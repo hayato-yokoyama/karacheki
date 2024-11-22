@@ -1,5 +1,11 @@
 {
-  "cSpell.words": ["tamagui"],
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "biomejs.biome"
+	"cSpell.words": [
+		"biomejs",
+		"healthkit",
+		"karacheki",
+		"kingstinct",
+		"tamagui"
+	],
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "biomejs.biome"
 }
