@@ -1,8 +1,37 @@
 import { Card, H2, H3, Separator, SizableText, Tabs, YStack } from "tamagui";
+import HealthKit, {
+	HKQuantityTypeIdentifier,
+} from "@kingstinct/react-native-healthkit";
+import { subDays } from "date-fns";
 
-export default function Index() {
+export default async function Index() {
+	const isAvailable = await HealthKit.isHealthDataAvailable();
+
+	// bodyMassの読み取り許可を要求する
+	await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
+
+	/** 今週分(1~7日前)の体重 */
+	const currentWeekWeights = await HealthKit.queryQuantitySamples(
+		HKQuantityTypeIdentifier.bodyMass,
+		{
+			from: subDays(new Date(), 7),
+			unit: "kg",
+		},
+	);
+
+	/** 先週分(8~14日前)の体重 */
+	const prevWeekData = await HealthKit.queryQuantitySamples(
+		HKQuantityTypeIdentifier.bodyMass,
+		{
+			from: subDays(new Date(), 14),
+			to: subDays(new Date(), 8),
+			unit: "kg",
+		},
+	);
+
 	return (
 		<YStack padding="$8" gap="$8">
+			<p>{currentWeekWeights[0].quantity} kg</p>
 			<Tabs
 				defaultValue="weekly"
 				orientation="horizontal"
