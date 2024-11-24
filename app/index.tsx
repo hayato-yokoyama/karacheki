@@ -2,36 +2,101 @@ import { Card, H2, H3, Separator, SizableText, Tabs, YStack } from "tamagui";
 import HealthKit, {
 	HKQuantityTypeIdentifier,
 } from "@kingstinct/react-native-healthkit";
-import { subDays } from "date-fns";
+import type {
+	HKQuantitySample,
+	HKUnit,
+} from "@kingstinct/react-native-healthkit";
+import { useQuery } from "@tanstack/react-query";
+import { format, subDays } from "date-fns";
+import { WeightTabContent } from "./_components/weightTabContent";
 
-export default async function Index() {
-	const isAvailable = await HealthKit.isHealthDataAvailable();
+/** 今週と先週の体重を取得する */
+const fetchWeights = async () => {
+	try {
+		const isAvailable = await HealthKit.isHealthDataAvailable();
 
-	// bodyMassの読み取り許可を要求する
-	await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
+		if (!isAvailable) {
+			throw new Error("HealthKitはこのデバイスでは利用できません。");
+		}
 
-	/** 今週分(1~7日前)の体重 */
-	const currentWeekWeights = await HealthKit.queryQuantitySamples(
+		// bodyMassの読み取り許可を要求する
+		await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
+
+		const now = new Date();
+
+		/** 今週分(1~7日前)の体重 */
+		const currentWeekData = await HealthKit.queryQuantitySamples(
+			HKQuantityTypeIdentifier.bodyMass,
+			{
+				from: subDays(now, 7),
+				to: subDays(now, 1),
+				unit: "kg",
+			},
+		);
+
+		/** 先週分(8~14日前)の体重 */
+		const prevWeekData = await HealthKit.queryQuantitySamples(
+			HKQuantityTypeIdentifier.bodyMass,
+			{
+				from: subDays(now, 14),
+				to: subDays(now, 8),
+				unit: "kg",
+			},
+		);
+
+		return {
+			currentWeek: currentWeekData,
+			prevWeekData: prevWeekData,
+		};
+	} catch (error) {
+		console.error(error);
+		throw new Error("HealthKitデータの取得にエラーが発生しました");
+	}
+};
+
+/** 体重の平均値を算出する */
+const calcWeightAvg = (
+	weights: readonly HKQuantitySample<
 		HKQuantityTypeIdentifier.bodyMass,
-		{
-			from: subDays(new Date(), 7),
-			unit: "kg",
-		},
-	);
+		HKUnit
+	>[],
+) => {
+	const weightsAvg =
+		weights.reduce((sum, sample) => sum + sample.quantity, 0) / weights.length;
 
-	/** 先週分(8~14日前)の体重 */
-	const prevWeekData = await HealthKit.queryQuantitySamples(
-		HKQuantityTypeIdentifier.bodyMass,
-		{
-			from: subDays(new Date(), 14),
-			to: subDays(new Date(), 8),
-			unit: "kg",
-		},
-	);
+	return weightsAvg;
+};
+
+export default function Index() {
+	const { data, isLoading, error } = useQuery({
+		queryKey: ["weights"],
+		queryFn: fetchWeights,
+	});
+
+	if (isLoading) {
+		return (
+			<YStack padding="$8">
+				<H3>Loading...</H3>
+			</YStack>
+		);
+	}
+
+	if (error || data === undefined) {
+		return (
+			<YStack padding="$8">
+				<H3>ヘルスケアデータを取得できませんでした</H3>
+			</YStack>
+		);
+	}
+
+	const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
+		data;
+
+	const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
+	const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
 
 	return (
 		<YStack padding="$8" gap="$8">
-			<p>{currentWeekWeights[0].quantity} kg</p>
 			<Tabs
 				defaultValue="weekly"
 				orientation="horizontal"
@@ -54,54 +119,19 @@ export default async function Index() {
 					</Tabs.Tab>
 				</Tabs.List>
 				<Tabs.Content value="weekly" gap="$4">
-					<H2 size="$8">週平均</H2>
-					<YStack gap="$4">
-						<WeightCard title="今週 (2024/11/10 ~ 2024/11/17)" weight={70.3} />
-						<WeightCard title="先週 (2024/11/02 ~ 2024/11/09)" weight={67.6} />
-						<WeightDiffCard weight={2.7} />
-					</YStack>
+					<H2 size="$8">週</H2>
+					<WeightTabContent
+						period="Week"
+						currentAve={currentWeekWeightsAvg}
+						prevAve={prevWeekWeightsAvg}
+					/>
 				</Tabs.Content>
 				<Tabs.Content value="monthly" gap="$4">
-					<H2 size="$8">月平均</H2>
-					<YStack gap="$4">
-						<WeightCard title="今月 (2024/10/18 ~ 2024/11/17)" weight={68.3} />
-						<WeightCard title="先月 (2024/09/18 ~ 2024/10/17)" weight={69.6} />
-						<WeightDiffCard weight={-1.3} />
-					</YStack>
+					<H2 size="$8">月</H2>
+					{/* TODO:月データも取得する */}
+					<WeightTabContent period="Month" currentAve={80} prevAve={90} />
 				</Tabs.Content>
 			</Tabs>
 		</YStack>
 	);
 }
-
-const WeightCard = ({ title, weight }: { title: string; weight: number }) => {
-	return (
-		<Card bordered padding="$4">
-			<H3 size="$6" fontWeight="bold">
-				{title}
-			</H3>
-			<SizableText size="$8" fontWeight="bold">
-				{weight}
-				<SizableText size="$4" paddingLeft="$2" theme="alt1">
-					kg
-				</SizableText>
-			</SizableText>
-		</Card>
-	);
-};
-
-const WeightDiffCard = ({ weight }: { weight: number }) => {
-	return (
-		<Card bordered padding="$4">
-			<H3 size="$6" fontWeight="bold">
-				差分
-			</H3>
-			<SizableText size="$8" fontWeight="bold">
-				{weight}
-				<SizableText size="$4" paddingLeft="$2" theme="alt1">
-					kg
-				</SizableText>
-			</SizableText>
-		</Card>
-	);
-};
