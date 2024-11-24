@@ -8,6 +8,7 @@ import type {
 } from "@kingstinct/react-native-healthkit";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
+import { WeightTabContent } from "./_components/weightTabContent";
 
 /** 今週と先週の体重を取得する */
 const fetchWeights = async () => {
@@ -93,11 +94,6 @@ export default function Index() {
 
 	const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
 	const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
-	const weightAvgDiff = currentWeekWeightsAvg - prevWeekWeightsAvg;
-
-	const now = new Date();
-	const currentWeekString = `今週 (${format(subDays(now, 7), "MM/dd")} ~ ${format(subDays(now, 1), "MM/dd")})`;
-	const prevWeekString = `先週 (${format(subDays(now, 14), "MM/dd")} ~ ${format(subDays(now, 8), "MM/dd")})`;
 
 	return (
 		<YStack padding="$8" gap="$8">
@@ -124,51 +120,18 @@ export default function Index() {
 				</Tabs.List>
 				<Tabs.Content value="weekly" gap="$4">
 					<H2 size="$8">週</H2>
-					<YStack gap="$4">
-						<WeightCard
-							title={currentWeekString}
-							weight={currentWeekWeightsAvg}
-						/>
-						<WeightCard title={prevWeekString} weight={prevWeekWeightsAvg} />
-						<WeightDiffCard weight={weightAvgDiff} />
-					</YStack>
+					<WeightTabContent
+						period="Week"
+						currentAve={currentWeekWeightsAvg}
+						prevAve={prevWeekWeightsAvg}
+					/>
 				</Tabs.Content>
 				<Tabs.Content value="monthly" gap="$4">
 					<H2 size="$8">月</H2>
+					{/* TODO:月データも取得する */}
+					<WeightTabContent period="Month" currentAve={80} prevAve={90} />
 				</Tabs.Content>
 			</Tabs>
 		</YStack>
 	);
 }
-
-const WeightCard = ({ title, weight }: { title: string; weight: number }) => {
-	return (
-		<Card bordered padding="$4">
-			<H3 size="$6" fontWeight="bold">
-				{title}
-			</H3>
-			<SizableText size="$8" fontWeight="bold">
-				{weight.toFixed(2)}
-				<SizableText size="$4" theme="alt1">
-					kg
-				</SizableText>
-			</SizableText>
-		</Card>
-	);
-};
-
-const WeightDiffCard = ({ weight }: { weight: number }) => {
-	return (
-		<Card bordered padding="$4">
-			<H3 size="$6" fontWeight="bold">
-				差分
-			</H3>
-			<SizableText size="$8" fontWeight="bold">
-				{weight.toFixed(2)}
-				<SizableText size="$4" theme="alt1">
-					kg
-				</SizableText>
-			</SizableText>
-		</Card>
-	);
-};
