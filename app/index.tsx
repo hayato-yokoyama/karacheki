@@ -31,21 +31,35 @@ async function scheduleDailyWeightNotification() {
 	const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
 	const AvgDiff = currentWeekWeightsAvg - prevWeekWeightsAvg;
 
-	// 既存の通知をクリアしてからスケジュール
-	await Notifications.cancelAllScheduledNotificationsAsync();
+	const trigger: Notifications.TimeIntervalTriggerInput = {
+		seconds: 2,
+		repeats: true,
+		type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+	};
 
 	await Notifications.scheduleNotificationAsync({
 		content: {
-			title: "体重レポート",
-			body: `今週の平均: ${currentWeekWeightsAvg.toFixed(2)}kg\n先週の平均: ${prevWeekWeightsAvg.toFixed(2)}kg\n変化: ${AvgDiff.toFixed(2)}kg`,
-			sound: true,
+			title: "You've got mail! 📬",
+			body: `Here is the notification body ${AvgDiff}kg`,
 		},
-		trigger: {
-			type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-			seconds: 2,
-			repeats: false, // 繰り返さない
-		},
+		trigger: trigger,
 	});
+
+	// // 既存の通知をクリアしてからスケジュール
+	// await Notifications.cancelAllScheduledNotificationsAsync();
+
+	// await Notifications.scheduleNotificationAsync({
+	// 	content: {
+	// 		title: "体重レポート",
+	// 		body: `今週の平均: ${currentWeekWeightsAvg.toFixed(2)}kg\n先週の平均: ${prevWeekWeightsAvg.toFixed(2)}kg\n変化: ${AvgDiff.toFixed(2)}kg`,
+	// 		sound: true,
+	// 	},
+	// 	trigger: {
+	// 		type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+	// 		seconds: 2,
+	// 		repeats: false, // 繰り返さない
+	// 	},
+	// });
 }
 
 /** 今週と先週の体重を取得する */
