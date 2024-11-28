@@ -25,13 +25,12 @@ Notifications.setNotificationHandler({
 });
 
 // プッシュ通知の送信関数
-async function sendPushNotification(expoPushToken: string) {
+async function sendPushNotification(expoPushToken: string, bodyText: string) {
 	const message = {
 		to: expoPushToken,
 		sound: "default",
-		title: "Original Title",
-		body: "And here is the body!",
-		data: { someData: "goes here" },
+		title: "今週の体重",
+		body: bodyText,
 	};
 
 	await fetch("https://exp.host/--/api/v2/push/send", {
@@ -101,40 +100,42 @@ async function registerForPushNotificationsAsync() {
 }
 
 export default function Index() {
-	// const { data, isLoading, error } = useQuery({
-	// 	queryKey: ["weights"],
-	// 	queryFn: fetchWeights,
-	// });
+	// 体重の取得
+	const { data, isLoading, error } = useQuery({
+		queryKey: ["weights"],
+		queryFn: fetchWeights,
+	});
 
-	// if (isLoading) {
-	// 	return (
-	// 		<YStack padding="$8">
-	// 			<H3>Loading...</H3>
-	// 		</YStack>
-	// 	);
-	// }
+	if (isLoading) {
+		return (
+			<YStack padding="$8">
+				<H3>Loading...</H3>
+			</YStack>
+		);
+	}
 
-	// if (error || data === undefined) {
-	// 	return (
-	// 		<YStack padding="$8">
-	// 			<H3>ヘルスケアデータを取得できませんでした</H3>
-	// 		</YStack>
-	// 	);
-	// }
+	if (error || data === undefined) {
+		return (
+			<YStack padding="$8">
+				<H3>ヘルスケアデータを取得できませんでした</H3>
+			</YStack>
+		);
+	}
 
-	// const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
-	// 	data;
+	const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
+		data;
 
-	// const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
-	// const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
+	const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
+	const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
 
-	const currentWeekWeightsAvg = 60;
-	const prevWeekWeightsAvg = 70;
-
+	// Pushトークンの保持
 	const [expoPushToken, setExpoPushToken] = useState<string>("");
+	// 通知データ（タイトル・本文など）の保持
 	const [notification, setNotification] = useState<
 		Notifications.Notification | undefined
 	>(undefined);
+
+	// イベントリスナーの定義
 	const notificationListener =
 		useRef<ReturnType<typeof Notifications.addNotificationReceivedListener>>();
 	const responseListener =
@@ -143,20 +144,24 @@ export default function Index() {
 		>();
 
 	useEffect(() => {
+		// 通知トークンの登録
 		registerForPushNotificationsAsync()
 			.then((token) => setExpoPushToken(token ?? ""))
 			.catch((error) => setExpoPushToken(`${error}`));
 
+		// 通知を受信した際のリスナー登録
 		notificationListener.current =
 			Notifications.addNotificationReceivedListener((notification) => {
 				setNotification(notification);
 			});
 
+		// 通知をタップした際のリスナー登録
 		responseListener.current =
 			Notifications.addNotificationResponseReceivedListener((response) => {
 				console.log(response);
 			});
 
+		// クリーンアップ処理: コンポーネントのアンマウント時にリスナーを削除
 		return () => {
 			notificationListener.current &&
 				Notifications.removeNotificationSubscription(
@@ -167,69 +172,55 @@ export default function Index() {
 		};
 	}, []);
 
+	const avgDiff = currentWeekWeightsAvg - prevWeekWeightsAvg;
+	const pushBodyText = `今週の体重 ${currentWeekWeightsAvg.toFixed(2)}kg (${avgDiff >= 0 ? "+" : ""}${avgDiff.toFixed(2)})`;
+
 	return (
-		<View
-			style={{ flex: 1, alignItems: "center", justifyContent: "space-around" }}
-		>
-			<Text>Your Expo push token: {expoPushToken}</Text>
-			<View style={{ alignItems: "center", justifyContent: "center" }}>
-				<Text>
-					Title: {notification && notification.request.content.title}{" "}
-				</Text>
-				<Text>Body: {notification && notification.request.content.body}</Text>
-				<Text>
-					Data:{" "}
-					{notification && JSON.stringify(notification.request.content.data)}
-				</Text>
-			</View>
-			<Button
-				// title="Press to Send Notification"
-				onPress={async () => {
-					await sendPushNotification(expoPushToken);
-				}}
-			/>
-		</View>
-		// <YStack padding="$8" gap="$8">
-		// 	<Tabs
-		// 		defaultValue="weekly"
-		// 		orientation="horizontal"
-		// 		flexDirection="column"
-		// 		borderRadius="$4"
-		// 		borderWidth="$0.25"
-		// 		overflow="hidden"
-		// 		borderColor="$borderColor"
-		// 		gap="$4"
-		// 	>
-		// 		<Tabs.List
-		// 			separator={<Separator vertical />}
-		// 			disablePassBorderRadius="bottom"
-		// 		>
-		// 			<Tabs.Tab flex={1} value="weekly">
-		// 				<SizableText fontFamily="$body">週</SizableText>
-		// 			</Tabs.Tab>
-		// 			<Tabs.Tab flex={1} value="monthly">
-		// 				<SizableText fontFamily="$body">月</SizableText>
-		// 			</Tabs.Tab>
-		// 		</Tabs.List>
-		// 		<Tabs.Content value="weekly" gap="$4">
-		// 			<H2 size="$8">週</H2>
-		// 			{/* 通知スケジュール用のボタン */}
-		// 			<Button onPress={scheduleDailyWeightNotification}>
-		// 				スケジュール通知を設定
-		// 			</Button>
-		// 			<WeightTabContent
-		// 				period="Week"
-		// 				currentAve={currentWeekWeightsAvg}
-		// 				prevAve={prevWeekWeightsAvg}
-		// 			/>
-		// 		</Tabs.Content>
-		// 		<Tabs.Content value="monthly" gap="$4">
-		// 			<H2 size="$8">月</H2>
-		// 			{/* TODO:月データも取得する */}
-		// 			<WeightTabContent period="Month" currentAve={80} prevAve={90} />
-		// 		</Tabs.Content>
-		// 	</Tabs>
-		// </YStack>
+		<YStack padding="$8" gap="$8">
+			<Tabs
+				defaultValue="weekly"
+				orientation="horizontal"
+				flexDirection="column"
+				borderRadius="$4"
+				borderWidth="$0.25"
+				overflow="hidden"
+				borderColor="$borderColor"
+				gap="$4"
+			>
+				<Tabs.List
+					separator={<Separator vertical />}
+					disablePassBorderRadius="bottom"
+				>
+					<Tabs.Tab flex={1} value="weekly">
+						<SizableText fontFamily="$body">週</SizableText>
+					</Tabs.Tab>
+					<Tabs.Tab flex={1} value="monthly">
+						<SizableText fontFamily="$body">月</SizableText>
+					</Tabs.Tab>
+				</Tabs.List>
+				<Tabs.Content value="weekly" gap="$4">
+					<H2 size="$8">週</H2>
+					{/* 通知スケジュール用のボタン */}
+					<Button
+						onPress={async () => {
+							await sendPushNotification(expoPushToken, pushBodyText);
+						}}
+					>
+						通知をテスト
+					</Button>
+					<WeightTabContent
+						period="Week"
+						currentAve={currentWeekWeightsAvg}
+						prevAve={prevWeekWeightsAvg}
+					/>
+				</Tabs.Content>
+				<Tabs.Content value="monthly" gap="$4">
+					<H2 size="$8">月</H2>
+					{/* TODO:月データも取得する */}
+					<WeightTabContent period="Month" currentAve={80} prevAve={90} />
+				</Tabs.Content>
+			</Tabs>
+		</YStack>
 	);
 }
 
@@ -270,59 +261,59 @@ export default function Index() {
 // 	});
 // }
 
-// /** 今週と先週の体重を取得する */
-// const fetchWeights = async () => {
-// 	try {
-// 		const isAvailable = await HealthKit.isHealthDataAvailable();
+/** 今週と先週の体重を取得する */
+const fetchWeights = async () => {
+	try {
+		const isAvailable = await HealthKit.isHealthDataAvailable();
 
-// 		if (!isAvailable) {
-// 			throw new Error("HealthKitはこのデバイスでは利用できません。");
-// 		}
+		if (!isAvailable) {
+			throw new Error("HealthKitはこのデバイスでは利用できません。");
+		}
 
-// 		// bodyMassの読み取り許可を要求する
-// 		await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
+		// bodyMassの読み取り許可を要求する
+		await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
 
-// 		const now = new Date();
+		const now = new Date();
 
-// 		/** 今週分(1~7日前)の体重 */
-// 		const currentWeekData = await HealthKit.queryQuantitySamples(
-// 			HKQuantityTypeIdentifier.bodyMass,
-// 			{
-// 				from: subDays(now, 7),
-// 				to: subDays(now, 1),
-// 				unit: "kg",
-// 			},
-// 		);
+		/** 今週分(1~7日前)の体重 */
+		const currentWeekData = await HealthKit.queryQuantitySamples(
+			HKQuantityTypeIdentifier.bodyMass,
+			{
+				from: subDays(now, 7),
+				to: subDays(now, 1),
+				unit: "kg",
+			},
+		);
 
-// 		/** 先週分(8~14日前)の体重 */
-// 		const prevWeekData = await HealthKit.queryQuantitySamples(
-// 			HKQuantityTypeIdentifier.bodyMass,
-// 			{
-// 				from: subDays(now, 14),
-// 				to: subDays(now, 8),
-// 				unit: "kg",
-// 			},
-// 		);
+		/** 先週分(8~14日前)の体重 */
+		const prevWeekData = await HealthKit.queryQuantitySamples(
+			HKQuantityTypeIdentifier.bodyMass,
+			{
+				from: subDays(now, 14),
+				to: subDays(now, 8),
+				unit: "kg",
+			},
+		);
 
-// 		return {
-// 			currentWeek: currentWeekData,
-// 			prevWeekData: prevWeekData,
-// 		};
-// 	} catch (error) {
-// 		console.error(error);
-// 		throw new Error("HealthKitデータの取得にエラーが発生しました");
-// 	}
-// };
+		return {
+			currentWeek: currentWeekData,
+			prevWeekData: prevWeekData,
+		};
+	} catch (error) {
+		console.error(error);
+		throw new Error("HealthKitデータの取得にエラーが発生しました");
+	}
+};
 
-// /** 体重の平均値を算出する */
-// const calcWeightAvg = (
-// 	weights: readonly HKQuantitySample<
-// 		HKQuantityTypeIdentifier.bodyMass,
-// 		HKUnit
-// 	>[],
-// ) => {
-// 	const weightsAvg =
-// 		weights.reduce((sum, sample) => sum + sample.quantity, 0) / weights.length;
+/** 体重の平均値を算出する */
+const calcWeightAvg = (
+	weights: readonly HKQuantitySample<
+		HKQuantityTypeIdentifier.bodyMass,
+		HKUnit
+	>[],
+) => {
+	const weightsAvg =
+		weights.reduce((sum, sample) => sum + sample.quantity, 0) / weights.length;
 
-// 	return weightsAvg;
-// };
+	return weightsAvg;
+};
