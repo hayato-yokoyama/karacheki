@@ -8,12 +8,13 @@ import type {
 } from "@kingstinct/react-native-healthkit";
 import { useQuery } from "@tanstack/react-query";
 import { subDays } from "date-fns";
-import { WeightTabContent } from "./_components/weightTabContent";
+import { WeightTabContent } from "../_components/weightTabContent";
 import * as Notifications from "expo-notifications";
 import { Platform, Text, View } from "react-native";
 import * as Device from "expo-device";
 import Constants from "expo-constants";
 import { useEffect, useRef, useState } from "react";
+import { Link, Stack } from "expo-router";
 
 // 通知のデフォルト動作設定（アラート表示、通知音、バッジ表示）
 Notifications.setNotificationHandler({
@@ -101,32 +102,34 @@ async function registerForPushNotificationsAsync() {
 
 export default function Index() {
 	// 体重の取得
-	const { data, isLoading, error } = useQuery({
-		queryKey: ["weights"],
-		queryFn: fetchWeights,
-	});
+	// const { data, isLoading, error } = useQuery({
+	// 	queryKey: ["weights"],
+	// 	queryFn: fetchWeights,
+	// });
 
-	if (isLoading) {
-		return (
-			<YStack padding="$8">
-				<H3>Loading...</H3>
-			</YStack>
-		);
-	}
+	// if (isLoading) {
+	// 	return (
+	// 		<YStack padding="$8">
+	// 			<H3>Loading...</H3>
+	// 		</YStack>
+	// 	);
+	// }
 
-	if (error || data === undefined) {
-		return (
-			<YStack padding="$8">
-				<H3>ヘルスケアデータを取得できませんでした</H3>
-			</YStack>
-		);
-	}
+	// if (error || data === undefined) {
+	// 	return (
+	// 		<YStack padding="$8">
+	// 			<H3>ヘルスケアデータを取得できませんでした</H3>
+	// 		</YStack>
+	// 	);
+	// }
 
-	const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
-		data;
+	// const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
+	// 	data;
 
-	const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
-	const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
+	// const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
+	// const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
+	const currentWeekWeightsAvg = 60;
+	const prevWeekWeightsAvg = 70;
 
 	// Pushトークンの保持
 	const [expoPushToken, setExpoPushToken] = useState<string>("");
@@ -143,84 +146,88 @@ export default function Index() {
 			ReturnType<typeof Notifications.addNotificationResponseReceivedListener>
 		>();
 
-	useEffect(() => {
-		// 通知トークンの登録
-		registerForPushNotificationsAsync()
-			.then((token) => setExpoPushToken(token ?? ""))
-			.catch((error) => setExpoPushToken(`${error}`));
+	// useEffect(() => {
+	// 	// 通知トークンの登録
+	// 	registerForPushNotificationsAsync()
+	// 		.then((token) => setExpoPushToken(token ?? ""))
+	// 		.catch((error) => setExpoPushToken(`${error}`));
 
-		// 通知を受信した際のリスナー登録
-		notificationListener.current =
-			Notifications.addNotificationReceivedListener((notification) => {
-				setNotification(notification);
-			});
+	// 	// 通知を受信した際のリスナー登録
+	// 	notificationListener.current =
+	// 		Notifications.addNotificationReceivedListener((notification) => {
+	// 			setNotification(notification);
+	// 		});
 
-		// 通知をタップした際のリスナー登録
-		responseListener.current =
-			Notifications.addNotificationResponseReceivedListener((response) => {
-				console.log(response);
-			});
+	// 	// 通知をタップした際のリスナー登録
+	// 	responseListener.current =
+	// 		Notifications.addNotificationResponseReceivedListener((response) => {
+	// 			console.log(response);
+	// 		});
 
-		// クリーンアップ処理: コンポーネントのアンマウント時にリスナーを削除
-		return () => {
-			notificationListener.current &&
-				Notifications.removeNotificationSubscription(
-					notificationListener.current,
-				);
-			responseListener.current &&
-				Notifications.removeNotificationSubscription(responseListener.current);
-		};
-	}, []);
+	// 	// クリーンアップ処理: コンポーネントのアンマウント時にリスナーを削除
+	// 	return () => {
+	// 		notificationListener.current &&
+	// 			Notifications.removeNotificationSubscription(
+	// 				notificationListener.current,
+	// 			);
+	// 		responseListener.current &&
+	// 			Notifications.removeNotificationSubscription(responseListener.current);
+	// 	};
+	// }, []);
 
 	const avgDiff = currentWeekWeightsAvg - prevWeekWeightsAvg;
 	const pushBodyText = `今週の体重 ${currentWeekWeightsAvg.toFixed(2)}kg (${avgDiff >= 0 ? "+" : ""}${avgDiff.toFixed(2)})`;
 
 	return (
-		<YStack padding="$8" gap="$8">
-			<Tabs
-				defaultValue="weekly"
-				orientation="horizontal"
-				flexDirection="column"
-				borderRadius="$4"
-				borderWidth="$0.25"
-				overflow="hidden"
-				borderColor="$borderColor"
-				gap="$4"
-			>
-				<Tabs.List
-					separator={<Separator vertical />}
-					disablePassBorderRadius="bottom"
+		<>
+			<Stack.Screen options={{ headerShown: false }} />
+			<YStack padding="$8" gap="$8">
+				<Link href="/graph">Go to graph screen</Link>
+				<Tabs
+					defaultValue="weekly"
+					orientation="horizontal"
+					flexDirection="column"
+					borderRadius="$4"
+					borderWidth="$0.25"
+					overflow="hidden"
+					borderColor="$borderColor"
+					gap="$4"
 				>
-					<Tabs.Tab flex={1} value="weekly">
-						<SizableText fontFamily="$body">週</SizableText>
-					</Tabs.Tab>
-					<Tabs.Tab flex={1} value="monthly">
-						<SizableText fontFamily="$body">月</SizableText>
-					</Tabs.Tab>
-				</Tabs.List>
-				<Tabs.Content value="weekly" gap="$4">
-					<H2 size="$8">週</H2>
-					{/* 通知スケジュール用のボタン */}
-					<Button
-						onPress={async () => {
-							await sendPushNotification(expoPushToken, pushBodyText);
-						}}
+					<Tabs.List
+						separator={<Separator vertical />}
+						disablePassBorderRadius="bottom"
 					>
-						通知をテスト
-					</Button>
-					<WeightTabContent
-						period="Week"
-						currentAve={currentWeekWeightsAvg}
-						prevAve={prevWeekWeightsAvg}
-					/>
-				</Tabs.Content>
-				<Tabs.Content value="monthly" gap="$4">
-					<H2 size="$8">月</H2>
-					{/* TODO:月データも取得する */}
-					<WeightTabContent period="Month" currentAve={80} prevAve={90} />
-				</Tabs.Content>
-			</Tabs>
-		</YStack>
+						<Tabs.Tab flex={1} value="weekly">
+							<SizableText fontFamily="$body">週</SizableText>
+						</Tabs.Tab>
+						<Tabs.Tab flex={1} value="monthly">
+							<SizableText fontFamily="$body">月</SizableText>
+						</Tabs.Tab>
+					</Tabs.List>
+					<Tabs.Content value="weekly" gap="$4">
+						<H2 size="$8">週</H2>
+						<WeightTabContent
+							period="Week"
+							currentAve={currentWeekWeightsAvg}
+							prevAve={prevWeekWeightsAvg}
+						/>
+					</Tabs.Content>
+					<Tabs.Content value="monthly" gap="$4">
+						<H2 size="$8">月</H2>
+						{/* TODO:月データも取得する */}
+						<WeightTabContent period="Month" currentAve={80} prevAve={90} />
+					</Tabs.Content>
+				</Tabs>
+				{/* 通知スケジュール用のボタン */}
+				<Button
+					onPress={async () => {
+						await sendPushNotification(expoPushToken, pushBodyText);
+					}}
+				>
+					通知をテスト
+				</Button>
+			</YStack>
+		</>
 	);
 }
 
