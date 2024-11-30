@@ -10,14 +10,14 @@
 		"newArchEnabled": true,
 		"ios": {
 			"supportsTablet": true,
-			"bundleIdentifier": "com.h-yokoyama.haracheki"
+			"bundleIdentifier": "com.h-yokoyama.karacheki.dev"
 		},
 		"android": {
 			"adaptiveIcon": {
 				"foregroundImage": "./assets/images/adaptive-icon.png",
 				"backgroundColor": "#ffffff"
 			},
-			"package": "com.h_yokoyama.karacheki"
+			"package": "com.h_yokoyama.karacheki.dev"
 		},
 		"web": {
 			"bundler": "metro",

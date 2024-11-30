@@ -1,8 +1,6 @@
 import { Tabs } from "expo-router";
 
-import Ionicons from "@expo/vector-icons/Ionicons";
-
-import { ChartLine, Home, Settings } from "@tamagui/lucide-icons";
+import { ChartLine, Home } from "@tamagui/lucide-icons";
 
 export default function TabLayout() {
 	return (
