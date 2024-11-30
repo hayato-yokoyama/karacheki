@@ -4,8 +4,7 @@
 		"healthkit",
 		"karacheki",
 		"kingstinct",
-		"tamagui",
-		"yokoyama"
+		"tamagui"
 	],
 	"editor.formatOnSave": true,
 	"editor.defaultFormatter": "biomejs.biome"
