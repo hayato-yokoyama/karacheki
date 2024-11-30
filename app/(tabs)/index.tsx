@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { subDays } from "date-fns";
 import { WeightTabContent } from "../_components/weightTabContent";
 import * as Notifications from "expo-notifications";
-import { Platform, Text, View } from "react-native";
+import { Platform } from "react-native";
 import * as Device from "expo-device";
 import Constants from "expo-constants";
 import { useEffect, useRef, useState } from "react";
@@ -102,34 +102,32 @@ async function registerForPushNotificationsAsync() {
 
 export default function Index() {
 	// 体重の取得
-	// const { data, isLoading, error } = useQuery({
-	// 	queryKey: ["weights"],
-	// 	queryFn: fetchWeights,
-	// });
+	const { data, isLoading, error } = useQuery({
+		queryKey: ["weights"],
+		queryFn: fetchWeights,
+	});
 
-	// if (isLoading) {
-	// 	return (
-	// 		<YStack padding="$8">
-	// 			<H3>Loading...</H3>
-	// 		</YStack>
-	// 	);
-	// }
+	if (isLoading) {
+		return (
+			<YStack padding="$8">
+				<H3>Loading...</H3>
+			</YStack>
+		);
+	}
 
-	// if (error || data === undefined) {
-	// 	return (
-	// 		<YStack padding="$8">
-	// 			<H3>ヘルスケアデータを取得できませんでした</H3>
-	// 		</YStack>
-	// 	);
-	// }
+	if (error || data === undefined) {
+		return (
+			<YStack padding="$8">
+				<H3>ヘルスケアデータを取得できませんでした</H3>
+			</YStack>
+		);
+	}
 
-	// const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
-	// 	data;
+	const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
+		data;
 
-	// const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
-	// const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
-	const currentWeekWeightsAvg = 60;
-	const prevWeekWeightsAvg = 70;
+	const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
+	const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
 
 	// Pushトークンの保持
 	const [expoPushToken, setExpoPushToken] = useState<string>("");
@@ -146,34 +144,34 @@ export default function Index() {
 			ReturnType<typeof Notifications.addNotificationResponseReceivedListener>
 		>();
 
-	// useEffect(() => {
-	// 	// 通知トークンの登録
-	// 	registerForPushNotificationsAsync()
-	// 		.then((token) => setExpoPushToken(token ?? ""))
-	// 		.catch((error) => setExpoPushToken(`${error}`));
+	useEffect(() => {
+		// 通知トークンの登録
+		registerForPushNotificationsAsync()
+			.then((token) => setExpoPushToken(token ?? ""))
+			.catch((error) => setExpoPushToken(`${error}`));
 
-	// 	// 通知を受信した際のリスナー登録
-	// 	notificationListener.current =
-	// 		Notifications.addNotificationReceivedListener((notification) => {
-	// 			setNotification(notification);
-	// 		});
+		// 通知を受信した際のリスナー登録
+		notificationListener.current =
+			Notifications.addNotificationReceivedListener((notification) => {
+				setNotification(notification);
+			});
 
-	// 	// 通知をタップした際のリスナー登録
-	// 	responseListener.current =
-	// 		Notifications.addNotificationResponseReceivedListener((response) => {
-	// 			console.log(response);
-	// 		});
+		// 通知をタップした際のリスナー登録
+		responseListener.current =
+			Notifications.addNotificationResponseReceivedListener((response) => {
+				console.log(response);
+			});
 
-	// 	// クリーンアップ処理: コンポーネントのアンマウント時にリスナーを削除
-	// 	return () => {
-	// 		notificationListener.current &&
-	// 			Notifications.removeNotificationSubscription(
-	// 				notificationListener.current,
-	// 			);
-	// 		responseListener.current &&
-	// 			Notifications.removeNotificationSubscription(responseListener.current);
-	// 	};
-	// }, []);
+		// クリーンアップ処理: コンポーネントのアンマウント時にリスナーを削除
+		return () => {
+			notificationListener.current &&
+				Notifications.removeNotificationSubscription(
+					notificationListener.current,
+				);
+			responseListener.current &&
+				Notifications.removeNotificationSubscription(responseListener.current);
+		};
+	}, []);
 
 	const avgDiff = currentWeekWeightsAvg - prevWeekWeightsAvg;
 	const pushBodyText = `今週の体重 ${currentWeekWeightsAvg.toFixed(2)}kg (${avgDiff >= 0 ? "+" : ""}${avgDiff.toFixed(2)})`;
