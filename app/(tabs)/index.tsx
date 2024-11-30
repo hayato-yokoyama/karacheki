@@ -1,4 +1,14 @@
-import { Button, H2, H3, YStack } from "tamagui";
+import {
+	H2,
+	H3,
+	Label,
+	Paragraph,
+	ScrollView,
+	SizableText,
+	Switch,
+	XStack,
+	YStack,
+} from "tamagui";
 import HealthKit, {
 	HKQuantityTypeIdentifier,
 } from "@kingstinct/react-native-healthkit";
@@ -12,6 +22,7 @@ import { WeightTabContent } from "../_components/weightTabContent";
 import * as Notifications from "expo-notifications";
 import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
+import { Card } from "tamagui";
 
 // アプリ起動中の通知の動作設定（アラート表示、通知音、バッジ表示）
 Notifications.setNotificationHandler({
@@ -67,18 +78,45 @@ export default function Index() {
 	return (
 		<>
 			<Stack.Screen options={{ title: "ホーム" }} />
-			<YStack padding="$8" gap="$8">
-				<H2 size="$8">体重の変化</H2>
-				<WeightTabContent
-					period="Week"
-					currentAve={currentWeekWeightsAvg}
-					prevAve={prevWeekWeightsAvg}
-				/>
-				{/* 通知設定 */}
-				<Button onPress={() => setIsEnabledDailyNotification((prev) => !prev)}>
-					通知を{isEnabledDailyNotification ? "OFF" : "ON"}にする
-				</Button>
-			</YStack>
+			<ScrollView>
+				<YStack padding="$8" gap="$8">
+					<H2 size="$8">体重の変化</H2>
+					<WeightTabContent
+						period="Week"
+						currentAve={currentWeekWeightsAvg}
+						prevAve={prevWeekWeightsAvg}
+					/>
+					<Card padding="$4">
+						<YStack gap="$2">
+							<XStack alignItems="center" gap="$4" margin="auto">
+								<Label
+									paddingRight="$0"
+									justifyContent="flex-end"
+									size="$4"
+									htmlFor="notificationSwitch"
+								>
+									通知する
+								</Label>
+								<Switch
+									id="notificationSwitch"
+									size="$3"
+									defaultChecked={false}
+									onCheckedChange={(isChecked) =>
+										setIsEnabledDailyNotification(isChecked)
+									}
+								>
+									<Switch.Thumb animation="quicker" />
+								</Switch>
+							</XStack>
+							<Paragraph>
+								設定を ON にすると
+								<SizableText color="$blue10">毎朝8時</SizableText>
+								に今週の体重を通知します。
+							</Paragraph>
+						</YStack>
+					</Card>
+				</YStack>
+			</ScrollView>
 		</>
 	);
 }

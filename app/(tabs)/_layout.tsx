@@ -6,13 +6,7 @@ import { ChartLine, Home, Settings } from "@tamagui/lucide-icons";
 
 export default function TabLayout() {
 	return (
-		<Tabs
-			screenOptions={{
-				tabBarLabelStyle: {
-					fontSize: 8,
-				},
-			}}
-		>
+		<Tabs>
 			<Tabs.Screen
 				name="index"
 				options={{
