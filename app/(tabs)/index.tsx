@@ -1,4 +1,14 @@
-import { Button, H2, H3, Separator, SizableText, Tabs, YStack } from "tamagui";
+import {
+	H2,
+	H3,
+	Label,
+	Paragraph,
+	ScrollView,
+	SizableText,
+	Switch,
+	XStack,
+	YStack,
+} from "tamagui";
 import HealthKit, {
 	HKQuantityTypeIdentifier,
 } from "@kingstinct/react-native-healthkit";
@@ -10,13 +20,11 @@ import { useQuery } from "@tanstack/react-query";
 import { subDays } from "date-fns";
 import { WeightTabContent } from "../_components/weightTabContent";
 import * as Notifications from "expo-notifications";
-import { Platform, Text, View } from "react-native";
-import * as Device from "expo-device";
-import Constants from "expo-constants";
-import { useEffect, useRef, useState } from "react";
-import { Link, Stack } from "expo-router";
+import { useEffect, useState } from "react";
+import { Stack } from "expo-router";
+import { Card } from "tamagui";
 
-// 通知のデフォルト動作設定（アラート表示、通知音、バッジ表示）
+// アプリ起動中の通知の動作設定（アラート表示、通知音、バッジ表示）
 Notifications.setNotificationHandler({
 	handleNotification: async () => ({
 		shouldShowAlert: true,
@@ -25,248 +33,133 @@ Notifications.setNotificationHandler({
 	}),
 });
 
-// プッシュ通知の送信関数
-async function sendPushNotification(expoPushToken: string, bodyText: string) {
-	const message = {
-		to: expoPushToken,
-		sound: "default",
-		title: "今週の体重",
-		body: bodyText,
-	};
-
-	await fetch("https://exp.host/--/api/v2/push/send", {
-		method: "POST",
-		headers: {
-			Accept: "application/json",
-			"Accept-encoding": "gzip, deflate",
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify(message),
-	});
-}
-
-function handleRegistrationError(errorMessage: string) {
-	alert(errorMessage);
-	throw new Error(errorMessage);
-}
-
-// プッシュ通知トークンの登録
-async function registerForPushNotificationsAsync() {
-	if (Platform.OS === "android") {
-		Notifications.setNotificationChannelAsync("default", {
-			name: "default",
-			importance: Notifications.AndroidImportance.MAX,
-			vibrationPattern: [0, 250, 250, 250],
-			lightColor: "#FF231F7C",
-		});
-	}
-
-	if (Device.isDevice) {
-		const { status: existingStatus } =
-			await Notifications.getPermissionsAsync();
-		let finalStatus = existingStatus;
-		if (existingStatus !== "granted") {
-			const { status } = await Notifications.requestPermissionsAsync();
-			finalStatus = status;
-		}
-		if (finalStatus !== "granted") {
-			handleRegistrationError(
-				"Permission not granted to get push token for push notification!",
-			);
-			return;
-		}
-
-		// projectIdの登録
-		const projectId =
-			Constants?.expoConfig?.extra?.eas?.projectId ??
-			Constants?.easConfig?.projectId;
-		if (!projectId) {
-			handleRegistrationError("Project ID not found");
-		}
-		try {
-			// プッシュトークンの登録
-			const pushTokenString = (
-				await Notifications.getExpoPushTokenAsync({
-					projectId,
-				})
-			).data;
-			console.log(pushTokenString);
-			return pushTokenString;
-		} catch (e: unknown) {
-			handleRegistrationError(`${e}`);
-		}
-	} else {
-		handleRegistrationError("Must use physical device for push notifications");
-	}
-}
-
 export default function Index() {
+	// 毎朝の通知が有効かどうか
+	const [isEnabledDailyNotification, setIsEnabledDailyNotification] =
+		useState(false);
+
+	// 通知のON/OFF状態に応じてスケジュール/キャンセルを実行
+	useEffect(() => {
+		if (isEnabledDailyNotification) {
+			scheduleDailyWeightNotification();
+		} else {
+			Notifications.cancelAllScheduledNotificationsAsync();
+		}
+	}, [isEnabledDailyNotification]);
+
 	// 体重の取得
-	// const { data, isLoading, error } = useQuery({
-	// 	queryKey: ["weights"],
-	// 	queryFn: fetchWeights,
-	// });
+	const { data, isLoading, error } = useQuery({
+		queryKey: ["weights"],
+		queryFn: fetchWeights,
+	});
 
-	// if (isLoading) {
-	// 	return (
-	// 		<YStack padding="$8">
-	// 			<H3>Loading...</H3>
-	// 		</YStack>
-	// 	);
-	// }
+	if (isLoading) {
+		return (
+			<YStack padding="$8">
+				<H3>Loading...</H3>
+			</YStack>
+		);
+	}
 
-	// if (error || data === undefined) {
-	// 	return (
-	// 		<YStack padding="$8">
-	// 			<H3>ヘルスケアデータを取得できませんでした</H3>
-	// 		</YStack>
-	// 	);
-	// }
+	if (error || data === undefined) {
+		return (
+			<YStack padding="$8">
+				<H3>ヘルスケアデータを取得できませんでした</H3>
+			</YStack>
+		);
+	}
 
-	// const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
-	// 	data;
+	const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
+		data;
 
-	// const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
-	// const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
-	const currentWeekWeightsAvg = 60;
-	const prevWeekWeightsAvg = 70;
-
-	// Pushトークンの保持
-	const [expoPushToken, setExpoPushToken] = useState<string>("");
-	// 通知データ（タイトル・本文など）の保持
-	const [notification, setNotification] = useState<
-		Notifications.Notification | undefined
-	>(undefined);
-
-	// イベントリスナーの定義
-	const notificationListener =
-		useRef<ReturnType<typeof Notifications.addNotificationReceivedListener>>();
-	const responseListener =
-		useRef<
-			ReturnType<typeof Notifications.addNotificationResponseReceivedListener>
-		>();
-
-	// useEffect(() => {
-	// 	// 通知トークンの登録
-	// 	registerForPushNotificationsAsync()
-	// 		.then((token) => setExpoPushToken(token ?? ""))
-	// 		.catch((error) => setExpoPushToken(`${error}`));
-
-	// 	// 通知を受信した際のリスナー登録
-	// 	notificationListener.current =
-	// 		Notifications.addNotificationReceivedListener((notification) => {
-	// 			setNotification(notification);
-	// 		});
-
-	// 	// 通知をタップした際のリスナー登録
-	// 	responseListener.current =
-	// 		Notifications.addNotificationResponseReceivedListener((response) => {
-	// 			console.log(response);
-	// 		});
-
-	// 	// クリーンアップ処理: コンポーネントのアンマウント時にリスナーを削除
-	// 	return () => {
-	// 		notificationListener.current &&
-	// 			Notifications.removeNotificationSubscription(
-	// 				notificationListener.current,
-	// 			);
-	// 		responseListener.current &&
-	// 			Notifications.removeNotificationSubscription(responseListener.current);
-	// 	};
-	// }, []);
-
-	const avgDiff = currentWeekWeightsAvg - prevWeekWeightsAvg;
-	const pushBodyText = `今週の体重 ${currentWeekWeightsAvg.toFixed(2)}kg (${avgDiff >= 0 ? "+" : ""}${avgDiff.toFixed(2)})`;
+	const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
+	const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
 
 	return (
 		<>
-			<Stack.Screen options={{ headerShown: false }} />
-			<YStack padding="$8" gap="$8">
-				<Link href="/graph">Go to graph screen</Link>
-				<Tabs
-					defaultValue="weekly"
-					orientation="horizontal"
-					flexDirection="column"
-					borderRadius="$4"
-					borderWidth="$0.25"
-					overflow="hidden"
-					borderColor="$borderColor"
-					gap="$4"
-				>
-					<Tabs.List
-						separator={<Separator vertical />}
-						disablePassBorderRadius="bottom"
-					>
-						<Tabs.Tab flex={1} value="weekly">
-							<SizableText fontFamily="$body">週</SizableText>
-						</Tabs.Tab>
-						<Tabs.Tab flex={1} value="monthly">
-							<SizableText fontFamily="$body">月</SizableText>
-						</Tabs.Tab>
-					</Tabs.List>
-					<Tabs.Content value="weekly" gap="$4">
-						<H2 size="$8">週</H2>
-						<WeightTabContent
-							period="Week"
-							currentAve={currentWeekWeightsAvg}
-							prevAve={prevWeekWeightsAvg}
-						/>
-					</Tabs.Content>
-					<Tabs.Content value="monthly" gap="$4">
-						<H2 size="$8">月</H2>
-						{/* TODO:月データも取得する */}
-						<WeightTabContent period="Month" currentAve={80} prevAve={90} />
-					</Tabs.Content>
-				</Tabs>
-				{/* 通知スケジュール用のボタン */}
-				<Button
-					onPress={async () => {
-						await sendPushNotification(expoPushToken, pushBodyText);
-					}}
-				>
-					通知をテスト
-				</Button>
-			</YStack>
+			<Stack.Screen options={{ title: "ホーム" }} />
+			<ScrollView>
+				<YStack padding="$8" gap="$8">
+					<H2 size="$8">体重の変化</H2>
+					<WeightTabContent
+						period="Week"
+						currentAve={currentWeekWeightsAvg}
+						prevAve={prevWeekWeightsAvg}
+					/>
+					<Card padding="$4">
+						<YStack gap="$2">
+							<XStack alignItems="center" gap="$4" margin="auto">
+								<Label
+									paddingRight="$0"
+									justifyContent="flex-end"
+									size="$4"
+									htmlFor="notificationSwitch"
+								>
+									通知する
+								</Label>
+								<Switch
+									id="notificationSwitch"
+									size="$3"
+									defaultChecked={false}
+									onCheckedChange={(isChecked) =>
+										setIsEnabledDailyNotification(isChecked)
+									}
+								>
+									<Switch.Thumb animation="quicker" />
+								</Switch>
+							</XStack>
+							<Paragraph>
+								設定を ON にすると
+								<SizableText color="$blue10">毎朝8時</SizableText>
+								に今週の体重を通知します。
+							</Paragraph>
+						</YStack>
+					</Card>
+				</YStack>
+			</ScrollView>
 		</>
 	);
 }
 
-// /** 毎朝8時の通知スケジュールを組む */
-// async function scheduleDailyWeightNotification() {
-// 	// 通知権限をリクエスト
-// 	const { status } = await Notifications.requestPermissionsAsync();
-// 	if (status !== "granted") {
-// 		console.warn("通知の権限がありません");
-// 		return;
-// 	}
+/** 毎朝8時の通知スケジュールを組む */
+async function scheduleDailyWeightNotification() {
+	// 通知権限をリクエスト
+	const { status } = await Notifications.requestPermissionsAsync();
+	if (status !== "granted") {
+		console.warn("通知の権限がありません");
+		return;
+	}
 
-// 	// 今週と先週の体重データを取得
-// 	const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
-// 		await fetchWeights();
-// 	if (!currentWeekWeights || !prevWeekWeights) {
-// 		console.error("体重データの取得に失敗しました");
-// 		return;
-// 	}
-// 	const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
-// 	const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
-// 	const AvgDiff = currentWeekWeightsAvg - prevWeekWeightsAvg;
+	// 今週と先週の体重データを取得
+	const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
+		await fetchWeights();
+	if (!currentWeekWeights || !prevWeekWeights) {
+		console.error("体重データの取得に失敗しました");
+		return;
+	}
+	const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
+	const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
+	const avgDiff = currentWeekWeightsAvg - prevWeekWeightsAvg;
 
-// 	// 既存の通知をクリアしてからスケジュール
-// 	await Notifications.cancelAllScheduledNotificationsAsync();
+	const pushBodyText = `${currentWeekWeightsAvg.toFixed(2)}kg (${avgDiff >= 0 ? "+" : ""}${avgDiff.toFixed(2)}kg)`;
 
-// 	await Notifications.scheduleNotificationAsync({
-// 		content: {
-// 			title: "体重レポート",
-// 			body: `今週の平均: ${currentWeekWeightsAvg.toFixed(2)}kg\n先週の平均: ${prevWeekWeightsAvg.toFixed(2)}kg\n変化: ${AvgDiff.toFixed(2)}kg`,
-// 			sound: true,
-// 		},
-// 		trigger: {
-// 			type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-// 			seconds: 2,
-// 			repeats: false, // 繰り返さない
-// 		},
-// 	});
-// }
+	// 既存の通知スケジュールを削除
+	await Notifications.cancelAllScheduledNotificationsAsync();
+
+	// 通知スケジュールを登録
+	await Notifications.scheduleNotificationAsync({
+		content: {
+			title: "今週の体重",
+			body: pushBodyText,
+			sound: true,
+		},
+		trigger: {
+			type: Notifications.SchedulableTriggerInputTypes.DAILY,
+			hour: 8,
+			minute: 0,
+		},
+	});
+}
 
 /** 今週と先週の体重を取得する */
 const fetchWeights = async () => {
