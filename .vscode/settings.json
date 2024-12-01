@@ -9,5 +9,7 @@
 		"yokoyama"
 	],
 	"editor.formatOnSave": true,
-	"editor.defaultFormatter": "biomejs.biome"
+	"editor.defaultFormatter": "biomejs.biome",
+	"javascript.preferences.importModuleSpecifier": "non-relative",
+	"typescript.preferences.importModuleSpecifier": "non-relative"
 }
