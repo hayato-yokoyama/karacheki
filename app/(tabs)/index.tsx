@@ -17,6 +17,7 @@ import { Card } from "tamagui";
 import { scheduleDailyWeightNotification } from "@/app/_services/notificationService";
 import { calcWeightAvg, fetchWeights } from "@/app/_services/weightService";
 import { WeightTabContent } from "@/app/_components/weightTabContent";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // アプリ起動中の通知の動作設定（アラート表示、通知音、バッジ表示）
 Notifications.setNotificationHandler({
@@ -27,10 +28,42 @@ Notifications.setNotificationHandler({
 	}),
 });
 
+/** 通知設定の保存キー */
+const DAILY_NOTIFICATION_KEY = "isEnabledDailyNotification";
+
 export default function Index() {
 	// 毎朝の通知が有効かどうか
 	const [isEnabledDailyNotification, setIsEnabledDailyNotification] =
 		useState(false);
+
+	// 通知設定を保存する
+	const saveNotificationSetting = async (isEnabled: boolean) => {
+		try {
+			await AsyncStorage.setItem(
+				DAILY_NOTIFICATION_KEY,
+				JSON.stringify(isEnabled),
+			);
+		} catch (error) {
+			console.error("Failed to save notification setting:", error);
+		}
+	};
+
+	// 通知設定を読み込む
+	const loadNotificationSetting = async () => {
+		try {
+			const savedSetting = await AsyncStorage.getItem(DAILY_NOTIFICATION_KEY);
+			if (savedSetting !== null) {
+				setIsEnabledDailyNotification(JSON.parse(savedSetting));
+			}
+		} catch (error) {
+			console.error("Failed to load notification setting:", error);
+		}
+	};
+
+	// 初回ロード時に通知設定を読み込む
+	useEffect(() => {
+		loadNotificationSetting();
+	}, []);
 
 	// 通知のON/OFF状態に応じてスケジュール/キャンセルを実行
 	useEffect(() => {
@@ -39,6 +72,8 @@ export default function Index() {
 		} else {
 			Notifications.cancelAllScheduledNotificationsAsync();
 		}
+		// 状態を保存
+		saveNotificationSetting(isEnabledDailyNotification);
 	}, [isEnabledDailyNotification]);
 
 	// 体重の取得
