@@ -140,7 +140,7 @@ export default function Index() {
 							<Paragraph>
 								設定を ON にすると
 								<SizableText color="$blue10">毎朝8時</SizableText>
-								に今週の体重を通知します。
+								に今週の体重を通知します。AsyncStorage使用中。
 							</Paragraph>
 						</YStack>
 					</Card>
