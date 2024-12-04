@@ -5,7 +5,7 @@ import type {
 	HKQuantitySample,
 	HKUnit,
 } from "@kingstinct/react-native-healthkit";
-import { subDays } from "date-fns";
+import { endOfDay, startOfDay, subDays } from "date-fns";
 
 /** 今週と先週の体重を取得する */
 export const fetchWeights = async () => {
@@ -25,8 +25,8 @@ export const fetchWeights = async () => {
 		const currentWeekData = await HealthKit.queryQuantitySamples(
 			HKQuantityTypeIdentifier.bodyMass,
 			{
-				from: subDays(now, 7),
-				to: subDays(now, 1),
+				from: startOfDay(subDays(now, 7)),
+				to: endOfDay(subDays(now, 1)),
 				unit: "kg",
 			},
 		);
@@ -35,8 +35,8 @@ export const fetchWeights = async () => {
 		const prevWeekData = await HealthKit.queryQuantitySamples(
 			HKQuantityTypeIdentifier.bodyMass,
 			{
-				from: subDays(now, 14),
-				to: subDays(now, 8),
+				from: startOfDay(subDays(now, 14)),
+				to: endOfDay(subDays(now, 8)),
 				unit: "kg",
 			},
 		);
