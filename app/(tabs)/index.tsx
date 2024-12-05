@@ -30,7 +30,7 @@ Notifications.setNotificationHandler({
 export default function Index() {
 	// 毎朝の通知が有効かどうか
 	const [isEnabledDailyNotification, setIsEnabledDailyNotification] =
-		useState(false);
+		useState(true);
 
 	// 通知のON/OFF状態に応じてスケジュール/キャンセルを実行
 	useEffect(() => {
@@ -94,7 +94,7 @@ export default function Index() {
 								<Switch
 									id="notificationSwitch"
 									size="$3"
-									defaultChecked={false}
+									defaultChecked={true}
 									onCheckedChange={(isChecked) =>
 										setIsEnabledDailyNotification(isChecked)
 									}
