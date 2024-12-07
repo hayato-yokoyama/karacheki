@@ -15,7 +15,10 @@ import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import { Card } from "tamagui";
 import { scheduleDailyWeightNotification } from "@/app/_services/notificationService";
-import { calcWeightAvg, fetchWeights } from "@/app/_services/weightService";
+import {
+	calcWeightAvg,
+	fetchWeeklyWeights,
+} from "@/app/_services/weightService";
 import { WeightTabContent } from "@/app/_components/weightTabContent";
 
 // アプリ起動中の通知の動作設定（アラート表示、通知音、バッジ表示）
@@ -44,7 +47,7 @@ export default function Index() {
 	// 体重の取得
 	const { data, isLoading, error } = useQuery({
 		queryKey: ["weights"],
-		queryFn: fetchWeights,
+		queryFn: fetchWeeklyWeights,
 	});
 
 	if (isLoading) {
