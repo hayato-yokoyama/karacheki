@@ -83,7 +83,7 @@ export default function Index() {
 						currentAve={currentWeekWeightsAvg}
 						prevAve={prevWeekWeightsAvg}
 					/>
-					<Card padding="$4">
+					{/* <Card padding="$4">
 						<YStack gap="$2">
 							<XStack alignItems="center" gap="$4" margin="auto">
 								<Label
@@ -111,7 +111,7 @@ export default function Index() {
 								に今週の体重を通知します。
 							</Paragraph>
 						</YStack>
-					</Card>
+					</Card> */}
 				</YStack>
 			</ScrollView>
 		</>
