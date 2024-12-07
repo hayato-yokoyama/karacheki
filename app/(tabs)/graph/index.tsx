@@ -2,9 +2,18 @@ import {
 	fetchRecentWeightsByMonths,
 	transformWeightDataForGraph,
 } from "@/app/_services/weightService";
+import { matchFont } from "@shopify/react-native-skia";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { Stack } from "expo-router";
-import { H3, Paragraph, YStack } from "tamagui";
+import { Platform } from "react-native";
+import { H3, ScrollView, Text, View, YStack } from "tamagui";
+import { CartesianChart, Line } from "victory-native";
+
+const DATA = Array.from({ length: 31 }, (_, i) => ({
+	day: i,
+	highTmp: 40 + 30 * Math.random(),
+}));
 
 export default function Graph() {
 	// 体重の取得
@@ -13,8 +22,8 @@ export default function Graph() {
 		isLoading,
 		error,
 	} = useQuery({
-		queryKey: ["graphWeights", 6],
-		queryFn: () => fetchRecentWeightsByMonths(6),
+		queryKey: ["graphWeights", 2],
+		queryFn: () => fetchRecentWeightsByMonths(2),
 	});
 
 	if (isLoading) {
@@ -36,17 +45,49 @@ export default function Graph() {
 	/** グラフ用の体重データ */
 	const weightForGraph = transformWeightDataForGraph(fetchedWight);
 
+	const font = matchFont({
+		fontFamily: Platform.select({ ios: "Helvetica", default: "serif" }),
+		fontSize: 12,
+	});
 	return (
 		<>
 			<Stack.Screen options={{ title: "グラフ" }} />
-			<YStack padding="$8" gap="$8">
-				<H3>体重データ</H3>
-				{weightForGraph.map((weight) => (
-					<Paragraph key={weight.date.toISOString()}>
-						{`日付: ${new Date(weight.date).toLocaleDateString()} - 体重: ${weight.weight.toFixed(2)} kg`}
-					</Paragraph>
-				))}
-			</YStack>
+			<ScrollView>
+				<YStack paddingVertical="$8" paddingHorizontal="$3" gap="$8">
+					<View style={{ height: 500, width: "100%" }}>
+						<Text style={{ fontSize: 12, marginBottom: 4 }}>(㎏)</Text>
+
+						{/* 横幅を指定 */}
+						<CartesianChart
+							data={weightForGraph}
+							xKey="date"
+							yKeys={["weight"]}
+							axisOptions={{
+								font,
+								formatXLabel: (value) => format(new Date(value), "M/d"),
+								labelPosition: { x: "outset", y: "outset" }, // ラベルを外側に配置
+								labelOffset: { x: 8, y: 8 }, // ラベルと軸の間の距離
+								tickCount: {
+									x: 4,
+									y: 6,
+								},
+							}}
+							// biome-ignore lint: correctness/noChildrenProp: Childrenで渡すとエラーになるため
+							children={({ points }) => (
+								<>
+									<Line
+										points={points.weight}
+										color="black"
+										strokeWidth={2}
+										animate={{ type: "timing", duration: 300 }}
+										opacity={0.3}
+									/>
+								</>
+							)}
+						/>
+					</View>
+				</YStack>
+			</ScrollView>
 		</>
 	);
 }

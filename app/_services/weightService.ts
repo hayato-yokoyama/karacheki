@@ -123,7 +123,7 @@ export const transformWeightDataForGraph = (
 ) => {
 	// データをグラフ用に整形
 	return weights.map((sample) => ({
-		date: new Date(sample.startDate), // 開始日時をDate型に変換
+		date: sample.startDate.toISOString(), // 開始日時をString型に変換
 		weight: sample.quantity, // 体重値 (kg)
 	}));
 };
