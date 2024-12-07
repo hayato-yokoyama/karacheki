@@ -10,11 +10,6 @@ import { Platform } from "react-native";
 import { H3, ScrollView, Text, View, YStack } from "tamagui";
 import { CartesianChart, Line } from "victory-native";
 
-const DATA = Array.from({ length: 31 }, (_, i) => ({
-	day: i,
-	highTmp: 40 + 30 * Math.random(),
-}));
-
 export default function Graph() {
 	// 体重の取得
 	const {
@@ -42,7 +37,7 @@ export default function Graph() {
 		);
 	}
 
-	/** グラフ用の体重データ */
+	/** グラフ用の体重データ（日時・実測データ・傾向データ） */
 	const weightForGraph = transformWeightDataForGraph(fetchedWight);
 
 	const font = matchFont({
@@ -53,15 +48,47 @@ export default function Graph() {
 		<>
 			<Stack.Screen options={{ title: "グラフ" }} />
 			<ScrollView>
-				<YStack paddingVertical="$8" paddingHorizontal="$3" gap="$8">
+				<YStack paddingVertical="$8" paddingHorizontal="$3">
+					{/* グラフの見出し */}
+					<YStack
+						flexDirection="row"
+						alignItems="center"
+						justifyContent="center"
+						gap="$3"
+					>
+						<View
+							style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+						>
+							<View
+								style={{
+									width: 20,
+									height: 2,
+									backgroundColor: "black",
+								}}
+							/>
+							<Text style={{ fontSize: 12 }}>実測データ</Text>
+						</View>
+						<View
+							style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+						>
+							<View
+								style={{
+									width: 20,
+									height: 2,
+									backgroundColor: "red",
+								}}
+							/>
+							<Text style={{ fontSize: 12 }}>傾向データ</Text>
+						</View>
+					</YStack>
+
+					{/* グラフ */}
 					<View style={{ height: 500, width: "100%" }}>
 						<Text style={{ fontSize: 12, marginBottom: 4 }}>(㎏)</Text>
-
-						{/* 横幅を指定 */}
 						<CartesianChart
 							data={weightForGraph}
 							xKey="date"
-							yKeys={["weight"]}
+							yKeys={["actualWeight", "trendWeight"]}
 							axisOptions={{
 								font,
 								formatXLabel: (value) => format(new Date(value), "M/d"),
@@ -76,11 +103,16 @@ export default function Graph() {
 							children={({ points }) => (
 								<>
 									<Line
-										points={points.weight}
+										points={points.actualWeight}
 										color="black"
 										strokeWidth={2}
-										animate={{ type: "timing", duration: 300 }}
 										opacity={0.3}
+									/>
+									<Line
+										points={points.trendWeight}
+										color="red"
+										strokeWidth={3}
+										animate={{ type: "timing", duration: 300 }}
 									/>
 								</>
 							)}

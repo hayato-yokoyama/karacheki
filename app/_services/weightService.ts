@@ -114,16 +114,71 @@ export const calcWeightAvg = (
 	return weightsAvg;
 };
 
-/** X軸:Date,Y軸:体重(kg) のグラフ用に整形する */
+/** X軸:日時,Y軸:体重(kg) のグラフ用に整形する */
 export const transformWeightDataForGraph = (
 	weights: readonly HKQuantitySample<
 		HKQuantityTypeIdentifier.bodyMass,
 		HKUnit
 	>[],
+	windowSize = 7, // 移動平均のウィンドウサイズ
 ) => {
-	// データをグラフ用に整形
-	return weights.map((sample) => ({
-		date: sample.startDate.toISOString(), // 開始日時をString型に変換
-		weight: sample.quantity, // 体重値 (kg)
+	// 日付ごとに最初の測定値だけを残す
+	const uniqueDailyWeights = Object.values(
+		weights.reduce(
+			(acc, sample) => {
+				const dateKey = sample.startDate.toISOString().split("T")[0]; // 日付部分をキーに使用
+				if (!acc[dateKey]) {
+					acc[dateKey] = sample; // その日の最初のデータをセット
+				}
+				return acc;
+			},
+			{} as Record<
+				string,
+				HKQuantitySample<HKQuantityTypeIdentifier.bodyMass, HKUnit>
+			>,
+		),
+	);
+
+	// 日付順にソート
+	const sortedWeights = uniqueDailyWeights.sort(
+		(a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+	);
+
+	// 実測データを整形
+	const transformedActualData = sortedWeights.map((sample) => ({
+		date: sample.startDate.toISOString(), // 日付
+		weight: sample.quantity, // 実測体重
 	}));
+
+	// 移動平均データを計算
+	const movingAverages = sortedWeights.map((_, index, array) => {
+		if (index < windowSize - 1) return null; // ウィンドウサイズ未満はスキップ
+
+		const window = array.slice(index - windowSize + 1, index + 1);
+		const average =
+			window.reduce((sum, sample) => sum + sample.quantity, 0) / window.length;
+
+		return {
+			date: array[index].startDate.toISOString(), // 日付
+			movingAverage: average, // 移動平均体重
+		};
+	});
+
+	// nullを除外
+	const transformedMovingAverageData = movingAverages.filter(
+		(data) => data !== null,
+	);
+
+	// 実測データと移動平均データを統合して返す
+	return transformedActualData.map((data) => {
+		const movingAverage = transformedMovingAverageData.find(
+			(avg) => avg.date === data.date,
+		);
+
+		return {
+			date: data.date,
+			actualWeight: data.weight,
+			trendWeight: movingAverage?.movingAverage || null, // 移動平均がない場合はnull
+		};
+	});
 };
