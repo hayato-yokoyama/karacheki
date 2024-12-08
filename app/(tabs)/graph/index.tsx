@@ -27,7 +27,7 @@ export default function Graph() {
 		<>
 			<Stack.Screen options={{ title: "グラフ" }} />
 			<ScrollView>
-				<YStack paddingVertical="$8" paddingHorizontal="$3">
+				<YStack paddingVertical="$8" paddingHorizontal="$4">
 					{/* グラフの見出し */}
 					<XStack alignItems="center" justifyContent="center" gap="$4">
 						<XStack alignItems="center" gap="$2">
@@ -63,10 +63,7 @@ export default function Graph() {
 						<Tabs.Content value="12">
 							<GraphContent month={12} />
 						</Tabs.Content>
-						<Tabs.List
-							separator={<Separator vertical />}
-							marginTop="$4"
-						>
+						<Tabs.List separator={<Separator vertical />} marginTop="$4">
 							<Tabs.Tab flex={1} value="1">
 								<SizableText fontFamily="$body">1ヶ月</SizableText>
 							</Tabs.Tab>
@@ -128,22 +125,26 @@ const GraphContent = ({ month }: { month: number }) => {
 
 	return (
 		<YStack gap="$1" height={440}>
-			<Text fontSize={12}>(㎏)</Text>
+			<Text fontSize={12}>( ㎏ )</Text>
 			<CartesianChart
 				data={weightForGraph}
 				xKey="date"
 				yKeys={["actualWeight", "trendWeight"]}
 				axisOptions={{
 					font,
-					formatXLabel: (value) => format(new Date(value), "M/d"),
-					labelPosition: { x: "outset", y: "outset" }, // ラベルを外側に配置
-					labelOffset: { x: 8, y: 8 }, // ラベルと軸の間の距離
+					formatYLabel: (value) => (value ? value.toFixed(1) : ""),
+					formatXLabel: (value) =>
+						month === 12
+							? format(new Date(value), "yyyy/MM")
+							: format(new Date(value), "M/d"),
+					labelPosition: { x: "outset", y: "outset" },
+					labelOffset: { x: 8, y: 8 },
 					tickCount: {
 						x: 4,
 						y: 6,
 					},
 				}}
-				// biome-ignore lint: correctness/noChildrenProp: Childrenで渡すとエラーになるため
+				// biome-ignore lint: correctness/noChildrenProp: Childrenで渡すとエラーになるためignore
 				children={({ points }) => (
 					<>
 						<Line

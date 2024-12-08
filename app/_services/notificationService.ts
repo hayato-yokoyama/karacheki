@@ -1,4 +1,7 @@
-import { calcWeightAvg, fetchWeights } from "@/app/_services/weightService";
+import {
+	calcWeightAvg,
+	fetchWeeklyWeights,
+} from "@/app/_services/weightService";
 import * as Notifications from "expo-notifications";
 
 /** 毎朝8時の通知スケジュールを組む */
@@ -12,7 +15,7 @@ export async function scheduleDailyWeightNotification() {
 
 	// 今週と先週の体重データを取得
 	const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
-		await fetchWeights();
+		await fetchWeeklyWeights();
 	if (!currentWeekWeights || !prevWeekWeights) {
 		console.error("体重データの取得に失敗しました");
 		return;
