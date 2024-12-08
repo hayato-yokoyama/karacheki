@@ -1,11 +1,8 @@
 import {
 	H2,
 	H3,
-	Label,
-	Paragraph,
 	ScrollView,
 	SizableText,
-	Switch,
 	XStack,
 	YStack,
 } from "tamagui";
@@ -19,7 +16,6 @@ import {
 	calcWeightAvg,
 	fetchWeeklyWeights,
 } from "@/app/_services/weightService";
-import { WeightTabContent } from "@/app/_components/weightTabContent";
 
 // アプリ起動中の通知の動作設定（アラート表示、通知音、バッジ表示）
 Notifications.setNotificationHandler({
@@ -71,18 +67,55 @@ export default function Index() {
 
 	const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
 	const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
+	const avgDiff = currentWeekWeightsAvg - prevWeekWeightsAvg;
 
 	return (
 		<>
 			<Stack.Screen options={{ title: "ホーム" }} />
 			<ScrollView>
-				<YStack padding="$8" gap="$8">
+				<YStack paddingVertical="$8" paddingHorizontal="$4" gap="$4">
 					<H2 size="$8">体重の変化</H2>
-					<WeightTabContent
-						period="Week"
-						currentAve={currentWeekWeightsAvg}
-						prevAve={prevWeekWeightsAvg}
-					/>
+					<Card padding="$4">
+						<YStack gap="$4">
+							<XStack alignItems="center" justifyContent="space-around">
+								<YStack>
+									<SizableText>今週</SizableText>
+									<XStack gap="$1" alignItems="baseline">
+										<SizableText size="$9" fontWeight="bold">
+											{currentWeekWeightsAvg.toFixed(2)}
+										</SizableText>
+										<SizableText size="$4" theme="alt1">
+											kg
+										</SizableText>
+									</XStack>
+								</YStack>
+								<YStack>
+									<SizableText>先週</SizableText>
+									<XStack gap="$1" alignItems="baseline">
+										<SizableText size="$9" fontWeight="bold">
+											{prevWeekWeightsAvg.toFixed(2)}
+										</SizableText>
+										<SizableText size="$4" theme="alt1">
+											kg
+										</SizableText>
+									</XStack>
+								</YStack>
+							</XStack>
+							<YStack marginHorizontal="auto">
+								<SizableText>変化幅</SizableText>
+								<XStack gap="$1" alignItems="baseline">
+									<SizableText size="$9" fontWeight="bold">
+										{avgDiff > 0 ? "+" : avgDiff < 0 ? "-" : "±"}
+										{avgDiff.toFixed(2)}
+									</SizableText>
+									<SizableText size="$4" theme="alt1">
+										kg
+									</SizableText>
+								</XStack>
+							</YStack>
+						</YStack>
+					</Card>
+
 					{/* <Card padding="$4">
 						<YStack gap="$2">
 							<XStack alignItems="center" gap="$4" margin="auto">
