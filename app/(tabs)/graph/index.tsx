@@ -12,91 +12,40 @@ import {
 	ScrollView,
 	Separator,
 	SizableText,
+	Spinner,
 	Tabs,
 	Text,
+	useTheme,
 	View,
+	XStack,
 	YStack,
 } from "tamagui";
 import { CartesianChart, Line } from "victory-native";
 
 export default function Graph() {
-	// 体重の取得
-	const {
-		data: fetchedWight,
-		isLoading,
-		error,
-	} = useQuery({
-		queryKey: ["graphWeights", 3],
-		queryFn: () => fetchRecentWeightsByMonths(3),
-	});
-
-	if (isLoading) {
-		return (
-			<YStack padding="$8">
-				<H3>Loading...</H3>
-			</YStack>
-		);
-	}
-
-	if (error || fetchedWight === undefined) {
-		return (
-			<YStack padding="$8">
-				<H3>ヘルスケアデータを取得できませんでした</H3>
-			</YStack>
-		);
-	}
-
-	/** グラフ用の体重データ（日時・実測データ・傾向データ） */
-	const weightForGraph = transformWeightDataForGraph(fetchedWight);
-
-	const font = matchFont({
-		fontFamily: Platform.select({ ios: "Helvetica", default: "serif" }),
-		fontSize: 12,
-	});
 	return (
 		<>
 			<Stack.Screen options={{ title: "グラフ" }} />
 			<ScrollView>
 				<YStack paddingVertical="$8" paddingHorizontal="$3">
 					{/* グラフの見出し */}
-					<YStack
-						flexDirection="row"
-						alignItems="center"
-						justifyContent="center"
-						gap="$3"
-					>
-						<View
-							style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-						>
-							<View
-								style={{
-									width: 20,
-									height: 2,
-									backgroundColor: "black",
-								}}
-							/>
-							<Text style={{ fontSize: 12 }}>実測データ</Text>
-						</View>
-						<View
-							style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-						>
-							<View
-								style={{
-									width: 20,
-									height: 2,
-									backgroundColor: "red",
-								}}
-							/>
-							<Text style={{ fontSize: 12 }}>傾向データ</Text>
-						</View>
-					</YStack>
+					<XStack alignItems="center" justifyContent="center" gap="$4">
+						<XStack alignItems="center" gap="$2">
+							<View width="$1" height="$0.5" backgroundColor="$gray8" />
+							<Text>実測データ</Text>
+						</XStack>
+						<XStack alignItems="center" gap="$2">
+							<View width="$1" height="$0.5" backgroundColor="$red10" />
+							<Text>傾向データ</Text>
+						</XStack>
+					</XStack>
 					{/* グラフ */}
 					<Tabs
 						defaultValue="3"
 						orientation="horizontal"
 						flexDirection="column"
 						width="100%"
-						height={700} // 画面いっぱいにしたい
+						height={600} // TODO:画面いっぱいにしたい
 						borderRadius="$4"
 						borderWidth="$0.25"
 						overflow="hidden"
@@ -116,7 +65,6 @@ export default function Graph() {
 						</Tabs.Content>
 						<Tabs.List
 							separator={<Separator vertical />}
-							disablePassBorderRadius="top"
 							marginTop="$4"
 						>
 							<Tabs.Tab flex={1} value="1">
@@ -141,6 +89,9 @@ export default function Graph() {
 }
 
 const GraphContent = ({ month }: { month: number }) => {
+	const theme = useTheme();
+
+	// TODO: 最初に1年分取得して、それをスケールごとに使い回すようにしたい
 	// 体重の取得
 	const {
 		data: fetchedWight,
@@ -154,7 +105,7 @@ const GraphContent = ({ month }: { month: number }) => {
 	if (isLoading) {
 		return (
 			<YStack padding="$8">
-				<H3>Loading...</H3>
+				<Spinner size="small" />
 			</YStack>
 		);
 	}
@@ -176,8 +127,8 @@ const GraphContent = ({ month }: { month: number }) => {
 	});
 
 	return (
-		<View style={{ height: 500, width: "100%" }}>
-			<Text style={{ fontSize: 12, marginBottom: 4 }}>(㎏)</Text>
+		<YStack gap="$1" height={440}>
+			<Text fontSize={12}>(㎏)</Text>
 			<CartesianChart
 				data={weightForGraph}
 				xKey="date"
@@ -197,19 +148,17 @@ const GraphContent = ({ month }: { month: number }) => {
 					<>
 						<Line
 							points={points.actualWeight}
-							color="black"
+							color={theme.gray8.val}
 							strokeWidth={2}
-							opacity={0.3}
 						/>
 						<Line
 							points={points.trendWeight}
-							color="red"
+							color={theme.red10.val}
 							strokeWidth={3}
-							animate={{ type: "timing", duration: 300 }}
 						/>
 					</>
 				)}
 			/>
-		</View>
+		</YStack>
 	);
 };
