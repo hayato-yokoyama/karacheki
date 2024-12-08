@@ -33,18 +33,8 @@ Notifications.setNotificationHandler({
 });
 
 export default function Index() {
-	// 毎朝の通知が有効かどうか
-	const [isEnabledDailyNotification, setIsEnabledDailyNotification] =
-		useState(true);
-
-	// 通知のON/OFF状態に応じてスケジュール/キャンセルを実行
-	useEffect(() => {
-		if (isEnabledDailyNotification) {
-			scheduleDailyWeightNotification();
-		} else {
-			Notifications.cancelAllScheduledNotificationsAsync();
-		}
-	}, [isEnabledDailyNotification]);
+	// 通知設定する
+	scheduleDailyWeightNotification();
 
 	// 体重の取得
 	const { data, isLoading, error } = useQuery({
@@ -124,37 +114,6 @@ export default function Index() {
 					</Card>
 
 					<NotificationSettingsCard />
-
-					{/* TODO: アプリ内で設定を保存できるようにする */}
-					{/* <Card padding="$4">
-						<YStack gap="$2">
-							<XStack alignItems="center" gap="$4" margin="auto">
-								<Label
-									paddingRight="$0"
-									justifyContent="flex-end"
-									size="$4"
-									htmlFor="notificationSwitch"
-								>
-									通知する
-								</Label>
-								<Switch
-									id="notificationSwitch"
-									size="$3"
-									defaultChecked={true}
-									onCheckedChange={(isChecked) =>
-										setIsEnabledDailyNotification(isChecked)
-									}
-								>
-									<Switch.Thumb animation="quicker" />
-								</Switch>
-							</XStack>
-							<Paragraph>
-								設定を ON にすると
-								<SizableText color="$blue10">毎朝8時</SizableText>
-								に今週の体重を通知します。
-							</Paragraph>
-						</YStack>
-					</Card> */}
 				</YStack>
 			</ScrollView>
 		</>
@@ -202,6 +161,7 @@ const NotificationSettingsCard = () => {
 
 	// 通知が許可されていない場合に通知誘導ボタンを表示する
 	return (
+		// TODO:端末設定ではなくアプリ内で通知設定を保存できるようにする
 		<Card padding="$4">
 			<XStack alignItems="center" gap="$4">
 				<Bell />
