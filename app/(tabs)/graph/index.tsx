@@ -38,11 +38,11 @@ export default function Graph() {
 					{/* グラフの見出し */}
 					<XStack alignItems="center" justifyContent="center" gap="$4">
 						<XStack alignItems="center" gap="$2">
-							<View width="$1" height="$0.5" backgroundColor={"$color7"} />
+							<View width="$1" height="$0.5" backgroundColor="$color7" />
 							<Text>実測データ</Text>
 						</XStack>
 						<XStack alignItems="center" gap="$2">
-							<View width="$1" height="$0.5" backgroundColor={"$accentColor"} />
+							<View width="$1" height="$0.5" backgroundColor="$accentColor" />
 							<Text>傾向データ</Text>
 						</XStack>
 					</XStack>
@@ -67,6 +67,7 @@ export default function Graph() {
 						<Tabs.Content value="12">
 							<GraphContent month={12} />
 						</Tabs.Content>
+
 						<Tabs.List separator={<Separator vertical />} marginTop="$4">
 							<Tabs.Tab flex={1} value="1">
 								<SizableText>1ヶ月</SizableText>
@@ -81,7 +82,6 @@ export default function Graph() {
 								<SizableText>1年</SizableText>
 							</Tabs.Tab>
 						</Tabs.List>
-						<Separator />
 					</Tabs>
 				</YStack>
 			</ScrollView>
@@ -147,7 +147,7 @@ const GraphContent = ({ month }: { month: number }) => {
 						x: 4,
 						y: 6,
 					},
-					lineColor: theme.color12.val,
+					lineColor: theme.color5.val,
 					labelColor: theme.color12.val,
 				}}
 				// biome-ignore lint: correctness/noChildrenProp: Childrenで渡すとエラーになるためignore
@@ -156,7 +156,7 @@ const GraphContent = ({ month }: { month: number }) => {
 						<Line
 							points={points.actualWeight}
 							color={theme.color7.val}
-							strokeWidth={2}
+							strokeWidth={month === 12 ? 1 : 2}
 						/>
 						<Line
 							points={points.trendWeight}
