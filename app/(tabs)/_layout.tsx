@@ -1,12 +1,18 @@
 import { Tabs } from "expo-router";
 
-import Ionicons from "@expo/vector-icons/Ionicons";
-
-import { ChartLine, Home, Settings } from "@tamagui/lucide-icons";
+import { ChartLine, Home } from "@tamagui/lucide-icons";
+import { useTheme } from "tamagui";
 
 export default function TabLayout() {
+	const theme = useTheme();
+
 	return (
-		<Tabs>
+		<Tabs
+			screenOptions={{
+				tabBarStyle: { backgroundColor: theme.background0.val },
+				tabBarActiveTintColor: theme.accentColor.val,
+			}}
+		>
 			<Tabs.Screen
 				name="index"
 				options={{

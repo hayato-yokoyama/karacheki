@@ -23,19 +23,26 @@ import {
 import { CartesianChart, Line } from "victory-native";
 
 export default function Graph() {
+	const theme = useTheme();
+
 	return (
 		<>
-			<Stack.Screen options={{ title: "グラフ" }} />
+			<Stack.Screen
+				options={{
+					title: "グラフ",
+					headerStyle: { backgroundColor: theme.background0.val },
+				}}
+			/>
 			<ScrollView>
 				<YStack paddingVertical="$8" paddingHorizontal="$4">
 					{/* グラフの見出し */}
 					<XStack alignItems="center" justifyContent="center" gap="$4">
 						<XStack alignItems="center" gap="$2">
-							<View width="$1" height="$0.5" backgroundColor="$gray8" />
+							<View width="$1" height="$0.5" backgroundColor="$color7" />
 							<Text>実測データ</Text>
 						</XStack>
 						<XStack alignItems="center" gap="$2">
-							<View width="$1" height="$0.5" backgroundColor="$red10" />
+							<View width="$1" height="$0.5" backgroundColor="$accentColor" />
 							<Text>傾向データ</Text>
 						</XStack>
 					</XStack>
@@ -45,11 +52,8 @@ export default function Graph() {
 						orientation="horizontal"
 						flexDirection="column"
 						width="100%"
-						height={600} // TODO:画面いっぱいにしたい
-						borderRadius="$4"
-						borderWidth="$0.25"
+						height={510} // TODO:数値を指定せずにグラフいっぱいにしたい
 						overflow="hidden"
-						borderColor="$borderColor"
 					>
 						<Tabs.Content value="1">
 							<GraphContent month={1} />
@@ -63,21 +67,21 @@ export default function Graph() {
 						<Tabs.Content value="12">
 							<GraphContent month={12} />
 						</Tabs.Content>
+
 						<Tabs.List separator={<Separator vertical />} marginTop="$4">
 							<Tabs.Tab flex={1} value="1">
-								<SizableText fontFamily="$body">1ヶ月</SizableText>
+								<SizableText>1ヶ月</SizableText>
 							</Tabs.Tab>
 							<Tabs.Tab flex={1} value="3">
-								<SizableText fontFamily="$body">3ヶ月</SizableText>
+								<SizableText>3ヶ月</SizableText>
 							</Tabs.Tab>
 							<Tabs.Tab flex={1} value="6">
-								<SizableText fontFamily="$body">6ヶ月</SizableText>
+								<SizableText>6ヶ月</SizableText>
 							</Tabs.Tab>
 							<Tabs.Tab flex={1} value="12">
-								<SizableText fontFamily="$body">1年</SizableText>
+								<SizableText>1年</SizableText>
 							</Tabs.Tab>
 						</Tabs.List>
-						<Separator />
 					</Tabs>
 				</YStack>
 			</ScrollView>
@@ -125,7 +129,7 @@ const GraphContent = ({ month }: { month: number }) => {
 
 	return (
 		<YStack gap="$1" height={440}>
-			<Text fontSize={12}>( ㎏ )</Text>
+			<Text fontSize={12}>（ ㎏ ）</Text>
 			<CartesianChart
 				data={weightForGraph}
 				xKey="date"
@@ -143,18 +147,20 @@ const GraphContent = ({ month }: { month: number }) => {
 						x: 4,
 						y: 6,
 					},
+					lineColor: theme.color5.val,
+					labelColor: theme.color12.val,
 				}}
 				// biome-ignore lint: correctness/noChildrenProp: Childrenで渡すとエラーになるためignore
 				children={({ points }) => (
 					<>
 						<Line
 							points={points.actualWeight}
-							color={theme.gray8.val}
-							strokeWidth={2}
+							color={theme.color7.val}
+							strokeWidth={month === 12 ? 1 : 2}
 						/>
 						<Line
 							points={points.trendWeight}
-							color={theme.red10.val}
+							color={theme.accentColor.val}
 							strokeWidth={3}
 						/>
 					</>

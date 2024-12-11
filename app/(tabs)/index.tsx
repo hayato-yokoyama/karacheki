@@ -5,6 +5,7 @@ import {
 	Paragraph,
 	ScrollView,
 	SizableText,
+	useTheme,
 	XStack,
 	YStack,
 } from "tamagui";
@@ -18,7 +19,7 @@ import {
 	calcWeightAvg,
 	fetchWeeklyWeights,
 } from "@/app/_services/weightService";
-import { Bell } from "@tamagui/lucide-icons";
+import { ArrowBigRight, Bell } from "@tamagui/lucide-icons";
 import * as Linking from "expo-linking";
 import type { AppStateStatus } from "react-native";
 import { AppState } from "react-native";
@@ -33,6 +34,7 @@ Notifications.setNotificationHandler({
 });
 
 export default function Index() {
+	const theme = useTheme();
 	// 通知設定する
 	scheduleDailyWeightNotification();
 
@@ -67,33 +69,34 @@ export default function Index() {
 
 	return (
 		<>
-			<Stack.Screen options={{ title: "ホーム" }} />
+			<Stack.Screen
+				options={{
+					title: "ホーム",
+					headerStyle: { backgroundColor: theme.background0.val },
+				}}
+			/>
 			<ScrollView>
 				<YStack paddingVertical="$8" paddingHorizontal="$4" gap="$4">
-					<H2 size="$8">体重の変化</H2>
+					<H2 size="$7">体重の変化</H2>
 					<Card padding="$4">
 						<YStack gap="$4">
 							<XStack alignItems="center" justifyContent="space-around">
-								<YStack>
-									<SizableText>今週</SizableText>
-									<XStack gap="$1" alignItems="baseline">
-										<SizableText size="$9" fontWeight="bold">
-											{currentWeekWeightsAvg.toFixed(2)}
-										</SizableText>
-										<SizableText size="$4" theme="alt1">
-											kg
-										</SizableText>
-									</XStack>
-								</YStack>
 								<YStack>
 									<SizableText>先週</SizableText>
 									<XStack gap="$1" alignItems="baseline">
 										<SizableText size="$9" fontWeight="bold">
 											{prevWeekWeightsAvg.toFixed(2)}
 										</SizableText>
-										<SizableText size="$4" theme="alt1">
-											kg
+										<SizableText>kg</SizableText>
+									</XStack>
+								</YStack>
+								<YStack>
+									<SizableText>今週</SizableText>
+									<XStack gap="$1" alignItems="baseline">
+										<SizableText size="$9" fontWeight="bold">
+											{currentWeekWeightsAvg.toFixed(2)}
 										</SizableText>
+										<SizableText>kg</SizableText>
 									</XStack>
 								</YStack>
 							</XStack>
@@ -105,9 +108,7 @@ export default function Index() {
 										{avgDiff === 0 && "±"}
 										{avgDiff.toFixed(2)}
 									</SizableText>
-									<SizableText size="$4" theme="alt1">
-										kg
-									</SizableText>
+									<SizableText>kg</SizableText>
 								</XStack>
 							</YStack>
 						</YStack>
@@ -165,10 +166,12 @@ const NotificationSettingsCard = () => {
 		<Card padding="$4">
 			<XStack alignItems="center" gap="$4">
 				<Bell />
-				<YStack flex={1} gap="$2">
-					<Paragraph flex={1}>
+				<YStack flex={1} gap="$4">
+					<Paragraph flex={1} fontSize="$4">
 						通知を有効にすると、
-						<SizableText color="$blue10">毎朝8時</SizableText>
+						<SizableText color="$accentColor" fontWeight="bold">
+							毎朝8時
+						</SizableText>
 						に体重データを通知します。
 					</Paragraph>
 					<Button onPress={openNotificationSettings}>設定を開く</Button>
