@@ -126,9 +126,9 @@ export const transformWeightDataForGraph = (
 	const uniqueDailyWeights = Object.values(
 		weights.reduce(
 			(acc, sample) => {
-				const dateKey = sample.startDate.toISOString().split("T")[0]; // 日付部分をキーに使用
+				const dateKey = sample.startDate.toISOString().split("T")[0];
 				if (!acc[dateKey]) {
-					acc[dateKey] = sample; // その日の最初のデータをセット
+					acc[dateKey] = sample;
 				}
 				return acc;
 			},
@@ -146,39 +146,32 @@ export const transformWeightDataForGraph = (
 
 	// 実測データを整形
 	const transformedActualData = sortedWeights.map((sample) => ({
-		date: sample.startDate.toISOString(), // 日付
-		weight: sample.quantity, // 実測体重
+		date: sample.startDate.toISOString(),
+		weight: sample.quantity,
 	}));
 
 	// 移動平均データを計算
-	const movingAverages = sortedWeights.map((_, index, array) => {
-		if (index < windowSize - 1) return null; // ウィンドウサイズ未満はスキップ
+	const movingAverages = sortedWeights
+		.map((_, index, array) => {
+			if (index < windowSize - 1) return null; // ウィンドウサイズ未満はスキップ
+			const window = array.slice(index - windowSize + 1, index + 1);
+			const average =
+				window.reduce((sum, sample) => sum + sample.quantity, 0) /
+				window.length;
 
-		const window = array.slice(index - windowSize + 1, index + 1);
-		const average =
-			window.reduce((sum, sample) => sum + sample.quantity, 0) / window.length;
+			return {
+				date: array[index].startDate.toISOString(),
+				movingAverage: average,
+			};
+		})
+		.filter((data) => data !== null);
 
-		return {
-			date: array[index].startDate.toISOString(), // 日付
-			movingAverage: average, // 移動平均体重
-		};
-	});
-
-	// nullを除外
-	const transformedMovingAverageData = movingAverages.filter(
-		(data) => data !== null,
-	);
-
-	// 実測データと移動平均データを統合して返す
 	return transformedActualData.map((data) => {
-		const movingAverage = transformedMovingAverageData.find(
-			(avg) => avg.date === data.date,
-		);
-
+		const movingAverage = movingAverages.find((avg) => avg.date === data.date);
 		return {
 			date: data.date,
 			actualWeight: data.weight,
-			trendWeight: movingAverage?.movingAverage || null, // 移動平均がない場合はnull
+			trendWeight: movingAverage?.movingAverage || null,
 		};
 	});
 };

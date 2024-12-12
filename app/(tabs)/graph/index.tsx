@@ -1,3 +1,4 @@
+import { ErrorHealthData } from "@/app/_components/errorHealthData";
 import {
 	fetchRecentWeightsByMonths,
 	transformWeightDataForGraph,
@@ -24,6 +25,36 @@ import { CartesianChart, Line } from "victory-native";
 
 export default function Graph() {
 	const theme = useTheme();
+
+	// 13ヶ月分のデータを取得
+	const {
+		data: fetchedWeights,
+		isLoading,
+		error,
+	} = useQuery({
+		queryKey: ["graphWeights", 13],
+		queryFn: () => fetchRecentWeightsByMonths(13),
+	});
+
+	if (isLoading) {
+		return (
+			<YStack
+				padding="$8"
+				height={400}
+				alignItems="center"
+				justifyContent="center"
+			>
+				<Spinner size="small" />
+			</YStack>
+		);
+	}
+
+	if (error || fetchedWeights === undefined || fetchedWeights.length === 0) {
+		return <ErrorHealthData />;
+	}
+
+	/** グラフ用の体重データ（日時・実測データ・傾向データ） */
+	const weightForGraph = transformWeightDataForGraph(fetchedWeights);
 
 	return (
 		<>
@@ -52,20 +83,20 @@ export default function Graph() {
 						orientation="horizontal"
 						flexDirection="column"
 						width="100%"
-						height={510} // TODO:数値を指定せずにグラフいっぱいにしたい
+						height={510}
 						overflow="hidden"
 					>
 						<Tabs.Content value="1">
-							<GraphContent month={1} />
+							<GraphContent month={1} data={weightForGraph} />
 						</Tabs.Content>
 						<Tabs.Content value="3">
-							<GraphContent month={3} />
+							<GraphContent month={3} data={weightForGraph} />
 						</Tabs.Content>
 						<Tabs.Content value="6">
-							<GraphContent month={6} />
+							<GraphContent month={6} data={weightForGraph} />
 						</Tabs.Content>
 						<Tabs.Content value="12">
-							<GraphContent month={12} />
+							<GraphContent month={12} data={weightForGraph} />
 						</Tabs.Content>
 
 						<Tabs.List separator={<Separator vertical />} marginTop="$4">
@@ -89,68 +120,48 @@ export default function Graph() {
 	);
 }
 
-const GraphContent = ({ month }: { month: number }) => {
+const graphAxisFont = matchFont({
+	fontFamily: Platform.select({ ios: "Helvetica", default: "serif" }),
+	fontSize: 12,
+});
+
+const GraphContent = ({
+	month,
+	data,
+}: {
+	month: number;
+	data: { date: string; actualWeight: number; trendWeight: number | null }[];
+}) => {
 	const theme = useTheme();
 
-	// TODO: 最初に1年分取得して、それをスケールごとに使い回すようにしたい
-	// 体重の取得
-	const {
-		data: fetchedWight,
-		isLoading,
-		error,
-	} = useQuery({
-		queryKey: ["graphWeights", month],
-		queryFn: () => fetchRecentWeightsByMonths(month),
+	// データを月ごとにスライス
+	const filteredData = data.filter((item) => {
+		const date = new Date(item.date);
+		const cutoffDate = new Date();
+		cutoffDate.setMonth(cutoffDate.getMonth() - month);
+		return date >= cutoffDate;
 	});
 
-	if (isLoading) {
+	if (filteredData.length === 0) {
 		return (
-			<YStack
-				padding="$8"
-				height={400}
-				alignItems="center"
-				justifyContent="center"
-			>
-				<Spinner size="small" />
+			<YStack alignItems="center" justifyContent="center" height={440}>
+				<Paragraph>指定期間のデータがありません。</Paragraph>
 			</YStack>
 		);
 	}
-
-	if (error || fetchedWight === undefined || fetchedWight.length === 0) {
-		return (
-			<YStack
-				paddingVertical="$8"
-				alignItems="center"
-				justifyContent="center"
-				height={400}
-			>
-				<Paragraph>ヘルスケアデータが取得できませんでした。</Paragraph>
-			</YStack>
-		);
-	}
-
-	/** グラフ用の体重データ（日時・実測データ・傾向データ） */
-	const weightForGraph = transformWeightDataForGraph(fetchedWight);
-
-	const font = matchFont({
-		fontFamily: Platform.select({ ios: "Helvetica", default: "serif" }),
-		fontSize: 12,
-	});
 
 	return (
 		<YStack gap="$1" height={440}>
 			<Text fontSize={12}>（ ㎏ ）</Text>
 			<CartesianChart
-				data={weightForGraph}
+				data={filteredData}
 				xKey="date"
 				yKeys={["actualWeight", "trendWeight"]}
 				axisOptions={{
-					font,
+					font: graphAxisFont,
 					formatYLabel: (value) => (value ? value.toFixed(1) : ""),
 					formatXLabel: (value) =>
-						month === 12
-							? format(new Date(value), "yyyy/MM")
-							: format(new Date(value), "M/d"),
+						format(new Date(value), month === 12 ? "yyyy/MM" : "M/d"),
 					labelPosition: { x: "outset", y: "outset" },
 					labelOffset: { x: 8, y: 8 },
 					tickCount: {
@@ -166,12 +177,12 @@ const GraphContent = ({ month }: { month: number }) => {
 						<Line
 							points={points.actualWeight}
 							color={theme.color7.val}
-							strokeWidth={month === 12 ? 1 : 2}
+							strokeWidth={month === 12 || month === 6 ? 1 : 2}
 						/>
 						<Line
 							points={points.trendWeight}
 							color={theme.accentColor.val}
-							strokeWidth={3}
+							strokeWidth={month === 12 || month === 6 ? 2 : 3}
 						/>
 					</>
 				)}
