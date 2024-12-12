@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { Stack } from "expo-router";
 import { Platform } from "react-native";
 import {
-	H3,
+	Paragraph,
 	ScrollView,
 	Separator,
 	SizableText,
@@ -105,16 +105,26 @@ const GraphContent = ({ month }: { month: number }) => {
 
 	if (isLoading) {
 		return (
-			<YStack padding="$8">
+			<YStack
+				padding="$8"
+				height={400}
+				alignItems="center"
+				justifyContent="center"
+			>
 				<Spinner size="small" />
 			</YStack>
 		);
 	}
 
-	if (error || fetchedWight === undefined) {
+	if (error || fetchedWight === undefined || fetchedWight.length === 0) {
 		return (
-			<YStack padding="$8">
-				<H3>ヘルスケアデータを取得できませんでした</H3>
+			<YStack
+				paddingVertical="$8"
+				alignItems="center"
+				justifyContent="center"
+				height={400}
+			>
+				<Paragraph>ヘルスケアデータが取得できませんでした。</Paragraph>
 			</YStack>
 		);
 	}
