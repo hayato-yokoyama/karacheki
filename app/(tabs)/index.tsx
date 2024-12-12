@@ -1,10 +1,10 @@
 import {
 	Button,
 	H2,
-	H3,
 	Paragraph,
 	ScrollView,
 	SizableText,
+	Spinner,
 	useTheme,
 	XStack,
 	YStack,
@@ -47,8 +47,13 @@ export default function Index() {
 
 	if (isLoading) {
 		return (
-			<YStack padding="$8">
-				<H3>Loading...</H3>
+			<YStack
+				padding="$8"
+				height={400}
+				alignItems="center"
+				justifyContent="center"
+			>
+				<Spinner size="small" />
 			</YStack>
 		);
 	}
