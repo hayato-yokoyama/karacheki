@@ -19,10 +19,11 @@ import {
 	calcWeightAvg,
 	fetchWeeklyWeights,
 } from "@/app/_services/weightService";
-import { ArrowBigRight, Bell } from "@tamagui/lucide-icons";
+import { Bell } from "@tamagui/lucide-icons";
 import * as Linking from "expo-linking";
 import type { AppStateStatus } from "react-native";
 import { AppState } from "react-native";
+import { ErrorHealthData } from "@/app/_components/errorHealthData";
 
 // アプリ起動中の通知の動作設定（アラート表示、通知音、バッジ表示）
 Notifications.setNotificationHandler({
@@ -52,12 +53,13 @@ export default function Index() {
 		);
 	}
 
-	if (error || data === undefined) {
-		return (
-			<YStack padding="$8">
-				<H3>ヘルスケアデータを取得できませんでした</H3>
-			</YStack>
-		);
+	// 体重取得失敗表示
+	if (
+		error ||
+		data === undefined ||
+		(data.currentWeek.length === 0 && data.prevWeekData.length === 0)
+	) {
+		return <ErrorHealthData />;
 	}
 
 	const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
