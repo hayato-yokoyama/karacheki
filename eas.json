@@ -9,6 +9,9 @@
 			"distribution": "internal",
 			"env": {
 				"APP_VARIANT": "development"
+			},
+			"ios": {
+				"simulator": true
 			}
 		},
 		"preview": {
