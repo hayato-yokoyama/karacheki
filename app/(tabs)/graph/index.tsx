@@ -21,7 +21,7 @@ import {
 	XStack,
 	YStack,
 } from "tamagui";
-import { CartesianChart, Line } from "victory-native";
+import { CartesianChart, Line, Scatter } from "victory-native";
 
 export default function Graph() {
 	const theme = useTheme();
@@ -134,7 +134,7 @@ const GraphContent = ({
 }) => {
 	const theme = useTheme();
 
-	// データを月ごとにスライス
+	// データを指定期間のものだけに絞る
 	const filteredData = data.filter((item) => {
 		const date = new Date(item.date);
 		const cutoffDate = new Date();
@@ -160,8 +160,12 @@ const GraphContent = ({
 				axisOptions={{
 					font: graphAxisFont,
 					formatYLabel: (value) => (value ? value.toFixed(1) : ""),
-					formatXLabel: (value) =>
-						format(new Date(value), month === 12 ? "yyyy/MM" : "M/d"),
+					formatXLabel: (value) => {
+						if (!value) {
+							return "";
+						}
+						return format(new Date(value), month === 12 ? "yyyy/MM" : "M/d");
+					},
 					labelPosition: { x: "outset", y: "outset" },
 					labelOffset: { x: 8, y: 8 },
 					tickCount: {
@@ -184,6 +188,20 @@ const GraphContent = ({
 							color={theme.accentColor.val}
 							strokeWidth={month === 12 || month === 6 ? 2 : 3}
 						/>
+						{month === 1 ? (
+							<>
+								<Scatter
+									points={points.actualWeight}
+									color={theme.color7.val}
+									radius={3}
+								/>
+								<Scatter
+									points={points.trendWeight}
+									color={theme.accentColor.val}
+									radius={3}
+								/>
+							</>
+						) : null}
 					</>
 				)}
 			/>
