@@ -21,7 +21,7 @@ import {
 	XStack,
 	YStack,
 } from "tamagui";
-import { CartesianChart, Line } from "victory-native";
+import { CartesianChart, Line, Scatter } from "victory-native";
 
 export default function Graph() {
 	const theme = useTheme();
@@ -188,6 +188,20 @@ const GraphContent = ({
 							color={theme.accentColor.val}
 							strokeWidth={month === 12 || month === 6 ? 2 : 3}
 						/>
+						{month === 1 ? (
+							<>
+								<Scatter
+									points={points.actualWeight}
+									color={theme.color7.val}
+									radius={3}
+								/>
+								<Scatter
+									points={points.trendWeight}
+									color={theme.accentColor.val}
+									radius={3}
+								/>
+							</>
+						) : null}
 					</>
 				)}
 			/>
