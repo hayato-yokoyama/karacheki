@@ -134,7 +134,7 @@ const GraphContent = ({
 }) => {
 	const theme = useTheme();
 
-	// データを月ごとにスライス
+	// データを指定期間のものだけに絞る
 	const filteredData = data.filter((item) => {
 		const date = new Date(item.date);
 		const cutoffDate = new Date();
@@ -160,8 +160,12 @@ const GraphContent = ({
 				axisOptions={{
 					font: graphAxisFont,
 					formatYLabel: (value) => (value ? value.toFixed(1) : ""),
-					formatXLabel: (value) =>
-						format(new Date(value), month === 12 ? "yyyy/MM" : "M/d"),
+					formatXLabel: (value) => {
+						if (!value) {
+							return "";
+						}
+						return format(new Date(value), month === 12 ? "yyyy/MM" : "M/d");
+					},
 					labelPosition: { x: "outset", y: "outset" },
 					labelOffset: { x: 8, y: 8 },
 					tickCount: {
