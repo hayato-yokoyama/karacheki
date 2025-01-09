@@ -183,11 +183,6 @@ const GraphContent = ({
 							color={theme.color7.val}
 							strokeWidth={month === 12 || month === 6 ? 1 : 2}
 						/>
-						<Line
-							points={points.trendWeight}
-							color={theme.accentColor.val}
-							strokeWidth={month === 12 || month === 6 ? 2 : 3}
-						/>
 						{month === 1 ? (
 							<>
 								<Scatter
@@ -195,6 +190,15 @@ const GraphContent = ({
 									color={theme.color7.val}
 									radius={3}
 								/>
+							</>
+						) : null}
+						<Line
+							points={points.trendWeight}
+							color={theme.accentColor.val}
+							strokeWidth={month === 12 || month === 6 ? 2 : 3}
+						/>
+						{month === 1 ? (
+							<>
 								<Scatter
 									points={points.trendWeight}
 									color={theme.accentColor.val}
