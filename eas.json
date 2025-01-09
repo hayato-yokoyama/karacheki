@@ -9,7 +9,10 @@
 			"distribution": "internal",
 			"env": {
 				"APP_VARIANT": "development"
-			},
+			}
+		},
+		"ios-simulator": {
+			"extends": "development",
 			"ios": {
 				"simulator": true
 			}
