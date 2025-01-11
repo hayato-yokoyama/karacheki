@@ -7,10 +7,7 @@
 		"userInterfaceStyle": "automatic",
 		"newArchEnabled": true,
 		"ios": {
-			"supportsTablet": true,
-			"config": {
-				"usesNonExemptEncryption": false
-			}
+			"supportsTablet": true
 		},
 		"android": {
 			"adaptiveIcon": {
@@ -40,13 +37,6 @@
 				"@kingstinct/react-native-healthkit",
 				{
 					"NSHealthShareUsageDescription": "体重データを取得するためにヘルスデータにアクセスします。"
-				}
-			],
-			[
-				"expo-secure-store",
-				{
-					"configureAndroidBackup": true,
-					"faceIDPermission": "Allow $(PRODUCT_NAME) to access your Face ID biometric data."
 				}
 			]
 		],
