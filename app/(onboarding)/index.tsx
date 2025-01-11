@@ -1,13 +1,43 @@
 import { Button, Image, useTheme } from "tamagui";
 import Onboarding from "react-native-onboarding-swiper";
-import { Link } from "expo-router";
+import { Link, Redirect } from "expo-router";
 import { Dimensions } from "react-native";
 import LottieView from "lottie-react-native";
+import { useEffect, useState } from "react";
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 
 export default function Index() {
 	const theme = useTheme();
+
+	const [isFirstLaunch, setIsFirstLaunch] = useState<null | boolean>(null);
+
+	// 初回起動チェック
+	useEffect(() => {
+		const checkFirstLaunch = async () => {
+			try {
+				const value = await AsyncStorage.getItem("isFirstLaunch");
+				if (value === null) {
+					// 初回起動
+					setIsFirstLaunch(true);
+					await AsyncStorage.setItem("isFirstLaunch", "false");
+				} else {
+					// 2回目以降の起動
+					setIsFirstLaunch(false);
+				}
+			} catch (error) {
+				console.error("初回起動のチェックでエラーが発生しました:", error);
+			}
+		};
+		checkFirstLaunch();
+	}, []);
+
+	// NOTE: Layoutで初回起動かを取得しinitialRouteNameで分岐させたかったがうまく動作しないので、ここで分岐
+	if (isFirstLaunch === false) {
+		return <Redirect href="/(tabs)/home" />;
+	}
 
 	return (
 		<Onboarding
