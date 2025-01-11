@@ -1,17 +1,13 @@
-import { useRef, useState } from "react";
 import { Button, Image, useTheme } from "tamagui";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Onboarding from "react-native-onboarding-swiper";
 import { Link } from "expo-router";
 import { Dimensions } from "react-native";
 import LottieView from "lottie-react-native";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 
 export default function Index() {
 	const theme = useTheme();
-
-	const [isFirstLaunch, setIsFirstLaunch] = useState<null | boolean>(null);
 
 	return (
 		<Onboarding
