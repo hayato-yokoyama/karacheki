@@ -16,6 +16,7 @@ const queryClient = new QueryClient();
 export default function RootLayout() {
 	const colorScheme = useColorScheme();
 
+	// フォントのロード
 	const [loaded] = useFonts({
 		Inter: require("@tamagui/font-inter/otf/Inter-Medium.otf"),
 		InterBold: require("@tamagui/font-inter/otf/Inter-Bold.otf"),
@@ -27,10 +28,6 @@ export default function RootLayout() {
 		}
 	}, [loaded]);
 
-	if (!loaded) {
-		return null;
-	}
-
 	return (
 		<TamaguiProvider
 			config={tamaguiConfig}
@@ -39,6 +36,10 @@ export default function RootLayout() {
 			<ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
 				<QueryClientProvider client={queryClient}>
 					<Stack>
+						<Stack.Screen
+							name="(onboarding)/index"
+							options={{ headerShown: false }}
+						/>
 						<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 						<Stack.Screen name="+not-found" options={{ headerShown: false }} />
 					</Stack>
