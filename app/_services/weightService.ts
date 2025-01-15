@@ -175,3 +175,22 @@ export const transformWeightDataForGraph = (
 		};
 	});
 };
+
+/** 体重データの書き込みをする */
+export const saveWeight = async (weight: number, date: Date) => {
+	// bodyMassの書き込み許可を要求する
+	await HealthKit.requestAuthorization(
+		[HKQuantityTypeIdentifier.bodyMass],
+		[HKQuantityTypeIdentifier.bodyMass],
+	);
+
+	// 体重データを書き込む
+	await HealthKit.saveQuantitySample(
+		HKQuantityTypeIdentifier.bodyMass,
+		"kg",
+		weight,
+		{
+			start: date,
+		},
+	);
+};

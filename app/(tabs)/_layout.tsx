@@ -12,10 +12,10 @@ export default function TabLayout() {
 				tabBarStyle: { backgroundColor: theme.background0.val },
 				tabBarActiveTintColor: theme.accentColor.val,
 			}}
-			initialRouteName="home/index"
+			initialRouteName="home"
 		>
 			<Tabs.Screen
-				name="home/index"
+				name="home"
 				options={{
 					title: "ホーム",
 					tabBarIcon: ({ color }) => <Home color={color} size="$1" />,

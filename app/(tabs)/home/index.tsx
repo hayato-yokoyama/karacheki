@@ -12,14 +12,14 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import * as Notifications from "expo-notifications";
 import { useEffect, useState } from "react";
-import { Stack } from "expo-router";
+import { Link, Stack } from "expo-router";
 import { Card } from "tamagui";
 import { scheduleDailyWeightNotification } from "@/app/_services/notificationService";
 import {
 	calcWeightAvg,
 	fetchWeeklyWeights,
 } from "@/app/_services/weightService";
-import { Bell } from "@tamagui/lucide-icons";
+import { Bell, Plus } from "@tamagui/lucide-icons";
 import * as Linking from "expo-linking";
 import type { AppStateStatus } from "react-native";
 import { AppState } from "react-native";
@@ -84,7 +84,12 @@ export default function Index() {
 			/>
 			<ScrollView>
 				<YStack paddingVertical="$8" paddingHorizontal="$4" gap="$4">
-					<H2 size="$7">体重の変化</H2>
+					<XStack alignItems="center" justifyContent="space-between">
+						<H2 size="$7">体重の変化</H2>
+						<Link href="/(tabs)/home/add" asChild>
+							<Button icon={<Plus />}>体重の入力</Button>
+						</Link>
+					</XStack>
 					<Card padding="$4">
 						<YStack gap="$4">
 							<XStack alignItems="center" justifyContent="space-around">
