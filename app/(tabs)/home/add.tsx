@@ -2,18 +2,32 @@ import { saveWeight } from "@/app/_services/weightService";
 import RNDateTimePicker, {
 	type DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert } from "react-native";
-import { Button, Input, Label, ScrollView, XStack, YStack } from "tamagui";
+import {
+	Button,
+	Input,
+	Label,
+	ScrollView,
+	XStack,
+	YStack,
+} from "tamagui";
 
 export default function Add() {
 	return (
-		<ScrollView>
-			<YStack paddingVertical="$8" paddingHorizontal="$4" gap="$4">
-				<WeightInputForm />
-			</YStack>
-		</ScrollView>
+		<>
+			<Stack.Screen
+				options={{
+					title: "体重の入力",
+				}}
+			/>
+			<ScrollView>
+				<YStack paddingVertical="$8" paddingHorizontal="$4" gap="$4">
+					<WeightInputForm />
+				</YStack>
+			</ScrollView>
+		</>
 	);
 }
 
