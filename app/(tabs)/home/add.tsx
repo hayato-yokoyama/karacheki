@@ -2,32 +2,45 @@ import { saveWeight } from "@/app/_services/weightService";
 import RNDateTimePicker, {
 	type DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { Stack, useRouter } from "expo-router";
+import { Lightbulb } from "@tamagui/lucide-icons";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert } from "react-native";
 import {
 	Button,
+	Card,
 	Input,
 	Label,
+	Paragraph,
 	ScrollView,
+	SizableText,
+	Text,
 	XStack,
 	YStack,
 } from "tamagui";
 
 export default function Add() {
 	return (
-		<>
-			<Stack.Screen
-				options={{
-					title: "体重の入力",
-				}}
-			/>
-			<ScrollView>
-				<YStack paddingVertical="$8" paddingHorizontal="$4" gap="$4">
-					<WeightInputForm />
-				</YStack>
-			</ScrollView>
-		</>
+		<ScrollView>
+			<YStack paddingVertical="$8" paddingHorizontal="$4" gap="$4">
+				<Card padding="$4">
+					<YStack gap="$2">
+						<XStack gap="$2">
+							<Lightbulb />
+							<SizableText fontWeight="bold">
+								体重の自動入力をお勧めしています
+							</SizableText>
+						</XStack>
+						<YStack flex={1} gap="$4">
+							<Paragraph flex={1} fontSize="$4">
+								スマート体重計を用意してスマホを連携すれば、体重測定するだけでスマホに自動で記録できます。
+							</Paragraph>
+						</YStack>
+					</YStack>
+				</Card>
+				<WeightInputForm />
+			</YStack>
+		</ScrollView>
 	);
 }
 
@@ -63,7 +76,7 @@ const WeightInputForm = () => {
 			<XStack alignItems="center" justifyContent="space-between">
 				<Label htmlFor="weight">体重（kg）</Label>
 				<Input
-					placeholder="体重（kg）"
+					placeholder="kg"
 					keyboardType="numeric"
 					value={weight}
 					onChangeText={(text) => setWeight(text)}
