@@ -1,5 +1,6 @@
-import { Settings } from "@tamagui/lucide-icons";
-import { H2, ListItem, Paragraph, YGroup, YStack } from "tamagui";
+import { Settings, SquarePlus } from "@tamagui/lucide-icons";
+import { Link } from "expo-router";
+import { Button, H2, ListItem, Paragraph, YGroup, YStack } from "tamagui";
 
 export const ErrorHealthData = () => {
 	return (
@@ -8,10 +9,7 @@ export const ErrorHealthData = () => {
 			<YStack gap="$2">
 				<Paragraph>体重データを取得できませんでした。</Paragraph>
 				<Paragraph>
-					ヘルスケアアプリに体重データが保存されていることを確認してください。
-				</Paragraph>
-				<Paragraph>
-					保存されている場合は、ヘルスケアアプリの設定から「からチェキ」のアクセスが許可されていることを確認してください。
+					ヘルスケアのアクセスが許可されていることを確認して、体重データを入力してください！
 				</Paragraph>
 			</YStack>
 
@@ -39,6 +37,10 @@ export const ErrorHealthData = () => {
 					<ListItem fontSize="$3">5.「すべてオンにする」を選択</ListItem>
 				</YGroup.Item>
 			</YGroup>
+
+			<Link href="/(tabs)/home/add" asChild>
+				<Button icon={<SquarePlus />}>体重を入力する</Button>
+			</Link>
 		</YStack>
 	);
 };

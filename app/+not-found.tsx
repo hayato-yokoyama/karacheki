@@ -1,5 +1,4 @@
 import { Link, Stack } from "expo-router";
-import { StyleSheet, View } from "react-native";
 import { Button, Paragraph, YStack } from "tamagui";
 
 export default function NotFoundScreen() {
@@ -8,9 +7,9 @@ export default function NotFoundScreen() {
 			<Stack.Screen options={{ headerShown: false }} />
 			<YStack padding="$8" gap="$8">
 				<Paragraph>ご指定のページが見つかりません。</Paragraph>
-				<Button>
-					<Link href="/">ホームに戻る</Link>
-				</Button>
+				<Link href="/(tabs)/home" asChild>
+					<Button>ホームに戻る</Button>
+				</Link>
 			</YStack>
 		</>
 	);

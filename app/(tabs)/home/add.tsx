@@ -67,7 +67,7 @@ const WeightInputForm = () => {
 			Alert.alert("完了", "体重を追加しました");
 			router.back();
 		} catch (error) {
-			Alert.alert("エラー", "体重の追加に失敗しました");
+			Alert.alert("エラー", "体重の追加に失敗しました。  \n設定アプリからヘルスケアのアクセスが許可されていることを確認してください。");
 		}
 	};
 

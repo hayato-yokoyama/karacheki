@@ -64,7 +64,17 @@ export default function Index() {
 		data === undefined ||
 		(data.currentWeek.length === 0 && data.prevWeekData.length === 0)
 	) {
-		return <ErrorHealthData />;
+		return (
+			<>
+				<Stack.Screen
+					options={{
+						title: "ホーム",
+						headerStyle: { backgroundColor: theme.background0.val },
+					}}
+				/>
+				<ErrorHealthData />
+			</>
+		);
 	}
 
 	const { currentWeek: currentWeekWeights, prevWeekData: prevWeekWeights } =
