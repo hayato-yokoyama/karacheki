@@ -50,7 +50,17 @@ export default function Graph() {
 	}
 
 	if (error || fetchedWeights === undefined || fetchedWeights.length === 0) {
-		return <ErrorHealthData />;
+		return (
+			<>
+				<Stack.Screen
+					options={{
+						title: "グラフ",
+						headerStyle: { backgroundColor: theme.background0.val },
+					}}
+				/>
+				<ErrorHealthData />
+			</>
+		);
 	}
 
 	/** グラフ用の体重データ（日時・実測データ・傾向データ） */
