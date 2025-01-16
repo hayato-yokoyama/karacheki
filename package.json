@@ -65,7 +65,8 @@
     "react-native-webview": "13.12.2",
     "tamagui": "^1.116.15",
     "victory-native": "^41.12.2",
-    "lottie-react-native": "7.1.0"
+    "lottie-react-native": "7.1.0",
+    "@react-native-community/datetimepicker": "8.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
