@@ -106,7 +106,7 @@ export const calcWeightAvg = (
 	>[],
 ) => {
 	if (weights.length === 0) {
-		return 0;
+		return null;
 	}
 	const weightsAvg =
 		weights.reduce((sum, sample) => sum + sample.quantity, 0) / weights.length;
