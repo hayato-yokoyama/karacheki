@@ -82,7 +82,10 @@ export default function Index() {
 
 	const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
 	const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
-	const avgDiff = currentWeekWeightsAvg - prevWeekWeightsAvg;
+	const avgDiff =
+		currentWeekWeightsAvg && prevWeekWeightsAvg
+			? currentWeekWeightsAvg - prevWeekWeightsAvg
+			: null;
 
 	return (
 		<>
@@ -107,7 +110,9 @@ export default function Index() {
 									<SizableText>先週</SizableText>
 									<XStack gap="$1" alignItems="baseline">
 										<SizableText size="$9" fontWeight="bold">
-											{prevWeekWeightsAvg.toFixed(2)}
+											{prevWeekWeightsAvg
+												? prevWeekWeightsAvg.toFixed(2)
+												: "---"}
 										</SizableText>
 										<SizableText>kg</SizableText>
 									</XStack>
@@ -116,7 +121,9 @@ export default function Index() {
 									<SizableText>今週</SizableText>
 									<XStack gap="$1" alignItems="baseline">
 										<SizableText size="$9" fontWeight="bold">
-											{currentWeekWeightsAvg.toFixed(2)}
+											{currentWeekWeightsAvg
+												? currentWeekWeightsAvg.toFixed(2)
+												: "---"}
 										</SizableText>
 										<SizableText>kg</SizableText>
 									</XStack>
@@ -125,11 +132,17 @@ export default function Index() {
 							<YStack marginHorizontal="auto">
 								<SizableText>変化幅</SizableText>
 								<XStack gap="$1" alignItems="baseline">
-									<SizableText size="$9" fontWeight="bold">
-										{avgDiff > 0 && "+"}
-										{avgDiff === 0 && "±"}
-										{avgDiff.toFixed(2)}
-									</SizableText>
+									{avgDiff !== null ? (
+										<SizableText size="$9" fontWeight="bold">
+											{avgDiff > 0 && "+"}
+											{avgDiff === 0 && "±"}
+											{avgDiff.toFixed(2)}
+										</SizableText>
+									) : (
+										<SizableText size="$9" fontWeight="bold">
+											---
+										</SizableText>
+									)}
 									<SizableText>kg</SizableText>
 								</XStack>
 							</YStack>

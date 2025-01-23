@@ -20,11 +20,21 @@ export async function scheduleDailyWeightNotification() {
 		console.error("体重データの取得に失敗しました");
 		return;
 	}
+
 	const currentWeekWeightsAvg = calcWeightAvg(currentWeekWeights);
 	const prevWeekWeightsAvg = calcWeightAvg(prevWeekWeights);
-	const avgDiff = currentWeekWeightsAvg - prevWeekWeightsAvg;
 
-	const pushBodyText = `${currentWeekWeightsAvg.toFixed(2)}kg (${avgDiff >= 0 ? "+" : ""}${avgDiff.toFixed(2)}kg)`;
+	const avgDiff =
+		currentWeekWeightsAvg && prevWeekWeightsAvg
+			? currentWeekWeightsAvg - prevWeekWeightsAvg
+			: null;
+	const pushBodyText = currentWeekWeightsAvg
+		? `${currentWeekWeightsAvg.toFixed(2)}kg ${
+				avgDiff !== null
+					? `(${avgDiff >= 0 ? "+" : ""}${avgDiff.toFixed(2)}kg)`
+					: ""
+			}`
+		: "今週の体重データが取得できませんでした。体重を測定しましょう！";
 
 	// 既存の通知スケジュールを削除
 	await Notifications.cancelAllScheduledNotificationsAsync();
