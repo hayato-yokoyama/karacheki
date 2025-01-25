@@ -18,6 +18,7 @@ import { scheduleDailyWeightNotification } from "@/app/_services/notificationSer
 import {
 	calcWeightAvg,
 	fetchWeeklyWeights,
+	useWeightRefetchOnActive,
 } from "@/app/_services/weightService";
 import { Bell, Plus } from "@tamagui/lucide-icons";
 import * as Linking from "expo-linking";
@@ -40,25 +41,36 @@ export default function Index() {
 	scheduleDailyWeightNotification();
 
 	// 体重の取得
-	const { data, isLoading, error } = useQuery({
+	const { data, isLoading, error, refetch } = useQuery({
 		queryKey: ["weights"],
 		queryFn: fetchWeeklyWeights,
 	});
 
+	// 画面フォーカス時やフォアグラウンド復帰時に体重を再取得する
+	useWeightRefetchOnActive(refetch);
+
 	if (isLoading) {
 		return (
-			<YStack
-				padding="$8"
-				height={400}
-				alignItems="center"
-				justifyContent="center"
-			>
-				<Spinner size="small" />
-			</YStack>
+			<>
+				<Stack.Screen
+					options={{
+						title: "ホーム",
+						headerStyle: { backgroundColor: theme.background0.val },
+					}}
+				/>
+				<YStack
+					padding="$8"
+					height={400}
+					alignItems="center"
+					justifyContent="center"
+				>
+					<Spinner size="small" />
+				</YStack>
+			</>
 		);
 	}
 
-	// 体重取得失敗表示
+	// 体重未入力・パーミッションエラー
 	if (
 		error ||
 		data === undefined ||

@@ -2,6 +2,7 @@ import { ErrorHealthData } from "@/app/_components/errorHealthData";
 import {
 	fetchRecentWeightsByMonths,
 	transformWeightDataForGraph,
+	useWeightRefetchOnActive,
 } from "@/app/_services/weightService";
 import { matchFont } from "@shopify/react-native-skia";
 import { useQuery } from "@tanstack/react-query";
@@ -31,24 +32,37 @@ export default function Graph() {
 		data: fetchedWeights,
 		isLoading,
 		error,
+		refetch,
 	} = useQuery({
 		queryKey: ["graphWeights", 13],
 		queryFn: () => fetchRecentWeightsByMonths(13),
 	});
 
+	// 画面フォーカス時やフォアグラウンド復帰時に体重を再取得する
+	useWeightRefetchOnActive(refetch);
+
 	if (isLoading) {
 		return (
-			<YStack
-				padding="$8"
-				height={400}
-				alignItems="center"
-				justifyContent="center"
-			>
-				<Spinner size="small" />
-			</YStack>
+			<>
+				<Stack.Screen
+					options={{
+						title: "グラフ",
+						headerStyle: { backgroundColor: theme.background0.val },
+					}}
+				/>
+				<YStack
+					padding="$8"
+					height={400}
+					alignItems="center"
+					justifyContent="center"
+				>
+					<Spinner size="small" />
+				</YStack>
+			</>
 		);
 	}
 
+	// 体重未入力・パーミッションエラー
 	if (error || fetchedWeights === undefined || fetchedWeights.length === 0) {
 		return (
 			<>

@@ -5,13 +5,17 @@ import { Button, H2, ListItem, Paragraph, YGroup, YStack } from "tamagui";
 export const ErrorHealthData = () => {
 	return (
 		<YStack paddingVertical="$8" paddingHorizontal="$4" gap="$4">
-			<H2 size="$7">Sorry</H2>
+			<H2 size="$7">体重を入力しましょう 🚀</H2>
 			<YStack gap="$2">
 				<Paragraph>体重データを取得できませんでした。</Paragraph>
 				<Paragraph>
-					ヘルスケアのアクセスが許可されていることを確認して、体重データを入力してください！
+					ヘルスケアのアクセス許可を確認して、体重データを入力してください！
 				</Paragraph>
 			</YStack>
+
+			<Link href="/(tabs)/home/add" asChild>
+				<Button>体重を入力する</Button>
+			</Link>
 
 			<YGroup>
 				<YGroup.Item>
@@ -37,10 +41,6 @@ export const ErrorHealthData = () => {
 					<ListItem fontSize="$3">5.「すべてオンにする」を選択</ListItem>
 				</YGroup.Item>
 			</YGroup>
-
-			<Link href="/(tabs)/home/add" asChild>
-				<Button icon={<SquarePlus />}>体重を入力する</Button>
-			</Link>
 		</YStack>
 	);
 };
