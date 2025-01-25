@@ -11,14 +11,6 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 
-/** ヘルスケアのアクセス権限を確認する */
-const checkIsAuthorizedHealthAccess = async () => {
-	const authorizationStatus = await HealthKit.authorizationStatusFor(
-		HKQuantityTypeIdentifier.bodyMass,
-	);
-	return authorizationStatus === HKAuthorizationStatus.sharingAuthorized;
-};
-
 /** 指定された期間内の体重データを取得する */
 export const fetchWeightDataInRange = async (from: Date, to?: Date) => {
 	const isAvailable = await HealthKit.isHealthDataAvailable();
@@ -29,11 +21,6 @@ export const fetchWeightDataInRange = async (from: Date, to?: Date) => {
 
 	// bodyMassの読み取り許可を要求する
 	await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
-
-	const isAuthorizedHealthAccess = await checkIsAuthorizedHealthAccess();
-	if (!isAuthorizedHealthAccess) {
-		throw new Error("ヘルスケアアクセスが許可されていません。");
-	}
 
 	// 指定範囲の体重データを取得
 	const weightData = await HealthKit.queryQuantitySamples(
@@ -58,11 +45,6 @@ export const fetchWeeklyWeights = async () => {
 
 	// bodyMassの読み取り許可を要求する
 	await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
-
-	const isAuthorizedHealthAccess = await checkIsAuthorizedHealthAccess();
-	if (!isAuthorizedHealthAccess) {
-		throw new Error("ヘルスケアアクセスが許可されていません。");
-	}
 
 	const now = new Date();
 
@@ -94,11 +76,6 @@ export const fetchRecentWeightsByMonths = async (month: number) => {
 
 	// bodyMassの読み取り許可を要求する
 	await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
-
-	const isAuthorizedHealthAccess = await checkIsAuthorizedHealthAccess();
-	if (!isAuthorizedHealthAccess) {
-		throw new Error("ヘルスケアアクセスが許可されていません。");
-	}
 
 	const now = new Date();
 
