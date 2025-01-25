@@ -43,17 +43,26 @@ export default function Graph() {
 
 	if (isLoading) {
 		return (
-			<YStack
-				padding="$8"
-				height={400}
-				alignItems="center"
-				justifyContent="center"
-			>
-				<Spinner size="small" />
-			</YStack>
+			<>
+				<Stack.Screen
+					options={{
+						title: "グラフ",
+						headerStyle: { backgroundColor: theme.background0.val },
+					}}
+				/>
+				<YStack
+					padding="$8"
+					height={400}
+					alignItems="center"
+					justifyContent="center"
+				>
+					<Spinner size="small" />
+				</YStack>
+			</>
 		);
 	}
 
+	// 体重未入力・パーミッションエラー
 	if (error || fetchedWeights === undefined || fetchedWeights.length === 0) {
 		return (
 			<>

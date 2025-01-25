@@ -51,18 +51,26 @@ export default function Index() {
 
 	if (isLoading) {
 		return (
-			<YStack
-				padding="$8"
-				height={400}
-				alignItems="center"
-				justifyContent="center"
-			>
-				<Spinner size="small" />
-			</YStack>
+			<>
+				<Stack.Screen
+					options={{
+						title: "ホーム",
+						headerStyle: { backgroundColor: theme.background0.val },
+					}}
+				/>
+				<YStack
+					padding="$8"
+					height={400}
+					alignItems="center"
+					justifyContent="center"
+				>
+					<Spinner size="small" />
+				</YStack>
+			</>
 		);
 	}
 
-	// 体重取得失敗表示
+	// 体重未入力・パーミッションエラー
 	if (
 		error ||
 		data === undefined ||
