@@ -109,7 +109,7 @@ export const transformWeightDataForGraph = (
 		HKQuantityTypeIdentifier.bodyMass,
 		HKUnit
 	>[],
-	windowSize = 7, // 移動平均のウィンドウサイズ
+	windowSize = 10, // 移動平均のウィンドウサイズ
 ) => {
 	// 日付ごとに最初の測定値だけを残す
 	const uniqueDailyWeights = Object.values(
