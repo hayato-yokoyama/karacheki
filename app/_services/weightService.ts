@@ -66,16 +66,16 @@ export const fetchWeeklyWeights = async () => {
 
 	const now = new Date();
 
-	/** 今週分(1~7日前)の体重 */
+	/** 今週分(現在~7日前)の体重 */
 	const currentWeekData = await fetchWeightDataInRange(
-		startOfDay(subDays(now, 7)),
-		endOfDay(subDays(now, 1)),
+		subDays(now, 7),
+		endOfDay(now),
 	);
 
-	/** 先週分(8~14日前)の体重 */
+	/** 先週分(7~14日前)の体重 */
 	const prevWeekData = await fetchWeightDataInRange(
-		startOfDay(subDays(now, 14)),
-		endOfDay(subDays(now, 8)),
+		subDays(now, 14),
+		subDays(now, 7),
 	);
 
 	return {
