@@ -1,4 +1,5 @@
 import HealthKit, {
+	HKAuthorizationStatus,
 	HKQuantityTypeIdentifier,
 } from "@kingstinct/react-native-healthkit";
 import type {
@@ -10,95 +11,103 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 
+/** ヘルスケアのアクセス権限を確認する */
+const checkIsAuthorizedHealthAccess = async () => {
+	const authorizationStatus = await HealthKit.authorizationStatusFor(
+		HKQuantityTypeIdentifier.bodyMass,
+	);
+	return authorizationStatus === HKAuthorizationStatus.sharingAuthorized;
+};
+
 /** 指定された期間内の体重データを取得する */
 export const fetchWeightDataInRange = async (from: Date, to?: Date) => {
-	try {
-		const isAvailable = await HealthKit.isHealthDataAvailable();
+	const isAvailable = await HealthKit.isHealthDataAvailable();
 
-		if (!isAvailable) {
-			throw new Error("HealthKitはこのデバイスでは利用できません。");
-		}
-
-		// bodyMassの読み取り許可を要求する
-		await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
-
-		// 指定範囲の体重データを取得
-		const weightData = await HealthKit.queryQuantitySamples(
-			HKQuantityTypeIdentifier.bodyMass,
-			{
-				from: from,
-				to: to ? to : new Date(),
-				unit: "kg",
-			},
-		);
-
-		return weightData;
-	} catch (error) {
-		console.error(error);
-		throw new Error("指定範囲のHealthKitデータ取得中にエラーが発生しました。");
+	if (!isAvailable) {
+		throw new Error("HealthKitはこのデバイスでは利用できません。");
 	}
+
+	// bodyMassの読み取り許可を要求する
+	await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
+
+	const isAuthorizedHealthAccess = await checkIsAuthorizedHealthAccess();
+	if (!isAuthorizedHealthAccess) {
+		throw new Error("ヘルスケアアクセスが許可されていません。");
+	}
+
+	// 指定範囲の体重データを取得
+	const weightData = await HealthKit.queryQuantitySamples(
+		HKQuantityTypeIdentifier.bodyMass,
+		{
+			from: from,
+			to: to ? to : new Date(),
+			unit: "kg",
+		},
+	);
+
+	return weightData;
 };
 
 /** 今週と先週の体重を取得する */
 export const fetchWeeklyWeights = async () => {
-	try {
-		const isAvailable = await HealthKit.isHealthDataAvailable();
+	const isAvailable = await HealthKit.isHealthDataAvailable();
 
-		if (!isAvailable) {
-			throw new Error("HealthKitはこのデバイスでは利用できません。");
-		}
-
-		// bodyMassの読み取り許可を要求する
-		await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
-
-		const now = new Date();
-
-		/** 今週分(1~7日前)の体重 */
-		const currentWeekData = await fetchWeightDataInRange(
-			startOfDay(subDays(now, 7)),
-			endOfDay(subDays(now, 1)),
-		);
-
-		/** 先週分(8~14日前)の体重 */
-		const prevWeekData = await fetchWeightDataInRange(
-			startOfDay(subDays(now, 14)),
-			endOfDay(subDays(now, 8)),
-		);
-
-		return {
-			currentWeek: currentWeekData,
-			prevWeekData: prevWeekData,
-		};
-	} catch (error) {
-		console.error(error);
-		throw new Error("HealthKitデータの取得にエラーが発生しました");
+	if (!isAvailable) {
+		throw new Error("HealthKitはこのデバイスでは利用できません。");
 	}
+
+	// bodyMassの読み取り許可を要求する
+	await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
+
+	const isAuthorizedHealthAccess = await checkIsAuthorizedHealthAccess();
+	if (!isAuthorizedHealthAccess) {
+		throw new Error("ヘルスケアアクセスが許可されていません。");
+	}
+
+	const now = new Date();
+
+	/** 今週分(1~7日前)の体重 */
+	const currentWeekData = await fetchWeightDataInRange(
+		startOfDay(subDays(now, 7)),
+		endOfDay(subDays(now, 1)),
+	);
+
+	/** 先週分(8~14日前)の体重 */
+	const prevWeekData = await fetchWeightDataInRange(
+		startOfDay(subDays(now, 14)),
+		endOfDay(subDays(now, 8)),
+	);
+
+	return {
+		currentWeek: currentWeekData,
+		prevWeekData: prevWeekData,
+	};
 };
 
 /** 直近の引数月の体重を取得する */
 export const fetchRecentWeightsByMonths = async (month: number) => {
-	try {
-		const isAvailable = await HealthKit.isHealthDataAvailable();
+	const isAvailable = await HealthKit.isHealthDataAvailable();
 
-		if (!isAvailable) {
-			throw new Error("HealthKitはこのデバイスでは利用できません。");
-		}
-
-		// bodyMassの読み取り許可を要求する
-		await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
-
-		const now = new Date();
-
-		/** 直近の引数月の体重 */
-		const recentWeight = await fetchWeightDataInRange(
-			startOfDay(subMonths(now, month)),
-		);
-
-		return recentWeight;
-	} catch (error) {
-		console.error(error);
-		throw new Error("HealthKitデータの取得にエラーが発生しました");
+	if (!isAvailable) {
+		throw new Error("HealthKitはこのデバイスでは利用できません。");
 	}
+
+	// bodyMassの読み取り許可を要求する
+	await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
+
+	const isAuthorizedHealthAccess = await checkIsAuthorizedHealthAccess();
+	if (!isAuthorizedHealthAccess) {
+		throw new Error("ヘルスケアアクセスが許可されていません。");
+	}
+
+	const now = new Date();
+
+	/** 直近の引数月の体重 */
+	const recentWeight = await fetchWeightDataInRange(
+		startOfDay(subMonths(now, month)),
+	);
+
+	return recentWeight;
 };
 
 /** 体重の平均値を算出する */
