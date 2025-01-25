@@ -6,6 +6,9 @@ import type {
 	HKUnit,
 } from "@kingstinct/react-native-healthkit";
 import { endOfDay, startOfDay, subDays, subMonths } from "date-fns";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useEffect } from "react";
+import { AppState, type AppStateStatus } from "react-native";
 
 /** 指定された期間内の体重データを取得する */
 export const fetchWeightDataInRange = async (from: Date, to?: Date) => {
@@ -193,4 +196,30 @@ export const saveWeight = async (weight: number, date: Date) => {
 			start: date,
 		},
 	);
+};
+
+/** 画面フォーカス時やフォアグラウンド復帰時に体重を再取得する */
+export const useWeightRefetchOnActive = (refetch: () => void) => {
+	// 体重入力されてホーム画面に戻ってきたときに入力値を即時で反映する
+	useFocusEffect(
+		useCallback(() => {
+			refetch();
+		}, [refetch]),
+	);
+
+	// フォアグラウンド復帰時に体重を再取得する
+	useEffect(() => {
+		const handleAppStateChange = (nextAppState: AppStateStatus) => {
+			if (nextAppState === "active") {
+				refetch();
+			}
+		};
+		const subscription = AppState.addEventListener(
+			"change",
+			handleAppStateChange,
+		);
+		return () => {
+			subscription.remove();
+		};
+	}, [refetch]);
 };

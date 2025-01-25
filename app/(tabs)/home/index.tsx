@@ -18,6 +18,7 @@ import { scheduleDailyWeightNotification } from "@/app/_services/notificationSer
 import {
 	calcWeightAvg,
 	fetchWeeklyWeights,
+	useWeightRefetchOnActive,
 } from "@/app/_services/weightService";
 import { Bell, Plus } from "@tamagui/lucide-icons";
 import * as Linking from "expo-linking";
@@ -40,10 +41,13 @@ export default function Index() {
 	scheduleDailyWeightNotification();
 
 	// 体重の取得
-	const { data, isLoading, error } = useQuery({
+	const { data, isLoading, error, refetch } = useQuery({
 		queryKey: ["weights"],
 		queryFn: fetchWeeklyWeights,
 	});
+
+	// 画面フォーカス時やフォアグラウンド復帰時に体重を再取得する
+	useWeightRefetchOnActive(refetch);
 
 	if (isLoading) {
 		return (

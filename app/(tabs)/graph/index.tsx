@@ -2,6 +2,7 @@ import { ErrorHealthData } from "@/app/_components/errorHealthData";
 import {
 	fetchRecentWeightsByMonths,
 	transformWeightDataForGraph,
+	useWeightRefetchOnActive,
 } from "@/app/_services/weightService";
 import { matchFont } from "@shopify/react-native-skia";
 import { useQuery } from "@tanstack/react-query";
@@ -31,10 +32,14 @@ export default function Graph() {
 		data: fetchedWeights,
 		isLoading,
 		error,
+		refetch,
 	} = useQuery({
 		queryKey: ["graphWeights", 13],
 		queryFn: () => fetchRecentWeightsByMonths(13),
 	});
+
+	// 画面フォーカス時やフォアグラウンド復帰時に体重を再取得する
+	useWeightRefetchOnActive(refetch);
 
 	if (isLoading) {
 		return (
