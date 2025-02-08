@@ -7,7 +7,11 @@
 		"userInterfaceStyle": "automatic",
 		"newArchEnabled": true,
 		"ios": {
-			"supportsTablet": true
+			"supportsTablet": true,
+			"infoPlist": {
+				"UIBackgroundModes": ["fetch", "processing"],
+				"BGTaskSchedulerPermittedIdentifiers": ["com.transistorsoft.fetch"]
+			}
 		},
 		"android": {
 			"adaptiveIcon": {
@@ -38,7 +42,8 @@
 				{
 					"NSHealthShareUsageDescription": "体重データを取得するためにヘルスデータにアクセスします。"
 				}
-			]
+			],
+			"react-native-background-fetch"
 		],
 		"experiments": {
 			"typedRoutes": true
