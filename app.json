@@ -1,13 +1,17 @@
 {
 	"expo": {
-		"version": "1.1.1",
+		"version": "1.2.1",
 		"orientation": "portrait",
 		"icon": "./assets/images/icon.png",
 		"scheme": "myapp",
 		"userInterfaceStyle": "automatic",
 		"newArchEnabled": true,
 		"ios": {
-			"supportsTablet": true
+			"supportsTablet": true,
+			"infoPlist": {
+				"UIBackgroundModes": ["fetch", "processing"],
+				"BGTaskSchedulerPermittedIdentifiers": ["com.transistorsoft.fetch"]
+			}
 		},
 		"android": {
 			"adaptiveIcon": {
@@ -38,7 +42,8 @@
 				{
 					"NSHealthShareUsageDescription": "体重データを取得するためにヘルスデータにアクセスします。"
 				}
-			]
+			],
+			"react-native-background-fetch"
 		],
 		"experiments": {
 			"typedRoutes": true

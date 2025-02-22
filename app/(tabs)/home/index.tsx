@@ -14,7 +14,10 @@ import * as Notifications from "expo-notifications";
 import { useEffect, useState } from "react";
 import { Link, Stack } from "expo-router";
 import { Card } from "tamagui";
-import { scheduleDailyWeightNotification } from "@/app/_services/notificationService";
+import {
+	initBackgroundFetch,
+	scheduleDailyWeightNotification,
+} from "@/app/_services/notificationService";
 import {
 	calcWeightAvg,
 	fetchWeeklyWeights,
@@ -37,8 +40,13 @@ Notifications.setNotificationHandler({
 
 export default function Index() {
 	const theme = useTheme();
-	// 通知設定する
-	scheduleDailyWeightNotification();
+
+	useEffect(() => {
+		// バックグラウンドの体重取得処理の登録をする
+		initBackgroundFetch();
+		// 通知設定する
+		scheduleDailyWeightNotification();
+	}, []);
 
 	// 体重の取得
 	const { data, isLoading, error, refetch } = useQuery({
