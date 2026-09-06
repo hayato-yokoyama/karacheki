@@ -8,7 +8,7 @@ import { Check, ImagePlus } from "@tamagui/lucide-icons";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Stack, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Alert, FlatList, Image, useWindowDimensions } from "react-native";
 import {
 	Button,
@@ -51,6 +51,22 @@ export default function Photos() {
 		queryFn: listBodyPhotos,
 	});
 
+	/**
+	 * 選択中の写真
+	 *
+	 * 選んだ後の再取得で実体ファイルが失われた写真が一覧から取り除かれることがある。
+	 * 消えたIDを選択に残すと、比較もできず他の写真も選べない行き止まりになるため、
+	 * 常に一覧にあるものだけを選択として扱う
+	 */
+	const selectedPhotos = useMemo(
+		() =>
+			selectedIds
+				.map((id) => photos?.find((photo) => photo.id === id))
+				.filter((photo): photo is BodyPhoto => photo !== undefined),
+		[photos, selectedIds],
+	);
+	const selectedCount = selectedPhotos.length;
+
 	/** フォトライブラリから1枚選び、撮影日の確認画面へ進む */
 	const handlePressAdd = useCallback(async () => {
 		try {
@@ -91,15 +107,18 @@ export default function Photos() {
 				return;
 			}
 
-			setSelectedIds((current) => {
-				if (current.includes(id)) {
-					return current.filter((selectedId) => selectedId !== id);
-				}
+			const currentIds = selectedPhotos.map((photo) => photo.id);
 
-				return current.length < COMPARE_COUNT ? [...current, id] : current;
-			});
+			if (currentIds.includes(id)) {
+				setSelectedIds(currentIds.filter((selectedId) => selectedId !== id));
+				return;
+			}
+
+			if (currentIds.length < COMPARE_COUNT) {
+				setSelectedIds([...currentIds, id]);
+			}
 		},
-		[isSelecting, router],
+		[isSelecting, router, selectedPhotos],
 	);
 
 	/**
@@ -108,15 +127,12 @@ export default function Photos() {
 	 * Before/After は時系列なので、選んだ順ではなく撮影日の古い方を Before にする
 	 */
 	const handlePressCompare = useCallback(() => {
-		const selectedPhotos = selectedIds
-			.map((id) => photos?.find((photo) => photo.id === id))
-			.filter((photo): photo is BodyPhoto => Boolean(photo));
-
-		if (selectedPhotos.length !== COMPARE_COUNT) {
+		if (selectedCount !== COMPARE_COUNT) {
 			return;
 		}
 
-		const [before, after] = selectedPhotos.sort((a, b) => {
+		// メモ化した配列をそのまま並べ替えると選択の状態を壊すため、複製してから並べる
+		const [before, after] = [...selectedPhotos].sort((a, b) => {
 			const takenAtDiff =
 				new Date(a.takenAt).getTime() - new Date(b.takenAt).getTime();
 
@@ -135,7 +151,7 @@ export default function Photos() {
 		// 見終えて戻ったら通常の一覧に戻す。比較の出口を「戻る」に一本化するため
 		setIsSelecting(false);
 		setSelectedIds([]);
-	}, [photos, router, selectedIds]);
+	}, [router, selectedCount, selectedPhotos]);
 
 	const cellWidth =
 		(width - LIST_PADDING * 2 - CELL_GAP * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
@@ -145,7 +161,7 @@ export default function Photos() {
 			const isSelected = selectedIds.includes(item.id);
 			// 2枚そろった後は、選び直す以外の操作をさせない
 			const isDisabled =
-				isSelecting && !isSelected && selectedIds.length >= COMPARE_COUNT;
+				isSelecting && !isSelected && selectedCount >= COMPARE_COUNT;
 
 			return (
 				<View
@@ -179,7 +195,7 @@ export default function Photos() {
 								alignItems="center"
 								justifyContent="center"
 							>
-								<Check size={14} color="$background0" />
+								<Check size={14} color="$background" />
 							</View>
 						)}
 					</View>
@@ -193,6 +209,7 @@ export default function Photos() {
 			cellWidth,
 			handlePressCell,
 			isSelecting,
+			selectedCount,
 			selectedIds,
 			theme.accentColor.val,
 			theme.background05.val,
@@ -220,8 +237,8 @@ export default function Photos() {
 						<Button
 							size="$2"
 							onPress={handlePressCompare}
-							disabled={selectedIds.length !== COMPARE_COUNT}
-							opacity={selectedIds.length === COMPARE_COUNT ? 1 : 0.5}
+							disabled={selectedCount !== COMPARE_COUNT}
+							opacity={selectedCount === COMPARE_COUNT ? 1 : 0.5}
 							chromeless
 						>
 							比較する

@@ -1,7 +1,12 @@
 import { getBodyPhotoUri, listBodyPhotos } from "@/services/bodyPhotoService";
 import type { BodyPhoto } from "@/services/bodyPhotoService";
 import { useQuery } from "@tanstack/react-query";
-import { differenceInCalendarDays, format, intervalToDuration } from "date-fns";
+import {
+	differenceInCalendarDays,
+	format,
+	intervalToDuration,
+	startOfDay,
+} from "date-fns";
 import { useLocalSearchParams } from "expo-router";
 import { Image } from "react-native";
 import {
@@ -26,7 +31,12 @@ const DAYS_SHOWN_AS_DAYS = 30;
  * どれくらいの期間なのか実感と結びつかないため
  */
 const formatElapsedLabel = (before: Date, after: Date) => {
-	const days = differenceInCalendarDays(after, before);
+	// 表示しているのは日付だけなので、時刻を落としてから間隔を求める。
+	// 時刻を含めたまま数えると、同じ日付の組み合わせでもEXIFの時刻次第で
+	// 「1ヶ月後」と「31日後」に割れる
+	const start = startOfDay(before);
+	const end = startOfDay(after);
+	const days = differenceInCalendarDays(end, start);
 
 	if (days === 0) {
 		return "同じ日";
@@ -36,10 +46,7 @@ const formatElapsedLabel = (before: Date, after: Date) => {
 		return `${days}日後`;
 	}
 
-	const { years = 0, months = 0 } = intervalToDuration({
-		start: before,
-		end: after,
-	});
+	const { years = 0, months = 0 } = intervalToDuration({ start, end });
 
 	// 30日を超えていても1ヶ月に満たないこと（1/1→1/31 など）があるため日数に戻す
 	if (years === 0 && months === 0) {
