@@ -34,6 +34,12 @@
 			],
 			"expo-font",
 			[
+				"expo-image-picker",
+				{
+					"photosPermission": "Before/Afterの写真を選ぶために写真へのアクセスを許可します。"
+				}
+			],
+			[
 				"@kingstinct/react-native-healthkit",
 				{
 					"NSHealthShareUsageDescription": "体重データを取得するためにヘルスデータにアクセスします。"
