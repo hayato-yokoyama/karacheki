@@ -103,7 +103,7 @@ export default function Photos() {
 	);
 
 	/**
-	 * 選んだ2枚を比較画面へ渡す
+	 * 選んだ2枚を比較画面へ渡し、選択モードを終える
 	 *
 	 * Before/After は時系列なので、選んだ順ではなく撮影日の古い方を Before にする
 	 */
@@ -131,6 +131,10 @@ export default function Photos() {
 			pathname: "/(tabs)/photo/compare",
 			params: { beforeId: before.id, afterId: after.id },
 		});
+
+		// 見終えて戻ったら通常の一覧に戻す。比較の出口を「戻る」に一本化するため
+		setIsSelecting(false);
+		setSelectedIds([]);
 	}, [photos, router, selectedIds]);
 
 	const cellWidth =
@@ -201,7 +205,8 @@ export default function Photos() {
 	const screenOptions = (
 		<Stack.Screen
 			options={{
-				title: isSelecting ? "2枚を選ぶ" : "Before/After",
+				// 比較画面の戻るボタンに戻り先として表示されるため、選択中も変えない
+				title: "Before/After",
 				headerStyle: { backgroundColor: theme.background0.val },
 				headerLeft: isSelecting
 					? () => (
