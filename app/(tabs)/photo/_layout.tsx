@@ -12,6 +12,7 @@ export default function Layout() {
 				}}
 			/>
 			<Stack.Screen name="[id]" options={{ title: "写真" }} />
+			<Stack.Screen name="compare" options={{ title: "比較" }} />
 		</Stack>
 	);
 }
