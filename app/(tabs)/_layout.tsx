@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 
-import { ChartLine, Home } from "@tamagui/lucide-icons";
+import { ChartLine, Home, Images } from "@tamagui/lucide-icons";
 import { useTheme } from "tamagui";
 
 export default function TabLayout() {
@@ -27,6 +27,14 @@ export default function TabLayout() {
 				options={{
 					title: "グラフ",
 					tabBarIcon: ({ color }) => <ChartLine color={color} size="$1" />,
+				}}
+			/>
+			<Tabs.Screen
+				name="photo"
+				options={{
+					title: "Before/After",
+					tabBarIcon: ({ color }) => <Images color={color} size="$1" />,
+					headerShown: false,
 				}}
 			/>
 		</Tabs>

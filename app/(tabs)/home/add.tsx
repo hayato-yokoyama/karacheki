@@ -1,4 +1,4 @@
-import { saveWeight } from "@/app/_services/weightService";
+import { saveWeight } from "@/services/weightService";
 import RNDateTimePicker, {
 	type DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
