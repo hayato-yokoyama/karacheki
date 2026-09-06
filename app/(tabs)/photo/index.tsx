@@ -58,11 +58,10 @@ export default function Photos() {
 					takenAt: picked.takenAt.toISOString(),
 				},
 			});
-		} catch {
-			Alert.alert(
-				"エラー",
-				"写真を選べませんでした。\n設定アプリから写真へのアクセスが許可されていることを確認してください。",
-			);
+		} catch (error) {
+			// 原因を決めつけず、切り分けできるよう内容はログに残す
+			console.error(error);
+			Alert.alert("エラー", "写真を選べませんでした");
 		}
 	}, [router]);
 

@@ -15,7 +15,11 @@ export default function PhotoDetail() {
 	const queryClient = useQueryClient();
 	const { id } = useLocalSearchParams<{ id: string }>();
 
-	const { data: photos, isLoading } = useQuery({
+	const {
+		data: photos,
+		isLoading,
+		error,
+	} = useQuery({
 		queryKey: ["bodyPhotos"],
 		queryFn: listBodyPhotos,
 	});
@@ -48,6 +52,15 @@ export default function PhotoDetail() {
 		return (
 			<YStack flex={1} alignItems="center" justifyContent="center">
 				<Spinner size="small" />
+			</YStack>
+		);
+	}
+
+	// 読み込みに失敗したときに「削除された」と誤解させない
+	if (error) {
+		return (
+			<YStack paddingVertical="$8" paddingHorizontal="$4">
+				<Paragraph>写真を読み込めませんでした。</Paragraph>
 			</YStack>
 		);
 	}

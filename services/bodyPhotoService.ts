@@ -144,25 +144,32 @@ export const addBodyPhoto = async (sourceUri: string, takenAt: Date) => {
 	return photo;
 };
 
-/** 写真をメタデータと実体ファイルの両方から削除する */
+/**
+ * 写真をメタデータと実体ファイルの両方から削除する
+ *
+ * ファイルを先に消す。メタデータを先に消すと、ファイル削除に失敗したときに
+ * 「失敗」と伝えながら削除は成立していて、参照されないファイルだけが残る
+ */
 export const deleteBodyPhoto = async (id: string) => {
 	const photoDir = getPhotoDir();
 	const storedPhotos = await readPhotoMeta();
 	const target = storedPhotos.find((photo) => photo.id === id);
-
-	await writePhotoMeta(storedPhotos.filter((photo) => photo.id !== id));
 
 	if (target) {
 		await FileSystem.deleteAsync(`${photoDir}${target.fileName}`, {
 			idempotent: true,
 		});
 	}
+
+	await writePhotoMeta(storedPhotos.filter((photo) => photo.id !== id));
 };
 
 /**
  * EXIFの DateTimeOriginal（"YYYY:MM:DD HH:MM:SS"）を Date に変換する
  *
- * 取得できない・解釈できない場合は null を返す
+ * 取得できない・解釈できない場合は null を返す。
+ * "0000:00:00 00:00:00" のような空欄プレースホルダは Date として成立して
+ * しまう（1899年になる）ため、桁を読めただけでは通さず値の範囲も確かめる
  */
 const parseExifDateTimeOriginal = (value: unknown) => {
 	if (typeof value !== "string") {
@@ -177,17 +184,22 @@ const parseExifDateTimeOriginal = (value: unknown) => {
 		return null;
 	}
 
-	const [, year, month, day, hours, minutes, seconds] = matched;
-	const date = new Date(
-		Number(year),
-		Number(month) - 1,
-		Number(day),
-		Number(hours),
-		Number(minutes),
-		Number(seconds),
-	);
+	const [year, month, day, hours, minutes, seconds] = matched
+		.slice(1)
+		.map(Number);
 
-	return Number.isNaN(date.getTime()) ? null : date;
+	const date = new Date(year, month - 1, day, hours, minutes, seconds);
+
+	// 繰り上がりで別の日付になっていないかで、範囲外の値をまとめて弾く
+	const isInRange =
+		date.getFullYear() === year &&
+		date.getMonth() === month - 1 &&
+		date.getDate() === day &&
+		date.getHours() === hours &&
+		date.getMinutes() === minutes &&
+		date.getSeconds() === seconds;
+
+	return isInRange ? date : null;
 };
 
 /**
@@ -207,7 +219,11 @@ export const pickBodyPhoto = async () => {
 		return null;
 	}
 
-	const asset = result.assets[0];
+	const asset = result.assets.at(0);
+
+	if (!asset) {
+		return null;
+	}
 
 	return {
 		uri: asset.uri,
