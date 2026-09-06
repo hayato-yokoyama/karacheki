@@ -1,9 +1,9 @@
-import { ErrorHealthData } from "@/app/_components/errorHealthData";
+import { ErrorHealthData } from "@/components/errorHealthData";
 import {
 	fetchRecentWeightsByMonths,
 	transformWeightDataForGraph,
 	useWeightRefetchOnActive,
-} from "@/app/_services/weightService";
+} from "@/services/weightService";
 import { matchFont } from "@shopify/react-native-skia";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";

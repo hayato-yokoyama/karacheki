@@ -1,7 +1,7 @@
 import {
 	calcWeightAvg,
 	fetchWeeklyWeights,
-} from "@/app/_services/weightService";
+} from "@/services/weightService";
 import * as Notifications from "expo-notifications";
 
 /** 毎朝8時の通知スケジュールを組む */

@@ -14,17 +14,17 @@ import * as Notifications from "expo-notifications";
 import { useEffect, useState } from "react";
 import { Link, Stack } from "expo-router";
 import { Card } from "tamagui";
-import { scheduleDailyWeightNotification } from "@/app/_services/notificationService";
+import { scheduleDailyWeightNotification } from "@/services/notificationService";
 import {
 	calcWeightAvg,
 	fetchWeeklyWeights,
 	useWeightRefetchOnActive,
-} from "@/app/_services/weightService";
+} from "@/services/weightService";
 import { Bell, Plus } from "@tamagui/lucide-icons";
 import * as Linking from "expo-linking";
 import type { AppStateStatus } from "react-native";
 import { AppState } from "react-native";
-import { ErrorHealthData } from "@/app/_components/errorHealthData";
+import { ErrorHealthData } from "@/components/errorHealthData";
 
 // アプリ起動中の通知の動作設定（アラート表示、通知音、バッジ表示）
 Notifications.setNotificationHandler({
