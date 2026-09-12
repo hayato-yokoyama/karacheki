@@ -75,3 +75,55 @@ Simulator では検証できず、積み残していた箇所。
   - 初回起動時にヘルスケアの読み取り／書き込み許可ダイアログが出る
 - **通知** — 毎朝8時のローカル通知と、その本文（週平均と変化幅）
 - **カメラ撮影** — 未実装。実機が使えるようになってから着手する（`cameraPermission: false` のままなので、着手時に `app.json` の変更とリビルドが要る）
+
+## 既知の問題: Apple ID ログインが失敗する（2026-09 時点）
+
+`eas device:create` / `eas build` で Apple ID を入力すると、こうなることがある。
+
+```
+Authentication with Apple Developer Portal failed!
+iTunes service key is empty
+```
+
+アカウントやパスワードの問題ではない。eas-cli（内部の `@expo/apple-utils`）が
+Apple ID ログインの前段で叩く以下のエンドポイントが、Apple 側で 404 を返すようになったため。
+
+```sh
+curl -sS 'https://appstoreconnect.apple.com/olympus/v1/app/config?hostname=itunesconnect.apple.com'
+```
+
+報告: https://github.com/expo/eas-cli/issues/4392 （2026-09-11 起票、eas-cli 23.2.0 / 24.3.0 で再現）。
+eas-cli のバージョンを変えても回避できない。
+
+### 回避策: App Store Connect API キーで認証する
+
+Apple ID ログイン（非公式 Web API + Cookie）ではなく、公式の App Store Connect API（JWT）を使う。
+壊れているエンドポイントを通らない。
+
+1. App Store Connect > ユーザーとアクセス > 統合 > App Store Connect API > チームキー
+2. キーを作成。アクセス権は **Admin**（証明書・端末・プロファイルを作るため）
+3. `AuthKey_XXXXXXXXXX.p8` をダウンロード（**一度きり**）。Key ID と Issuer ID を控える
+
+```sh
+export EXPO_ASC_API_KEY_PATH="$HOME/.appstoreconnect/AuthKey_XXXXXXXXXX.p8"
+export EXPO_ASC_KEY_ID="XXXXXXXXXX"
+export EXPO_ASC_ISSUER_ID="（Issuer ID）"
+export EXPO_APPLE_TEAM_ID="3T3P7N445K"
+export EXPO_APPLE_TEAM_TYPE="INDIVIDUAL"
+```
+
+`.p8` は鍵そのものなので、リポジトリに置かないこと（`.gitignore` の `*.p8` で保護済み）。
+
+### この回避策で足りる範囲
+
+eas-cli 24.3.0 のソースで確認した内容。
+
+| | 認証モード |
+| --- | --- |
+| `eas device:create` | ASC 環境変数があれば API キー |
+| Ad Hoc プロビジョニングプロファイルの作成・更新 | 同上 |
+| 証明書・Bundle ID | 同上 |
+| **Push キー / TestFlight / `eas submit`** | **Apple ID ログインが必須のまま** |
+
+このアプリはローカル通知しか使っておらず Push キーが不要なので、実機ビルドには影響しない。
+ただし**リリース（`eas submit`）の前にはこの問題の解消が必要**になる。
