@@ -1,9 +1,9 @@
-import { Button, Image, useTheme } from "tamagui";
-import Onboarding from "react-native-onboarding-swiper";
 import { Link, Redirect } from "expo-router";
-import { Dimensions } from "react-native";
 import LottieView from "lottie-react-native";
 import { useEffect, useState } from "react";
+import { Dimensions } from "react-native";
+import Onboarding from "react-native-onboarding-swiper";
+import { Button, Image, useTheme } from "tamagui";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 

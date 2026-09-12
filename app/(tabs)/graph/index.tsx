@@ -17,10 +17,10 @@ import {
 	Spinner,
 	Tabs,
 	Text,
-	useTheme,
 	View,
 	XStack,
 	YStack,
+	useTheme,
 } from "tamagui";
 import { CartesianChart, Line, Scatter } from "victory-native";
 
