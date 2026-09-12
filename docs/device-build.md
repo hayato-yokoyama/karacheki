@@ -21,10 +21,13 @@ App Store 版（`com.h-yokoyama.karacheki`）とは別アプリとして入る�
 
 ## 手順
 
-### 1. EAS にログイン
+### 1. eas-cli を入れてログインする
+
+パッケージ名は `eas` ではなく `eas-cli`（実行コマンドが `eas`）。
 
 ```sh
-npx eas login
+npm install -g eas-cli
+eas login
 ```
 
 ### 2. 実機を登録する
