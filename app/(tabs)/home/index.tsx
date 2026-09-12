@@ -1,19 +1,4 @@
-import {
-	Button,
-	H2,
-	Paragraph,
-	ScrollView,
-	SizableText,
-	Spinner,
-	useTheme,
-	XStack,
-	YStack,
-} from "tamagui";
-import { useQuery } from "@tanstack/react-query";
-import * as Notifications from "expo-notifications";
-import { useEffect, useState } from "react";
-import { Link, Stack } from "expo-router";
-import { Card } from "tamagui";
+import { ErrorHealthData } from "@/components/errorHealthData";
 import { scheduleDailyWeightNotification } from "@/services/notificationService";
 import {
 	calcWeightAvg,
@@ -21,15 +6,32 @@ import {
 	useWeightRefetchOnActive,
 } from "@/services/weightService";
 import { Bell, Plus } from "@tamagui/lucide-icons";
+import { useQuery } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
+import * as Notifications from "expo-notifications";
+import { Link, Stack } from "expo-router";
+import { useEffect, useState } from "react";
 import type { AppStateStatus } from "react-native";
 import { AppState } from "react-native";
-import { ErrorHealthData } from "@/components/errorHealthData";
+import {
+	Button,
+	H2,
+	Paragraph,
+	ScrollView,
+	SizableText,
+	Spinner,
+	XStack,
+	YStack,
+	useTheme,
+} from "tamagui";
+import { Card } from "tamagui";
 
 // アプリ起動中の通知の動作設定（アラート表示、通知音、バッジ表示）
+// shouldShowAlert は非推奨になり、バナー表示と通知センターへの掲載に分かれた
 Notifications.setNotificationHandler({
 	handleNotification: async () => ({
-		shouldShowAlert: true,
+		shouldShowBanner: true,
+		shouldShowList: true,
 		shouldPlaySound: false,
 		shouldSetBadge: false,
 	}),

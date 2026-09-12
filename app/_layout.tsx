@@ -1,13 +1,10 @@
 import tamaguiConfig from "@/tamagui.config";
-import {
-	DarkTheme,
-	DefaultTheme,
-	ThemeProvider,
-} from "@react-navigation/native";
 import { TamaguiProvider } from "@tamagui/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+// SDK 56 以降、expo-router は react-navigation と併用できない。
+// テーマ関連は expo-router が再エクスポートしているものを使う
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import { useEffect } from "react";
 import { useColorScheme } from "react-native";
 
