@@ -18,7 +18,7 @@ export default function TabLayout() {
 				name="home"
 				options={{
 					title: "ホーム",
-					tabBarIcon: ({ color }) => <Home color={color} size="$1" />,
+					tabBarIcon: ({ color }) => <Home color={color as string} size="$1" />,
 					headerShown: false,
 				}}
 			/>
@@ -26,14 +26,18 @@ export default function TabLayout() {
 				name="graph/index"
 				options={{
 					title: "グラフ",
-					tabBarIcon: ({ color }) => <ChartLine color={color} size="$1" />,
+					tabBarIcon: ({ color }) => (
+						<ChartLine color={color as string} size="$1" />
+					),
 				}}
 			/>
 			<Tabs.Screen
 				name="photo"
 				options={{
 					title: "Before/After",
-					tabBarIcon: ({ color }) => <Images color={color} size="$1" />,
+					tabBarIcon: ({ color }) => (
+						<Images color={color as string} size="$1" />
+					),
 					headerShown: false,
 				}}
 			/>

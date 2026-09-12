@@ -26,10 +26,11 @@ import type { AppStateStatus } from "react-native";
 import { AppState } from "react-native";
 import { ErrorHealthData } from "@/components/errorHealthData";
 
-// アプリ起動中の通知の動作設定（アラート表示、通知音、バッジ表示）
+// アプリ起動中の通知の動作設定（バナー表示、通知センター表示、通知音、バッジ表示）
 Notifications.setNotificationHandler({
 	handleNotification: async () => ({
-		shouldShowAlert: true,
+		shouldShowBanner: true,
+		shouldShowList: true,
 		shouldPlaySound: false,
 		shouldSetBadge: false,
 	}),
