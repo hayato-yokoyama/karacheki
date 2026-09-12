@@ -6,7 +6,7 @@
 		"scheme": "myapp",
 		"userInterfaceStyle": "automatic",
 		"ios": {
-			"supportsTablet": true
+			"supportsTablet": false
 		},
 		"android": {
 			"adaptiveIcon": {
