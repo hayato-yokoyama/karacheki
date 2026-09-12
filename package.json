@@ -4,7 +4,10 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
-    "dev": "APP_VARIANT=development npx expo start",
+    "dev": "APP_VARIANT=development npx expo start --dev-client",
+    "device:register": "npx eas-cli device:create",
+    "build:device": "npx eas-cli build --profile development --platform ios",
+    "build:simulator": "npx eas-cli build --profile ios-simulator --platform ios",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
