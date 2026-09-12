@@ -1,9 +1,9 @@
-# 実機ビルド手順（iOS / SDK 52 のまま）
+# 実機ビルド・TestFlight 手順（iOS / SDK 57）
 
-Simulator では検証できなかった箇所を実機で確認するための、開発用ビルド（dev client）の手順。
-SDK アップグレード（#46 手順4）の前に、**まず今のコードが実機で動くこと**を確かめるためのもの。
+開発用ビルド（dev client）で実機検証し、TestFlight に上げるまでの手順。
 
-2026-09-12 にこの手順で実機検証を完了済み。体重の読み書き・通知・写真選択すべて動作した。
+- 2026-09-12: SDK 52 のまま dev client で実機検証を完了。体重の読み書き・通知・写真選択すべて動作
+- 2026-09-12: SDK 57 へアップグレード（#46 手順4）。Xcode 26.6 でのビルドと Simulator 起動まで確認済み
 
 ## これで入るもの
 
@@ -17,17 +17,53 @@ App Store 版（`com.h-yokoyama.karacheki`）とは別アプリとして入る�
 
 ## 前提
 
-- Apple Developer Program が有効であること
-- ネイティブビルドはクラウド（EAS）で行う。ローカルに Xcode は不要
+- Apple Developer Program が有効であること（2026-09-12 に更新済み）
+- ネイティブビルドはクラウド（EAS）で行える。ローカルに Xcode は必須ではない
 - リモートプッシュは使っていない（`expo-notifications` のローカル通知のみ）ため、**APNs キーの用意は不要**
 - `node_modules` が `package-lock.json` と一致していること（後述。ここがズレるとビルドが落ちる）
 
-### TestFlight は今は使えない
+### なぜ SDK 57 が要るのか
 
 2026-04-28 以降、App Store Connect へのアップロードは **Xcode 26 / iOS 26 SDK でビルドしたものに限られる**。
-SDK 52 のビルドは Xcode 16 で作られるためアップロードが弾かれ（`ITMS-90725`）、かといって Xcode 26 でビルドすると
-`expo-device` がコンパイルできない。**TestFlight が選択肢になるのは #46 手順4（SDKアップグレード）の後**。
-それまでの実機検証はこの dev client で行う。
+これを満たさないと `ITMS-90725` で弾かれる。
+
+EAS は SDK ごとに決まった Xcode イメージでビルドするため、**満たせるのは SDK 55 以降**。
+SDK 54 は Xcode 16 系なので条件を満たさない。
+
+| Expo SDK | React Native | Xcode |
+| --- | --- | --- |
+| 54 | 0.81 | 16.1+ |
+| 55 | 0.83 | 26.2+ |
+| 56 | 0.85 | 26.4+ |
+| **57** | 0.86 | **26.4+** |
+
+次の移行を遠ざけるため 57 を選んだ。SDK 57 は **iOS 16.4 以上**が対象になる。
+
+## ローカルの Simulator で確認する
+
+EAS を使わず手元で完結する。Xcode 26.6 が入っていれば動く。**EAS に投げる前の切り分けはここでやる**のが速い。
+
+```sh
+npm run ios          # prebuild → CocoaPods → xcodebuild → 起動（初回 10 分ほど）
+```
+
+`ios/` は `prebuild` の生成物で gitignore 済み。設定の正は `app.json` / `app.config.ts` なので、
+`ios/` を直接編集しない。おかしくなったら `rm -rf ios` して作り直す。
+
+LAN の IP が変わっていると dev client が Metro を見つけられず
+`Failed to load app from http://<古いIP>:8081` になる。Simulator なら localhost で繋ぎ直せる。
+
+```sh
+xcrun simctl openurl booted "exp+karacheki://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+```
+
+### iOS 26 Simulator ではヘルスケアも動く
+
+以前は「Simulator にヘルスケアが無いので体重機能は検証できない」としていたが、**これは iOS 26 Simulator では当てはまらない**。
+ヘルスケアの許可ダイアログが出て、ヘルスケア App で体重を手入力すれば読み取りまで確認できる。
+
+ただし `xcrun simctl privacy` はヘルスケアに対応していない（`Operation not permitted`）ため、
+許可は Simulator 上で手でタップする必要がある。
 
 ## 手順
 
@@ -35,11 +71,12 @@ SDK 52 のビルドは Xcode 16 で作られるためアップロードが弾か
 
 ```sh
 npm ci
-node -p "require('./node_modules/expo/package.json').version"   # → 52.x であること
+node -p "require('./node_modules/expo/package.json').version"   # → 57.x であること
+npx expo-doctor                                                 # → 全チェック通過
 ```
 
 EAS は**ローカルの `node_modules/expo` のバージョン**を見てビルドイメージ（Xcode）を選ぶ。
-ここが 57 などになっていると Xcode 26 のイメージが選ばれ、SDK 52 のコードがコンパイルできずに落ちる。
+ここがズレると意図しない Xcode が選ばれてコンパイルに失敗する。
 
 ### 1. eas-cli を入れてログインする
 
@@ -82,7 +119,7 @@ npm run build:device
 **デバイス選択はスペースキーでチェックを付ける**。矢印で移動してそのまま Enter を押すと、
 ハイライトされていた1件しか選ばれず、目的の端末が入っていないプロファイルができてしまう。
 
-アップロード後、`SDK Version` が **52.0.0** と表示されていることを確認する。57 などになっていたら手順0に戻る。
+アップロード後、`SDK Version` が **57.0.0** と表示されていることを確認する。違っていたら手順0に戻る。
 
 ### 4. iPhone にインストールする
 
@@ -118,6 +155,55 @@ http://192.168.11.10:8081
 ```
 
 **JS の変更はリビルド不要**。`app.json` / config plugin / 依存パッケージを変えたときだけ 3 からやり直す。
+
+## TestFlight に上げる
+
+dev client での実機確認が済んでから行う。ビルドとアップロードは別のコマンド。
+
+### 1. バージョンを上げる
+
+`app.json` の `expo.version` だけ手で上げる。
+
+```json
+"version": "1.2.0",
+```
+
+**ビルド番号は触らない**。`eas.json` が `appVersionSource: "remote"` かつ production で `autoIncrement` なので、
+EAS 側が採番する。`runtimeVersion` は `appVersion` ポリシーなので `version` に連動する。
+
+### 2. 本番ビルドを作る
+
+```sh
+npm run build:production
+```
+
+- distribution は store（Ad Hoc ではないので端末登録は不要）
+- 配布証明書とプロビジョニングプロファイルは EAS が自動生成する
+- `SDK Version` が **57.0.0** であることを確認する
+
+### 3. アップロードする
+
+```sh
+npm run submit:production
+```
+
+App Store Connect の「TestFlight」に現れ、処理が終わるとテスターに配れる。
+
+> 提出先のアプリは `eas.json` の `submit.production.ios.ascAppId`（App Store Connect のアプリ ID）で指定する。
+> 未設定だと非対話モードで `Set ascAppId in the submit profile` になる。
+> ID は公開 API から引ける。
+>
+> ```sh
+> curl -s "https://itunes.apple.com/lookup?bundleId=com.h-yokoyama.karacheki" | \
+>   python3 -c "import json,sys;print(json.load(sys.stdin)['results'][0]['trackId'])"
+> ```
+>
+> **`eas submit` は Apple ID ログインを通らない。** EAS 側に App Store Connect API キーが
+> 保存されていればそれを使うため、後述の Apple ID ログインの不具合の影響を受けない
+> （2026-09-12 の提出はこれで通った）。
+
+暗号化の輸出申告（`ITSAppUsesNonExemptEncryption: false`）は `app.config.ts` で設定済みなので、
+アップロードのたびに聞かれることはない。
 
 ## 既知の問題: Apple ID ログインが失敗する（2026-09 時点）
 
@@ -186,23 +272,31 @@ eas-cli 24.3.0 のソースで確認した内容。
 | `eas device:create` | ASC 環境変数があれば API キー |
 | Ad Hoc プロビジョニングプロファイルの作成・更新 | 同上 |
 | 証明書・Bundle ID | 同上 |
-| **Push キー / TestFlight / `eas submit`** | **Apple ID ログインが必須のまま** |
+| `eas submit` | **EAS に保存された ASC API キー**（Apple ID ログイン不要） |
+| Push キー | Apple ID ログインが必須のまま |
 
-このアプリはローカル通知しか使っておらず Push キーが不要なので、実機ビルドには影響しない。
-ただし**リリース（`eas submit`）の前にはこの問題の解消が必要**になる。
+このアプリはローカル通知しか使っておらず Push キーが不要なので、実機ビルドにもリリースにも影響しない。
+
+`eas submit` については当初「Apple ID ログイン必須」と書いていたが、**EAS の credentials service に
+ASC API キーがあれば通らない**。2026-09-12 の提出は Apple ID ログインなしで成功した。
 
 ## トラブルシューティング
 
-### ビルドが `cannot find 'TARGET_OS_SIMULATOR' in scope` で落ちる
-
-`node_modules` が `package-lock.json` とズレていて、EAS が新しい Xcode のイメージを選んでいる。
+### ビルドが Pods のヘッダ not found で落ちる
 
 ```
-node_modules/expo-device/ios/UIDevice.swift:186:12:
-error: cannot find 'TARGET_OS_SIMULATOR' in scope
+ios/Pods/Headers/Private/RNWorklets/worklets/Tools/RNRuntimeStatus.h
+  'worklets/Tools/RNRuntimeStatus.h' file not found
 ```
 
-`npm ci` で解消する（手順0）。ビルド詳細の `SDK Version` が 52.0.0 になっていれば正しいイメージが選ばれている。
+`pod install` の後に `node_modules` が変わると、Pods にコピー済みのヘッダと実体がズレる。
+**ビルド中に `npm install` / `npx expo install` を走らせない**。起きたら作り直す。
+
+```sh
+rm -rf ios && npm run ios
+```
+
+同種の症状は `node_modules` が `package-lock.json` とズレているときにも出る。`npm ci` で揃える（手順0）。
 
 ### QR を読むと本番の「からチェキ」が開いてしまう
 
@@ -236,11 +330,12 @@ scheme: IS_DEV ? "karachekidev" : "myapp",
 Metro のログに `通知の権限がありません` も `体重データの取得に失敗しました` も出なければ、
 権限・HealthKit 取得・通知登録がすべて通っている。
 
-## 実機で初めて確認できること
+## 実機で確認したいこと
 
-Simulator では検証できず、積み残していた箇所。
+Simulator でも大半は見られるようになったが、実機でしか確かめられない・実機で見たほうが確実な箇所。
 
 - **体重の取得・保存**（HealthKit）— ホーム画面の週平均、グラフ画面、手動記録
   - 初回起動時にヘルスケアの読み取り／書き込み許可ダイアログが出る
+  - 実機には実データの蓄積があるので、移動平均やグラフの見え方は実機で確認する
 - **通知** — 毎朝8時のローカル通知と、その本文（週平均と変化幅）
-- **カメラ撮影** — 未実装。実機が使えるようになってから着手する（`cameraPermission: false` のままなので、着手時に `app.json` の変更とリビルドが要る）
+- **カメラ撮影** — 未実装。`cameraPermission: false` のままなので、着手時に `app.json` の変更とリビルドが要る

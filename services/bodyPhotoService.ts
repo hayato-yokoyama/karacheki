@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as FileSystem from "expo-file-system";
+// SDK 54 で File / Directory ベースの新 API に置き換わった。
+// 関数ベースの従来 API は legacy として残っているため、まずはそのまま使う
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 
 /** Before/After 写真のメタデータの保存キー */

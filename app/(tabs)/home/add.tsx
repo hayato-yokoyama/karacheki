@@ -1,6 +1,6 @@
 import { saveWeight } from "@/services/weightService";
 import RNDateTimePicker, {
-	type DateTimePickerEvent,
+	type DateTimePickerChangeEvent,
 } from "@react-native-community/datetimepicker";
 import { Lightbulb } from "@tamagui/lucide-icons";
 import { useRouter } from "expo-router";
@@ -50,10 +50,9 @@ const WeightInputForm = () => {
 	const [weight, setWeight] = useState<string>("");
 	const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-	const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
-		if (date) {
-			setSelectedDate(date);
-		}
+	// v9 で date が必須になったため、存在チェックは不要
+	const handleDateChange = (_event: DateTimePickerChangeEvent, date: Date) => {
+		setSelectedDate(date);
 	};
 
 	const handlePressSave = async () => {
@@ -89,7 +88,7 @@ const WeightInputForm = () => {
 				<RNDateTimePicker
 					value={selectedDate}
 					mode="datetime"
-					onChange={handleDateChange}
+					onValueChange={handleDateChange}
 					locale="ja-JP"
 				/>
 			</XStack>

@@ -10,6 +10,9 @@ web-build/
 expo-env.d.ts
 
 # Native
+# prebuild で生成されるディレクトリ。設定は app.json / app.config.ts が正
+/ios
+/android
 *.orig.*
 *.jks
 *.p8
