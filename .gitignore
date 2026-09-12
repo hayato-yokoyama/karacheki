@@ -10,6 +10,9 @@ web-build/
 expo-env.d.ts
 
 # Native
+# prebuild で生成されるため追跡しない。設定は app.json / app.config.ts が持つ
+/ios
+/android
 *.orig.*
 *.jks
 *.p8
