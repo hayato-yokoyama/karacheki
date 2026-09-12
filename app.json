@@ -44,7 +44,8 @@
 			[
 				"@kingstinct/react-native-healthkit",
 				{
-					"NSHealthShareUsageDescription": "体重データを取得するためにヘルスデータにアクセスします。"
+					"NSHealthShareUsageDescription": "体重データを取得するためにヘルスデータにアクセスします。",
+					"NSHealthUpdateUsageDescription": "記録した体重をヘルスケアに書き込むためにアクセスします。"
 				}
 			]
 		],

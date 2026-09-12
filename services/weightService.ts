@@ -1,50 +1,58 @@
-import HealthKit, {
-	HKAuthorizationStatus,
-	HKQuantityTypeIdentifier,
+import {
+	isHealthDataAvailable,
+	queryQuantitySamples,
+	requestAuthorization,
+	saveQuantitySample,
 } from "@kingstinct/react-native-healthkit";
-import type {
-	HKQuantitySample,
-	HKUnit,
-} from "@kingstinct/react-native-healthkit";
+import type { QuantitySampleTyped } from "@kingstinct/react-native-healthkit";
 import { endOfDay, startOfDay, subDays, subMonths } from "date-fns";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 
+/** 体重（HealthKit の識別子）。v9 で enum から文字列リテラルになった */
+const BODY_MASS = "HKQuantityTypeIdentifierBodyMass" as const;
+
+/** 体重のサンプル */
+type BodyMassSample = QuantitySampleTyped<typeof BODY_MASS>;
+
 /** 指定された期間内の体重データを取得する */
 export const fetchWeightDataInRange = async (from: Date, to?: Date) => {
-	const isAvailable = await HealthKit.isHealthDataAvailable();
+	const isAvailable = isHealthDataAvailable();
 
 	if (!isAvailable) {
 		throw new Error("HealthKitはこのデバイスでは利用できません。");
 	}
 
 	// bodyMassの読み取り許可を要求する
-	await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
+	await requestAuthorization({ toRead: [BODY_MASS] });
 
 	// 指定範囲の体重データを取得
-	const weightData = await HealthKit.queryQuantitySamples(
-		HKQuantityTypeIdentifier.bodyMass,
-		{
-			from: from,
-			to: to ? to : new Date(),
-			unit: "kg",
+	const weightData = await queryQuantitySamples(BODY_MASS, {
+		// 0 は「件数の上限なし」。既定では直近20件しか返らない
+		limit: 0,
+		filter: {
+			date: {
+				startDate: from,
+				endDate: to ?? new Date(),
+			},
 		},
-	);
+		unit: "kg",
+	});
 
 	return weightData;
 };
 
 /** 今週と先週の体重を取得する */
 export const fetchWeeklyWeights = async () => {
-	const isAvailable = await HealthKit.isHealthDataAvailable();
+	const isAvailable = isHealthDataAvailable();
 
 	if (!isAvailable) {
 		throw new Error("HealthKitはこのデバイスでは利用できません。");
 	}
 
 	// bodyMassの読み取り許可を要求する
-	await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
+	await requestAuthorization({ toRead: [BODY_MASS] });
 
 	const now = new Date();
 
@@ -68,14 +76,14 @@ export const fetchWeeklyWeights = async () => {
 
 /** 直近の引数月の体重を取得する */
 export const fetchRecentWeightsByMonths = async (month: number) => {
-	const isAvailable = await HealthKit.isHealthDataAvailable();
+	const isAvailable = isHealthDataAvailable();
 
 	if (!isAvailable) {
 		throw new Error("HealthKitはこのデバイスでは利用できません。");
 	}
 
 	// bodyMassの読み取り許可を要求する
-	await HealthKit.requestAuthorization([HKQuantityTypeIdentifier.bodyMass]);
+	await requestAuthorization({ toRead: [BODY_MASS] });
 
 	const now = new Date();
 
@@ -88,12 +96,7 @@ export const fetchRecentWeightsByMonths = async (month: number) => {
 };
 
 /** 体重の平均値を算出する */
-export const calcWeightAvg = (
-	weights: readonly HKQuantitySample<
-		HKQuantityTypeIdentifier.bodyMass,
-		HKUnit
-	>[],
-) => {
+export const calcWeightAvg = (weights: readonly BodyMassSample[]) => {
 	if (weights.length === 0) {
 		return null;
 	}
@@ -105,10 +108,7 @@ export const calcWeightAvg = (
 
 /** X軸:日時,Y軸:体重(kg) のグラフ用に整形する */
 export const transformWeightDataForGraph = (
-	weights: readonly HKQuantitySample<
-		HKQuantityTypeIdentifier.bodyMass,
-		HKUnit
-	>[],
+	weights: readonly BodyMassSample[],
 	windowSize = 10, // 移動平均のウィンドウサイズ
 ) => {
 	// 日付ごとに最初の測定値だけを残す
@@ -121,10 +121,7 @@ export const transformWeightDataForGraph = (
 				}
 				return acc;
 			},
-			{} as Record<
-				string,
-				HKQuantitySample<HKQuantityTypeIdentifier.bodyMass, HKUnit>
-			>,
+			{} as Record<string, BodyMassSample>,
 		),
 	);
 
@@ -167,21 +164,11 @@ export const transformWeightDataForGraph = (
 
 /** 体重データの書き込みをする */
 export const saveWeight = async (weight: number, date: Date) => {
-	// bodyMassの書き込み許可を要求する
-	await HealthKit.requestAuthorization(
-		[HKQuantityTypeIdentifier.bodyMass],
-		[HKQuantityTypeIdentifier.bodyMass],
-	);
+	// bodyMassの読み書き許可を要求する
+	await requestAuthorization({ toRead: [BODY_MASS], toShare: [BODY_MASS] });
 
-	// 体重データを書き込む
-	await HealthKit.saveQuantitySample(
-		HKQuantityTypeIdentifier.bodyMass,
-		"kg",
-		weight,
-		{
-			start: date,
-		},
-	);
+	// 体重データを書き込む。計測は一瞬なので開始と終了は同じ時刻にする
+	await saveQuantitySample(BODY_MASS, "kg", weight, date, date);
 };
 
 /** 画面フォーカス時やフォアグラウンド復帰時に体重を再取得する */
