@@ -26,8 +26,6 @@
     "@kingstinct/react-native-healthkit": "^15.1.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.1.0",
-    "@react-navigation/bottom-tabs": "^7.0.0",
-    "@react-navigation/native": "^7.0.0",
     "@shopify/react-native-skia": "2.6.2",
     "@tamagui/babel-plugin": "^1.144.4",
     "@tamagui/cli": "^1.144.4",
