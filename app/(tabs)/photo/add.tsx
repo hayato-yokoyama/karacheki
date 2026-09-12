@@ -1,6 +1,6 @@
 import { addBodyPhoto } from "@/services/bodyPhotoService";
 import RNDateTimePicker, {
-	type DateTimePickerEvent,
+	type DateTimePickerChangeEvent,
 } from "@react-native-community/datetimepicker";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -46,10 +46,9 @@ export default function Add() {
 		}
 	};
 
-	const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
-		if (date) {
-			setSelectedDate(date);
-		}
+	// v9 で date が必須になったため、存在チェックは不要
+	const handleDateChange = (_event: DateTimePickerChangeEvent, date: Date) => {
+		setSelectedDate(date);
 	};
 
 	if (!uri) {
@@ -75,7 +74,7 @@ export default function Add() {
 					<RNDateTimePicker
 						value={selectedDate}
 						mode="date"
-						onChange={handleDateChange}
+						onValueChange={handleDateChange}
 						locale="ja-JP"
 					/>
 				</XStack>
