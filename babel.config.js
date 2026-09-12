@@ -12,9 +12,6 @@ module.exports = (api) => {
 					disableExtraction: process.env.NODE_ENV === "development",
 				},
 			],
-
-			// NOTE: this is only necessary if you are using reanimated for animations
-			"react-native-reanimated/plugin",
 		],
 	};
 };
