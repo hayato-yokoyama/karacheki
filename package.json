@@ -79,7 +79,7 @@
     "jest-expo": "~57.0.5",
     "markuplint": "^4.11.2",
     "react-test-renderer": "19.2.3",
-    "typescript": "^5.3.3"
+    "typescript": "~6.0.3"
   },
   "private": true
 }
