@@ -189,9 +189,18 @@ npm run submit:production
 
 App Store Connect の「TestFlight」に現れ、処理が終わるとテスターに配れる。
 
-> **`eas submit` は Apple ID ログインが必須**で、後述の不具合の影響を受ける。
-> App Store Connect API キー（回避策B）では代替できない。回避策A を使うか、
-> `.ipa` をダウンロードして **Transporter.app** で手動アップロードする。
+> 提出先のアプリは `eas.json` の `submit.production.ios.ascAppId`（App Store Connect のアプリ ID）で指定する。
+> 未設定だと非対話モードで `Set ascAppId in the submit profile` になる。
+> ID は公開 API から引ける。
+>
+> ```sh
+> curl -s "https://itunes.apple.com/lookup?bundleId=com.h-yokoyama.karacheki" | \
+>   python3 -c "import json,sys;print(json.load(sys.stdin)['results'][0]['trackId'])"
+> ```
+>
+> **`eas submit` は Apple ID ログインを通らない。** EAS 側に App Store Connect API キーが
+> 保存されていればそれを使うため、後述の Apple ID ログインの不具合の影響を受けない
+> （2026-09-12 の提出はこれで通った）。
 
 暗号化の輸出申告（`ITSAppUsesNonExemptEncryption: false`）は `app.config.ts` で設定済みなので、
 アップロードのたびに聞かれることはない。
@@ -263,10 +272,13 @@ eas-cli 24.3.0 のソースで確認した内容。
 | `eas device:create` | ASC 環境変数があれば API キー |
 | Ad Hoc プロビジョニングプロファイルの作成・更新 | 同上 |
 | 証明書・Bundle ID | 同上 |
-| **Push キー / TestFlight / `eas submit`** | **Apple ID ログインが必須のまま** |
+| `eas submit` | **EAS に保存された ASC API キー**（Apple ID ログイン不要） |
+| Push キー | Apple ID ログインが必須のまま |
 
-このアプリはローカル通知しか使っておらず Push キーが不要なので、実機ビルドには影響しない。
-ただし**リリース（`eas submit`）の前にはこの問題の解消が必要**になる。
+このアプリはローカル通知しか使っておらず Push キーが不要なので、実機ビルドにもリリースにも影響しない。
+
+`eas submit` については当初「Apple ID ログイン必須」と書いていたが、**EAS の credentials service に
+ASC API キーがあれば通らない**。2026-09-12 の提出は Apple ID ログインなしで成功した。
 
 ## トラブルシューティング
 
