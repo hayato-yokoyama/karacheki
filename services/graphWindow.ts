@@ -359,3 +359,45 @@ export const clampCardLeft = ({
 
 	return Math.min(Math.max(centerX - cardWidth / 2, minLeft), maxLeft);
 };
+
+/** 表示窓の中での傾向データの増減 */
+export type TrendSummary = {
+	/** 窓の中で最初に傾向が出た日の値 */
+	startWeight: number;
+	/** 窓の中で最後に傾向が出た日の値 */
+	endWeight: number;
+	/** 期間の増減(kg)。減っていればマイナス */
+	diffWeight: number;
+};
+
+/**
+ * 表示窓の中の増減を、傾向データの両端から求める
+ *
+ * 実測値ではなく傾向データを使うのは、日々の水分変動を増減として拾わないため。
+ * グラフに描いている傾向線の両端そのものなので、線の上下と数字が食い違わない。
+ *
+ * 傾向データは移動平均のため記録開始からしばらくは求まらず、
+ * 窓の中に2点そろわないときは増減を出せない
+ */
+export const getTrendSummary = (
+	points: readonly GraphPoint[],
+	{ startMs, endMs }: GraphWindow,
+): TrendSummary | null => {
+	const trendWeights = points
+		.filter((point) => point.date >= startMs && point.date <= endMs)
+		.map((point) => point.trendWeight)
+		.filter((weight): weight is number => weight !== null);
+
+	if (trendWeights.length < 2) {
+		return null;
+	}
+
+	const startWeight = trendWeights[0];
+	const endWeight = trendWeights[trendWeights.length - 1];
+
+	return {
+		startWeight,
+		endWeight,
+		diffWeight: endWeight - startWeight,
+	};
+};

@@ -4,6 +4,7 @@ import {
 	type GraphPoint,
 	type GraphWindow,
 	SCROLL_TO_LATEST_DURATION_MS,
+	type TrendSummary,
 	clampCardLeft,
 	clampWindowEnd,
 	easeOutCubic,
@@ -11,6 +12,7 @@ import {
 	flingToEndMs,
 	formatWindowLabel,
 	getInitialEndMs,
+	getTrendSummary,
 	getWindow,
 	getXTickValues,
 	getYRange,
@@ -262,6 +264,12 @@ const GraphContent = ({
 		[visibleWindow, months],
 	);
 
+	// 未選択のあいだ、カードの置き場には表示中の期間の増減を出す
+	const trendSummary = useMemo(
+		() => getTrendSummary(visibleData, visibleWindow),
+		[visibleData, visibleWindow],
+	);
+
 	/** タップで選択中のデータの日時。未選択は null */
 	const [selectedMs, setSelectedMs] = useState<number | null>(null);
 
@@ -497,8 +505,8 @@ const GraphContent = ({
 					</Button>
 				)}
 			</XStack>
-			{/* カードの置き場。選択の有無でグラフの高さが動かないよう常に確保する */}
-			<View height={CARD_AREA_HEIGHT}>
+			{/* 選択中は1点の値、未選択のあいだは期間の増減。高さは常に確保する */}
+			<View height={CARD_AREA_HEIGHT} justifyContent="flex-end">
 				{selectedPoint !== null &&
 				selectedX !== null &&
 				chartBounds !== null ? (
@@ -511,7 +519,9 @@ const GraphContent = ({
 							padding: CARD_EDGE_PADDING,
 						})}
 					/>
-				) : null}
+				) : (
+					<WindowTrendSummary summary={trendSummary} />
+				)}
 			</View>
 			<Text fontSize={12}>（ ㎏ ）</Text>
 			<GestureDetector gesture={gesture}>
@@ -703,3 +713,45 @@ const SelectedPointCard = ({
 		</YStack>
 	);
 };
+
+/** 増減を符号つきで表す。増減なしは ± にして向きを持たせない */
+const formatDiffWeight = (diffWeight: number): string => {
+	const rounded = Math.round(diffWeight * 10) / 10;
+
+	if (rounded > 0) {
+		return `+${rounded.toFixed(1)}kg`;
+	}
+	if (rounded < 0) {
+		return `${rounded.toFixed(1)}kg`;
+	}
+
+	return `±${rounded.toFixed(1)}kg`;
+};
+
+/**
+ * 未選択のあいだ出す、表示中の期間の増減
+ *
+ * 増減は色を変えない。増量期か減量期かはユーザーの目的しだいで、
+ * アプリが良し悪しを決めて一喜一憂させないため
+ */
+const WindowTrendSummary = ({
+	summary,
+}: {
+	summary: TrendSummary | null;
+}) => (
+	<YStack gap="$1">
+		<XStack alignItems="baseline" gap="$2">
+			<Text fontSize={12} color="$color11">
+				この期間の傾向
+			</Text>
+			<Text fontSize={20} fontWeight="700">
+				{summary === null ? "-" : formatDiffWeight(summary.diffWeight)}
+			</Text>
+		</XStack>
+		{summary === null ? null : (
+			<Text fontSize={12} color="$color11">
+				{`${summary.startWeight.toFixed(1)} → ${summary.endWeight.toFixed(1)}kg`}
+			</Text>
+		)}
+	</YStack>
+);

@@ -7,6 +7,7 @@ import {
 	flingToEndMs,
 	formatWindowLabel,
 	getInitialEndMs,
+	getTrendSummary,
 	getWindow,
 	getXTickValues,
 	getYRange,
@@ -609,5 +610,82 @@ describe("clampCardLeft", () => {
 		expect(
 			clampCardLeft({ centerX: 60, cardWidth: 400, bounds, padding: 4 }),
 		).toBe(44);
+	});
+});
+
+describe("getTrendSummary", () => {
+	const window = {
+		startMs: at("2026-06-01T00:00:00Z"),
+		endMs: at("2026-06-30T00:00:00Z"),
+	};
+
+	it("窓の中の傾向データの両端から増減を求める", () => {
+		const summary = getTrendSummary(
+			[
+				point("2026-06-02T00:00:00Z", 71, 70.5),
+				point("2026-06-10T00:00:00Z", 69, 69.8),
+				point("2026-06-20T00:00:00Z", 68, 68.4),
+			],
+			window,
+		);
+
+		expect(summary).toMatchObject({ startWeight: 70.5, endWeight: 68.4 });
+		expect(summary?.diffWeight).toBeCloseTo(-2.1);
+	});
+
+	it("窓の外の点は増減に含めない", () => {
+		expect(
+			getTrendSummary(
+				[
+					// sliceByWindow が線を端まで届かせるために返す窓外の点
+					point("2026-05-20T00:00:00Z", 75, 75.5),
+					point("2026-06-02T00:00:00Z", 71, 70.5),
+					point("2026-06-20T00:00:00Z", 68, 68.4),
+					point("2026-07-05T00:00:00Z", 67, 67.2),
+				],
+				window,
+			),
+		).toMatchObject({ startWeight: 70.5, endWeight: 68.4 });
+	});
+
+	it("傾向データが無い点は飛ばす", () => {
+		expect(
+			getTrendSummary(
+				[
+					point("2026-06-02T00:00:00Z", 71),
+					point("2026-06-10T00:00:00Z", 69, 69.8),
+					point("2026-06-20T00:00:00Z", 68, 68.4),
+				],
+				window,
+			),
+		).toMatchObject({ startWeight: 69.8, endWeight: 68.4 });
+	});
+
+	it("傾向データが1点しか無いときは求められない", () => {
+		expect(
+			getTrendSummary(
+				[
+					point("2026-06-02T00:00:00Z", 71),
+					point("2026-06-10T00:00:00Z", 69, 69.8),
+				],
+				window,
+			),
+		).toBeNull();
+	});
+
+	it("データが無いときは求められない", () => {
+		expect(getTrendSummary([], window)).toBeNull();
+	});
+
+	it("増えているときはプラスになる", () => {
+		expect(
+			getTrendSummary(
+				[
+					point("2026-06-02T00:00:00Z", 68, 68.0),
+					point("2026-06-20T00:00:00Z", 70, 69.0),
+				],
+				window,
+			)?.diffWeight,
+		).toBeCloseTo(1.0);
 	});
 });
