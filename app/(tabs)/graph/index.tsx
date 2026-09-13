@@ -1,6 +1,17 @@
 import { ErrorHealthData } from "@/components/errorHealthData";
 import {
-	fetchRecentWeightsByMonths,
+	type GraphPoint,
+	type GraphWindow,
+	clampWindowEnd,
+	formatWindowLabel,
+	getWindow,
+	getYRange,
+	isShowingLatest,
+	panToEndMs,
+	sliceByWindow,
+} from "@/services/graphWindow";
+import {
+	fetchAllWeights,
 	transformWeightDataForGraph,
 	useWeightRefetchOnActive,
 } from "@/services/weightService";
@@ -8,38 +19,55 @@ import { matchFont } from "@shopify/react-native-skia";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Stack } from "expo-router";
-import { Platform } from "react-native";
+import { useMemo, useRef, useState } from "react";
+import { type LayoutChangeEvent, Platform } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import {
-	Paragraph,
+	Button,
 	ScrollView,
 	Separator,
 	SizableText,
 	Spinner,
 	Tabs,
 	Text,
-	useTheme,
 	View,
 	XStack,
 	YStack,
+	useTheme,
 } from "tamagui";
 import { CartesianChart, Line, Scatter } from "victory-native";
+
+/** グラフの表示期間幅（月） */
+const MONTH_OPTIONS = [1, 3, 6, 12] as const;
 
 export default function Graph() {
 	const theme = useTheme();
 
-	// 13ヶ月分のデータを取得
+	// 全期間のデータを取得する（過去へ遡れるようにするため期間を絞らない）
 	const {
 		data: fetchedWeights,
 		isLoading,
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: ["graphWeights", 13],
-		queryFn: () => fetchRecentWeightsByMonths(13),
+		queryKey: ["graphWeights", "all"],
+		queryFn: fetchAllWeights,
 	});
 
 	// 画面フォーカス時やフォアグラウンド復帰時に体重を再取得する
 	useWeightRefetchOnActive(refetch);
+
+	/** 表示期間幅（月） */
+	const [months, setMonths] = useState<number>(3);
+	/** 表示窓の終端時刻。スケールを切り替えても引き継ぐ */
+	const [endMs, setEndMs] = useState<number>(() => Date.now());
+
+	/** グラフ用の体重データ（日時・実測データ・傾向データ） */
+	// パン中の再レンダーごとに全期間ぶんを計算し直さないようメモ化する
+	const weightForGraph = useMemo(
+		() => (fetchedWeights ? transformWeightDataForGraph(fetchedWeights) : []),
+		[fetchedWeights],
+	);
 
 	if (isLoading) {
 		return (
@@ -77,9 +105,6 @@ export default function Graph() {
 		);
 	}
 
-	/** グラフ用の体重データ（日時・実測データ・傾向データ） */
-	const weightForGraph = transformWeightDataForGraph(fetchedWeights);
-
 	return (
 		<>
 			<Stack.Screen
@@ -103,39 +128,31 @@ export default function Graph() {
 					</XStack>
 					{/* グラフ */}
 					<Tabs
-						defaultValue="3"
+						value={String(months)}
+						onValueChange={(value) => setMonths(Number(value))}
 						orientation="horizontal"
 						flexDirection="column"
 						width="100%"
-						height={510}
+						height={540}
 						overflow="hidden"
 					>
-						<Tabs.Content value="1">
-							<GraphContent month={1} data={weightForGraph} />
-						</Tabs.Content>
-						<Tabs.Content value="3">
-							<GraphContent month={3} data={weightForGraph} />
-						</Tabs.Content>
-						<Tabs.Content value="6">
-							<GraphContent month={6} data={weightForGraph} />
-						</Tabs.Content>
-						<Tabs.Content value="12">
-							<GraphContent month={12} data={weightForGraph} />
+						<Tabs.Content value={String(months)}>
+							<GraphContent
+								months={months}
+								endMs={endMs}
+								onChangeEndMs={setEndMs}
+								data={weightForGraph}
+							/>
 						</Tabs.Content>
 
 						<Tabs.List separator={<Separator vertical />} marginTop="$4">
-							<Tabs.Tab flex={1} value="1">
-								<SizableText>1ヶ月</SizableText>
-							</Tabs.Tab>
-							<Tabs.Tab flex={1} value="3">
-								<SizableText>3ヶ月</SizableText>
-							</Tabs.Tab>
-							<Tabs.Tab flex={1} value="6">
-								<SizableText>6ヶ月</SizableText>
-							</Tabs.Tab>
-							<Tabs.Tab flex={1} value="12">
-								<SizableText>1年</SizableText>
-							</Tabs.Tab>
+							{MONTH_OPTIONS.map((month) => (
+								<Tabs.Tab key={month} flex={1} value={String(month)}>
+									<SizableText>
+										{month === 12 ? "1年" : `${month}ヶ月`}
+									</SizableText>
+								</Tabs.Tab>
+							))}
 						</Tabs.List>
 					</Tabs>
 				</YStack>
@@ -150,89 +167,148 @@ const graphAxisFont = matchFont({
 });
 
 const GraphContent = ({
-	month,
+	months,
+	endMs,
+	onChangeEndMs,
 	data,
 }: {
-	month: number;
-	data: { date: string; actualWeight: number; trendWeight: number | null }[];
+	months: number;
+	endMs: number;
+	onChangeEndMs: (endMs: number) => void;
+	data: GraphPoint[];
 }) => {
 	const theme = useTheme();
 
-	// データを指定期間のものだけに絞る
-	const filteredData = data.filter((item) => {
-		const date = new Date(item.date);
-		const cutoffDate = new Date();
-		cutoffDate.setMonth(cutoffDate.getMonth() - month);
-		return date >= cutoffDate;
-	});
+	const nowMs = Date.now();
+	const oldestMs = data[0]?.date ?? nowMs;
 
-	if (filteredData.length === 0) {
-		return (
-			<YStack alignItems="center" justifyContent="center" height={440}>
-				<Paragraph>指定期間のデータがありません。</Paragraph>
-			</YStack>
-		);
-	}
+	// 端（最古データ〜今日）を超えないように表示位置を丸める
+	const clampedEndMs = clampWindowEnd({ endMs, months, oldestMs, nowMs });
+	const visibleWindow: GraphWindow = getWindow(clampedEndMs, months);
+
+	const visibleData = sliceByWindow(data, visibleWindow);
+	const yRange = getYRange(visibleData, visibleWindow);
+
+	// ジェスチャーのコールバックから常に最新値を読めるようにする
+	const chartWidthRef = useRef(0);
+	const panRef = useRef({ months, endMs: clampedEndMs, oldestMs });
+	panRef.current = { months, endMs: clampedEndMs, oldestMs };
+
+	const handleLayout = (event: LayoutChangeEvent) => {
+		chartWidthRef.current = event.nativeEvent.layout.width;
+	};
+
+	const panGesture = useMemo(
+		() =>
+			Gesture.Pan()
+				// 表示位置を React の state で持つため、コールバックは JS スレッドで動かす
+				.runOnJS(true)
+				// 縦スクロールを潰さないよう、横方向が優勢なときだけパンを開始する
+				.activeOffsetX([-10, 10])
+				.failOffsetY([-10, 10])
+				.onChange((event) => {
+					const {
+						months: currentMonths,
+						endMs: currentEndMs,
+						oldestMs: currentOldestMs,
+					} = panRef.current;
+					const pannedEndMs = panToEndMs({
+						endMs: currentEndMs,
+						deltaX: event.changeX,
+						chartWidth: chartWidthRef.current,
+						months: currentMonths,
+					});
+					// 端で行き過ぎが溜まらないよう、state に入れる前に丸める
+					onChangeEndMs(
+						clampWindowEnd({
+							endMs: pannedEndMs,
+							months: currentMonths,
+							oldestMs: currentOldestMs,
+							nowMs: Date.now(),
+						}),
+					);
+				}),
+		[onChangeEndMs],
+	);
 
 	return (
-		<YStack gap="$1" height={440}>
+		<YStack gap="$1" height={470}>
+			{/* 表示中の期間と、今日へ戻る導線 */}
+			<XStack alignItems="center" justifyContent="space-between" height="$2">
+				<Text fontSize={12} color="$color11">
+					{formatWindowLabel(visibleWindow)}
+				</Text>
+				{isShowingLatest(clampedEndMs, nowMs) ? null : (
+					<Button size="$2" onPress={() => onChangeEndMs(Date.now())}>
+						今日へ
+					</Button>
+				)}
+			</XStack>
 			<Text fontSize={12}>（ ㎏ ）</Text>
-			<CartesianChart
-				data={filteredData}
-				xKey="date"
-				yKeys={["actualWeight", "trendWeight"]}
-				axisOptions={{
-					font: graphAxisFont,
-					formatYLabel: (value) => (value ? value.toFixed(1) : ""),
-					formatXLabel: (value) => {
-						if (!value) {
-							return "";
-						}
-						return format(new Date(value), month === 12 ? "yyyy/MM" : "M/d");
-					},
-					labelPosition: { x: "outset", y: "outset" },
-					labelOffset: { x: 8, y: 8 },
-					tickCount: {
-						x: 4,
-						y: 6,
-					},
-					lineColor: theme.color5.val,
-					labelColor: theme.color12.val,
-				}}
-				// biome-ignore lint: correctness/noChildrenProp: Childrenで渡すとエラーになるためignore
-				children={({ points }) => (
-					<>
-						<Line
-							points={points.actualWeight}
-							color={theme.color7.val}
-							strokeWidth={month === 12 || month === 6 ? 1 : 2}
-						/>
-						{month === 1 ? (
+			<GestureDetector gesture={panGesture}>
+				<View flex={1} onLayout={handleLayout}>
+					<CartesianChart
+						data={visibleData}
+						xKey="date"
+						yKeys={["actualWeight", "trendWeight"]}
+						// 表示窓をそのまま定義域にする。窓の外のデータはクリップされる
+						domain={{
+							x: [visibleWindow.startMs, visibleWindow.endMs],
+							y: yRange,
+						}}
+						axisOptions={{
+							font: graphAxisFont,
+							formatYLabel: (value) => (value ? value.toFixed(1) : ""),
+							formatXLabel: (value) => {
+								if (!value) {
+									return "";
+								}
+								return format(
+									new Date(value),
+									months === 12 ? "yyyy/MM" : "M/d",
+								);
+							},
+							labelPosition: { x: "outset", y: "outset" },
+							labelOffset: { x: 8, y: 8 },
+							tickCount: {
+								x: 4,
+								y: 6,
+							},
+							lineColor: theme.color5.val,
+							labelColor: theme.color12.val,
+						}}
+						// biome-ignore lint: correctness/noChildrenProp: Childrenで渡すとエラーになるためignore
+						children={({ points }) => (
 							<>
-								<Scatter
+								<Line
 									points={points.actualWeight}
 									color={theme.color7.val}
-									radius={3}
+									strokeWidth={months === 12 || months === 6 ? 1 : 2}
 								/>
-							</>
-						) : null}
-						<Line
-							points={points.trendWeight}
-							color={theme.accentColor.val}
-							strokeWidth={month === 12 || month === 6 ? 2 : 3}
-						/>
-						{month === 1 ? (
-							<>
-								<Scatter
+								{months === 1 ? (
+									<Scatter
+										points={points.actualWeight}
+										color={theme.color7.val}
+										radius={3}
+									/>
+								) : null}
+								<Line
 									points={points.trendWeight}
 									color={theme.accentColor.val}
-									radius={3}
+									strokeWidth={months === 12 || months === 6 ? 2 : 3}
 								/>
+								{months === 1 ? (
+									<Scatter
+										points={points.trendWeight}
+										color={theme.accentColor.val}
+										radius={3}
+									/>
+								) : null}
 							</>
-						) : null}
-					</>
-				)}
-			/>
+						)}
+					/>
+				</View>
+			</GestureDetector>
 		</YStack>
 	);
 };

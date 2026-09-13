@@ -5,7 +5,8 @@
 		"paths": {
 			"@/*": ["./*"]
 		},
-		"jsx": "react-jsx"
+		"jsx": "react-jsx",
+		"types": ["jest"]
 	},
 	"include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }
