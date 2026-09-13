@@ -8,7 +8,9 @@ import {
 	easeOutCubic,
 	flingToEndMs,
 	formatWindowLabel,
+	getInitialEndMs,
 	getWindow,
+	getXTickValues,
 	getYRange,
 	isShowingLatest,
 	panToEndMs,
@@ -39,10 +41,17 @@ import {
 	YStack,
 	useTheme,
 } from "tamagui";
+import type { ChartBounds } from "victory-native";
 import { CartesianChart, Line, Scatter } from "victory-native";
 
 /** グラフの表示期間幅（月） */
 const MONTH_OPTIONS = [1, 3, 6, 12] as const;
+
+/** 初期表示の期間幅（月） */
+const DEFAULT_MONTHS = 3;
+
+/** X軸の目盛りの数 */
+const X_TICK_COUNT = 4;
 
 export default function Graph() {
 	const theme = useTheme();
@@ -62,15 +71,30 @@ export default function Graph() {
 	useWeightRefetchOnActive(refetch);
 
 	/** 表示期間幅（月） */
-	const [months, setMonths] = useState<number>(3);
-	/** 表示窓の終端時刻。スケールを切り替えても引き継ぐ */
-	const [endMs, setEndMs] = useState<number>(() => Date.now());
+	const [months, setMonths] = useState<number>(DEFAULT_MONTHS);
+	/**
+	 * 表示窓の終端時刻。スケールを切り替えても引き継ぐ
+	 *
+	 * まだ一度も動かしていない間は null にして、データから決めた初期位置を使う
+	 */
+	const [endMs, setEndMs] = useState<number | null>(null);
 
 	/** グラフ用の体重データ（日時・実測データ・傾向データ） */
 	// パン中の再レンダーごとに全期間ぶんを計算し直さないようメモ化する
 	const weightForGraph = useMemo(
 		() => (fetchedWeights ? transformWeightDataForGraph(fetchedWeights) : []),
 		[fetchedWeights],
+	);
+
+	// 最後に記録したのが表示幅より前でも、開いた時点でデータが見えるようにする
+	const initialEndMs = useMemo(
+		() =>
+			getInitialEndMs({
+				newestMs: weightForGraph.at(-1)?.date,
+				nowMs: Date.now(),
+				months: DEFAULT_MONTHS,
+			}),
+		[weightForGraph],
 	);
 
 	if (isLoading) {
@@ -143,7 +167,7 @@ export default function Graph() {
 						<Tabs.Content value={String(months)}>
 							<GraphContent
 								months={months}
-								endMs={endMs}
+								endMs={endMs ?? initialEndMs}
 								onChangeEndMs={setEndMs}
 								data={weightForGraph}
 							/>
@@ -188,18 +212,43 @@ const GraphContent = ({
 
 	// 端（最古データ〜今日）を超えないように表示位置を丸める
 	const clampedEndMs = clampWindowEnd({ endMs, months, oldestMs, nowMs });
-	const visibleWindow: GraphWindow = getWindow(clampedEndMs, months);
 
-	const visibleData = sliceByWindow(data, visibleWindow);
-	const yRange = getYRange(visibleData, visibleWindow);
+	// パン中は毎フレーム再レンダーされるため、窓の導出はメモ化しておく
+	const visibleWindow: GraphWindow = useMemo(
+		() => getWindow(clampedEndMs, months),
+		[clampedEndMs, months],
+	);
+	const visibleData = useMemo(
+		() => sliceByWindow(data, visibleWindow),
+		[data, visibleWindow],
+	);
+	const yRange = useMemo(
+		() => getYRange(visibleData, visibleWindow),
+		[visibleData, visibleWindow],
+	);
+	const xTickValues = useMemo(
+		() =>
+			getXTickValues(visibleWindow, {
+				count: X_TICK_COUNT,
+				// 長い期間では月初に揃えたほうが読みやすい
+				snapToMonth: months >= 6,
+			}),
+		[visibleWindow, months],
+	);
 
 	// ジェスチャーのコールバックから常に最新値を読めるようにする
 	const chartWidthRef = useRef(0);
 	const panRef = useRef({ months, endMs: clampedEndMs, oldestMs });
 	panRef.current = { months, endMs: clampedEndMs, oldestMs };
 
+	// レイアウト確定直後、プロット領域が確定するまでの暫定値
 	const handleLayout = (event: LayoutChangeEvent) => {
 		chartWidthRef.current = event.nativeEvent.layout.width;
+	};
+
+	// 指の移動量を時間に換算する基準は、Y軸ラベルを除いたプロット領域の幅
+	const handleChartBoundsChange = (bounds: ChartBounds) => {
+		chartWidthRef.current = bounds.right - bounds.left;
 	};
 
 	/** 表示位置を端に収める */
@@ -237,7 +286,10 @@ const GraphContent = ({
 				const progress = (Date.now() - startedAt) / durationMs;
 				const eased = easeOutCubic(progress);
 
-				onChangeEndMs(clampToEdges(fromEndMs + (toEndMs - fromEndMs) * eased));
+				const next = clampToEdges(fromEndMs + (toEndMs - fromEndMs) * eased);
+				// 次のレンダーを待たずに現在位置を更新する
+				panRef.current.endMs = next;
+				onChangeEndMs(next);
 
 				if (progress < 1) {
 					animationRef.current = requestAnimationFrame(step);
@@ -273,7 +325,11 @@ const GraphContent = ({
 						months: currentMonths,
 					});
 					// 端で行き過ぎが溜まらないよう、state に入れる前に丸める
-					onChangeEndMs(clampToEdges(pannedEndMs));
+					const next = clampToEdges(pannedEndMs);
+					// 1フレームに複数イベントが届いても移動量を取りこぼさないよう、
+					// レンダーを待たずに現在位置を進めておく
+					panRef.current.endMs = next;
+					onChangeEndMs(next);
 				})
 				.onEnd((event, success) => {
 					// 途中でキャンセルされたときは滑らせない
@@ -327,9 +383,13 @@ const GraphContent = ({
 							x: [visibleWindow.startMs, visibleWindow.endMs],
 							y: yRange,
 						}}
-						axisOptions={{
+						onChartBoundsChange={handleChartBoundsChange}
+						// X軸は目盛りの位置を自前で決めるため xAxis 側で指定する。
+						// axisOptions の x 向けの指定はこの場合使われない
+						xAxis={{
 							font: graphAxisFont,
-							formatYLabel: (value) => (value ? value.toFixed(1) : ""),
+							tickCount: X_TICK_COUNT,
+							tickValues: xTickValues,
 							formatXLabel: (value) => {
 								if (!value) {
 									return "";
@@ -339,10 +399,18 @@ const GraphContent = ({
 									months === 12 ? "yyyy/MM" : "M/d",
 								);
 							},
+							labelPosition: "outset",
+							labelOffset: 8,
+							lineColor: theme.color5.val,
+							labelColor: theme.color12.val,
+						}}
+						axisOptions={{
+							font: graphAxisFont,
+							formatYLabel: (value) => (value ? value.toFixed(1) : ""),
 							labelPosition: { x: "outset", y: "outset" },
 							labelOffset: { x: 8, y: 8 },
 							tickCount: {
-								x: 4,
+								x: X_TICK_COUNT,
 								y: 6,
 							},
 							lineColor: theme.color5.val,

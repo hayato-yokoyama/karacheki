@@ -1,4 +1,10 @@
-import { addMonths, format, subMonths } from "date-fns";
+import {
+	addMonths,
+	format,
+	startOfDay,
+	startOfMonth,
+	subMonths,
+} from "date-fns";
 
 /** 1日のミリ秒 */
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -38,7 +44,11 @@ export const getWindow = (endMs: number, months: number): GraphWindow => ({
 /**
  * 終端時刻を「最古データが左端に来る位置」〜「今日」に収める
  *
- * データの範囲が表示幅より短いときは、常に今日を終端にする
+ * データの範囲が表示幅より短いときは、常に今日を終端にする。
+ *
+ * なお addMonths と subMonths は月末で往復しない（1/31 に1ヶ月足して1ヶ月引くと 1/28）ため、
+ * 最古データが月末のときは左端が最大3日ぶん手前で止まる。
+ * 常にデータより過去側にはみ出す向きなので、最古データが隠れることはない
  */
 export const clampWindowEnd = ({
 	endMs,
@@ -188,6 +198,58 @@ export const getYRange = (
 	const padding = Math.max((max - min) * 0.1, 0.5);
 
 	return [min - padding, max + padding];
+};
+
+/**
+ * 初回に表示する終端時刻
+ *
+ * 最新の測定が既定の表示幅より古いときは、その測定が右端に来る位置から始める。
+ * 今日を右端にすると、しばらく記録していないユーザーには何も描かれないグラフが出てしまうため
+ */
+export const getInitialEndMs = ({
+	newestMs,
+	nowMs,
+	months,
+}: {
+	newestMs: number | undefined;
+	nowMs: number;
+	months: number;
+}): number => {
+	if (newestMs === undefined) {
+		return nowMs;
+	}
+
+	const { startMs } = getWindow(nowMs, months);
+
+	return newestMs >= startMs ? nowMs : newestMs;
+};
+
+/**
+ * X軸の目盛りを表示窓から作る
+ *
+ * victory-native に任せると「キリのよいミリ秒」に目盛りが置かれ、
+ * 日付としては半端な位置（3/20 09:46 など）になるため自前で作る。
+ * 両端を避けた内側に等間隔で置き、日または月の頭に丸める
+ */
+export const getXTickValues = (
+	{ startMs, endMs }: GraphWindow,
+	{ count, snapToMonth }: { count: number; snapToMonth: boolean },
+): number[] => {
+	const tickValues: number[] = [];
+
+	for (let i = 1; i <= count; i++) {
+		const at = startMs + ((endMs - startMs) * i) / (count + 1);
+		const snapped = snapToMonth
+			? startOfMonth(at).getTime()
+			: startOfDay(at).getTime();
+
+		// 丸めた結果が窓の外に出たり、隣と重なったりしたら捨てる
+		if (snapped > startMs && snapped < endMs && !tickValues.includes(snapped)) {
+			tickValues.push(snapped);
+		}
+	}
+
+	return tickValues;
 };
 
 /** 表示中の期間のラベル */
