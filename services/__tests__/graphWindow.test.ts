@@ -1,16 +1,21 @@
 import {
 	type GraphPoint,
+	clampCardLeft,
 	clampWindowEnd,
 	easeOutCubic,
+	findNearestPoint,
 	flingToEndMs,
 	formatWindowLabel,
 	getInitialEndMs,
+	getTrendSummary,
 	getWindow,
 	getXTickValues,
 	getYRange,
 	isShowingLatest,
+	msToX,
 	panToEndMs,
 	sliceByWindow,
+	xToMs,
 } from "@/services/graphWindow";
 
 const at = (iso: string) => new Date(iso).getTime();
@@ -507,5 +512,180 @@ describe("isShowingLatest の境界", () => {
 
 	it("未来を指していても今日とみなす", () => {
 		expect(isShowingLatest(nowMs + 60 * 60 * 1000, nowMs)).toBe(true);
+	});
+});
+
+describe("findNearestPoint", () => {
+	const points = [
+		point("2026-06-01T00:00:00Z", 70),
+		point("2026-06-05T00:00:00Z", 69.5),
+		point("2026-06-10T00:00:00Z", 69),
+	];
+
+	it("指定時刻に最も近い点を返す", () => {
+		expect(findNearestPoint(points, at("2026-06-04T00:00:00Z"))?.date).toBe(
+			at("2026-06-05T00:00:00Z"),
+		);
+	});
+
+	it("データより過去を指しても最古の点を返す", () => {
+		expect(findNearestPoint(points, at("2026-01-01T00:00:00Z"))?.date).toBe(
+			at("2026-06-01T00:00:00Z"),
+		);
+	});
+
+	it("データより未来を指しても最新の点を返す", () => {
+		expect(findNearestPoint(points, at("2026-12-31T00:00:00Z"))?.date).toBe(
+			at("2026-06-10T00:00:00Z"),
+		);
+	});
+
+	it("同じ距離なら過去側の点を返す", () => {
+		expect(
+			findNearestPoint(
+				[point("2026-06-01T00:00:00Z", 70), point("2026-06-03T00:00:00Z", 69)],
+				at("2026-06-02T00:00:00Z"),
+			)?.date,
+		).toBe(at("2026-06-01T00:00:00Z"));
+	});
+
+	it("データが無いときは null を返す", () => {
+		expect(findNearestPoint([], at("2026-06-01T00:00:00Z"))).toBeNull();
+	});
+});
+
+describe("msToX と xToMs", () => {
+	const window = {
+		startMs: at("2026-06-01T00:00:00Z"),
+		endMs: at("2026-06-11T00:00:00Z"),
+	};
+	const bounds = { left: 40, right: 340 };
+
+	it("窓の両端がプロット領域の両端に対応する", () => {
+		expect(msToX({ ms: window.startMs, window, bounds })).toBe(40);
+		expect(msToX({ ms: window.endMs, window, bounds })).toBe(340);
+	});
+
+	it("窓の中央がプロット領域の中央に対応する", () => {
+		expect(msToX({ ms: at("2026-06-06T00:00:00Z"), window, bounds })).toBe(190);
+	});
+
+	it("xToMs は msToX の逆写像になる", () => {
+		const ms = at("2026-06-08T12:00:00Z");
+
+		expect(xToMs({ x: msToX({ ms, window, bounds }), window, bounds })).toBe(
+			ms,
+		);
+	});
+
+	it("レイアウト確定前（幅0）でも壊れない", () => {
+		const zeroWidth = { left: 0, right: 0 };
+
+		expect(msToX({ ms: window.endMs, window, bounds: zeroWidth })).toBe(0);
+		expect(xToMs({ x: 0, window, bounds: zeroWidth })).toBe(window.startMs);
+	});
+});
+
+describe("clampCardLeft", () => {
+	const bounds = { left: 40, right: 340 };
+	const cardWidth = 132;
+
+	it("選択位置を中心に置く", () => {
+		expect(clampCardLeft({ centerX: 190, cardWidth, bounds })).toBe(124);
+	});
+
+	it("左端では領域の内側に収める", () => {
+		expect(clampCardLeft({ centerX: 45, cardWidth, bounds, padding: 4 })).toBe(
+			44,
+		);
+	});
+
+	it("右端では領域の内側に収める", () => {
+		expect(clampCardLeft({ centerX: 335, cardWidth, bounds, padding: 4 })).toBe(
+			204,
+		);
+	});
+
+	it("プロット領域よりカードが広いときは左端に合わせる", () => {
+		expect(
+			clampCardLeft({ centerX: 60, cardWidth: 400, bounds, padding: 4 }),
+		).toBe(44);
+	});
+});
+
+describe("getTrendSummary", () => {
+	const window = {
+		startMs: at("2026-06-01T00:00:00Z"),
+		endMs: at("2026-06-30T00:00:00Z"),
+	};
+
+	it("窓の中の傾向データの両端から増減を求める", () => {
+		const summary = getTrendSummary(
+			[
+				point("2026-06-02T00:00:00Z", 71, 70.5),
+				point("2026-06-10T00:00:00Z", 69, 69.8),
+				point("2026-06-20T00:00:00Z", 68, 68.4),
+			],
+			window,
+		);
+
+		expect(summary).toMatchObject({ startWeight: 70.5, endWeight: 68.4 });
+		expect(summary?.diffWeight).toBeCloseTo(-2.1);
+	});
+
+	it("窓の外の点は増減に含めない", () => {
+		expect(
+			getTrendSummary(
+				[
+					// sliceByWindow が線を端まで届かせるために返す窓外の点
+					point("2026-05-20T00:00:00Z", 75, 75.5),
+					point("2026-06-02T00:00:00Z", 71, 70.5),
+					point("2026-06-20T00:00:00Z", 68, 68.4),
+					point("2026-07-05T00:00:00Z", 67, 67.2),
+				],
+				window,
+			),
+		).toMatchObject({ startWeight: 70.5, endWeight: 68.4 });
+	});
+
+	it("傾向データが無い点は飛ばす", () => {
+		expect(
+			getTrendSummary(
+				[
+					point("2026-06-02T00:00:00Z", 71),
+					point("2026-06-10T00:00:00Z", 69, 69.8),
+					point("2026-06-20T00:00:00Z", 68, 68.4),
+				],
+				window,
+			),
+		).toMatchObject({ startWeight: 69.8, endWeight: 68.4 });
+	});
+
+	it("傾向データが1点しか無いときは求められない", () => {
+		expect(
+			getTrendSummary(
+				[
+					point("2026-06-02T00:00:00Z", 71),
+					point("2026-06-10T00:00:00Z", 69, 69.8),
+				],
+				window,
+			),
+		).toBeNull();
+	});
+
+	it("データが無いときは求められない", () => {
+		expect(getTrendSummary([], window)).toBeNull();
+	});
+
+	it("増えているときはプラスになる", () => {
+		expect(
+			getTrendSummary(
+				[
+					point("2026-06-02T00:00:00Z", 68, 68.0),
+					point("2026-06-20T00:00:00Z", 70, 69.0),
+				],
+				window,
+			)?.diffWeight,
+		).toBeCloseTo(1.0);
 	});
 });

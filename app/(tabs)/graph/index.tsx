@@ -4,32 +4,45 @@ import {
 	type GraphPoint,
 	type GraphWindow,
 	SCROLL_TO_LATEST_DURATION_MS,
+	type TrendSummary,
+	clampCardLeft,
 	clampWindowEnd,
 	easeOutCubic,
+	findNearestPoint,
 	flingToEndMs,
 	formatWindowLabel,
 	getInitialEndMs,
+	getTrendSummary,
 	getWindow,
 	getXTickValues,
 	getYRange,
 	isShowingLatest,
+	msToX,
 	panToEndMs,
 	sliceByWindow,
+	xToMs,
 } from "@/services/graphWindow";
 import {
 	fetchAllWeights,
 	transformWeightDataForGraph,
 	useWeightRefetchOnActive,
 } from "@/services/weightService";
-import { matchFont } from "@shopify/react-native-skia";
+import {
+	Circle,
+	Line as SkiaLine,
+	matchFont,
+	vec,
+} from "@shopify/react-native-skia";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import * as Haptics from "expo-haptics";
 import { Stack } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type LayoutChangeEvent, Platform } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import {
 	Button,
+	type ColorTokens,
 	ScrollView,
 	Separator,
 	SizableText,
@@ -52,6 +65,22 @@ const DEFAULT_MONTHS = 3;
 
 /** X軸の目盛りの数 */
 const X_TICK_COUNT = 4;
+
+/** タップで選んだ1点の値を出すカードの大きさ */
+const CARD_WIDTH = 132;
+const CARD_HEIGHT = 76;
+
+/** 選択の有無でグラフの高さが動かないよう、常に空けておく高さ */
+const CARD_AREA_HEIGHT = CARD_HEIGHT;
+
+/** カードをプロット領域の端から離す余白 */
+const CARD_EDGE_PADDING = 4;
+
+/** グラフ本体（カード置き場を含む）の高さ */
+const GRAPH_HEIGHT = 470 + CARD_AREA_HEIGHT;
+
+/** 指が動いたらパンに譲るしきい値(px) */
+const TAP_MAX_DISTANCE = 10;
 
 export default function Graph() {
 	const theme = useTheme();
@@ -161,7 +190,7 @@ export default function Graph() {
 						orientation="horizontal"
 						flexDirection="column"
 						width="100%"
-						height={540}
+						height={GRAPH_HEIGHT + 70}
 						overflow="hidden"
 					>
 						<Tabs.Content value={String(months)}>
@@ -236,8 +265,45 @@ const GraphContent = ({
 		[visibleWindow, months],
 	);
 
+	// 未選択のあいだ、カードの置き場には表示中の期間の増減を出す
+	const trendSummary = useMemo(
+		() => getTrendSummary(visibleData, visibleWindow),
+		[visibleData, visibleWindow],
+	);
+
+	/** タップで選択中のデータの日時。未選択は null */
+	const [selectedMs, setSelectedMs] = useState<number | null>(null);
+
+	// sliceByWindow は線を端まで届かせるために窓の前後1点も返すため、
+	// 画面に見えていない点を選んでしまわないようここで落とす
+	const selectablePoints = useMemo(
+		() =>
+			visibleData.filter(
+				(point) =>
+					point.date >= visibleWindow.startMs &&
+					point.date <= visibleWindow.endMs,
+			),
+		[visibleData, visibleWindow],
+	);
+
+	// 選択した日が窓の外へ出たときも、再取得で消えたときも、同じく表示しない。
+	// 選択自体は保持したままなので、窓の中に戻ってくれば再び表示される
+	const selectedPoint = useMemo(
+		() =>
+			selectedMs === null
+				? null
+				: (selectablePoints.find((point) => point.date === selectedMs) ?? null),
+		[selectablePoints, selectedMs],
+	);
+
 	// ジェスチャーのコールバックから常に最新値を読めるようにする
 	const chartWidthRef = useRef(0);
+	const chartBoundsRef = useRef<ChartBounds | null>(null);
+	const tapRef = useRef({ window: visibleWindow, points: selectablePoints });
+	tapRef.current = { window: visibleWindow, points: selectablePoints };
+
+	// カードとガイド線の位置決めに使うため、プロット領域は描画にも反映させる
+	const [chartBounds, setChartBounds] = useState<ChartBounds | null>(null);
 	const panRef = useRef({ months, endMs: clampedEndMs, oldestMs });
 	panRef.current = { months, endMs: clampedEndMs, oldestMs };
 
@@ -249,6 +315,17 @@ const GraphContent = ({
 	// 指の移動量を時間に換算する基準は、Y軸ラベルを除いたプロット領域の幅
 	const handleChartBoundsChange = (bounds: ChartBounds) => {
 		chartWidthRef.current = bounds.right - bounds.left;
+		chartBoundsRef.current = bounds;
+		// 毎回新しいオブジェクトで渡ってくるため、値が変わったときだけ state を更新する
+		setChartBounds((prev) =>
+			prev &&
+			prev.left === bounds.left &&
+			prev.right === bounds.right &&
+			prev.top === bounds.top &&
+			prev.bottom === bounds.bottom
+				? prev
+				: bounds,
+		);
 	};
 
 	/** 表示位置を端に収める */
@@ -353,8 +430,66 @@ const GraphContent = ({
 		[animateToEndMs, clampToEdges, onChangeEndMs, stopAnimation],
 	);
 
+	const tapGesture = useMemo(
+		() =>
+			Gesture.Tap()
+				// 選択状態を React の state で持つため、コールバックは JS スレッドで動かす
+				.runOnJS(true)
+				// 指が動いたら選択ではなくパンとして扱う
+				.maxDistance(TAP_MAX_DISTANCE)
+				.onEnd((event, success) => {
+					if (!success) {
+						return;
+					}
+
+					const bounds = chartBoundsRef.current;
+					// X軸ラベルや余白の誤タップで選択が動かないよう、プロット領域の中だけ拾う
+					if (
+						bounds === null ||
+						event.x < bounds.left ||
+						event.x > bounds.right ||
+						event.y < bounds.top ||
+						event.y > bounds.bottom
+					) {
+						return;
+					}
+
+					const { window, points } = tapRef.current;
+					const nearest = findNearestPoint(
+						points,
+						xToMs({ x: event.x, window, bounds }),
+					);
+					if (nearest === null) {
+						return;
+					}
+
+					Haptics.selectionAsync();
+					// 同じ点をもう一度タップしたら選択を解除する
+					setSelectedMs((prev) =>
+						prev === nearest.date ? null : nearest.date,
+					);
+				}),
+		[],
+	);
+
+	// 横に動かせばパン、動かさなければ選択、と指の動きで振り分ける
+	const gesture = useMemo(
+		() => Gesture.Race(panGesture, tapGesture),
+		[panGesture, tapGesture],
+	);
+
+	/** 選択中の点のX座標(px)。カードとガイド線で共有する */
+	const selectedX =
+		selectedPoint === null || chartBounds === null
+			? null
+			: msToX({
+					ms: selectedPoint.date,
+					window: visibleWindow,
+					bounds: chartBounds,
+				});
+
 	return (
-		<YStack gap="$1" height={470}>
+		<YStack gap="$1" height={GRAPH_HEIGHT}>
 			{/* 表示中の期間と、今日へ戻る導線 */}
 			<XStack alignItems="center" justifyContent="space-between" height="$2">
 				<Text fontSize={12} color="$color11">
@@ -371,8 +506,26 @@ const GraphContent = ({
 					</Button>
 				)}
 			</XStack>
+			{/* 選択中は1点の値、未選択のあいだは期間の増減。高さは常に確保する */}
+			<View height={CARD_AREA_HEIGHT} justifyContent="center">
+				{selectedPoint !== null &&
+				selectedX !== null &&
+				chartBounds !== null ? (
+					<SelectedPointCard
+						point={selectedPoint}
+						left={clampCardLeft({
+							centerX: selectedX,
+							cardWidth: CARD_WIDTH,
+							bounds: chartBounds,
+							padding: CARD_EDGE_PADDING,
+						})}
+					/>
+				) : (
+					<WindowTrendSummary summary={trendSummary} />
+				)}
+			</View>
 			<Text fontSize={12}>（ ㎏ ）</Text>
-			<GestureDetector gesture={panGesture}>
+			<GestureDetector gesture={gesture}>
 				<View flex={1} onLayout={handleLayout}>
 					<CartesianChart
 						data={visibleData}
@@ -417,37 +570,209 @@ const GraphContent = ({
 							labelColor: theme.color12.val,
 						}}
 						// biome-ignore lint: correctness/noChildrenProp: Childrenで渡すとエラーになるためignore
-						children={({ points }) => (
-							<>
-								<Line
-									points={points.actualWeight}
-									color={theme.color7.val}
-									strokeWidth={months === 12 || months === 6 ? 1 : 2}
-								/>
-								{months === 1 ? (
-									<Scatter
+						children={({ points, chartBounds: bounds }) => {
+							// ハイライトの高さは、線を描くのに使われた座標をそのまま使う
+							const selectedActualY =
+								selectedPoint === null
+									? null
+									: (points.actualWeight.find(
+											(point) => point.xValue === selectedPoint.date,
+										)?.y ?? null);
+							const selectedTrendY =
+								selectedPoint === null
+									? null
+									: (points.trendWeight.find(
+											(point) => point.xValue === selectedPoint.date,
+										)?.y ?? null);
+
+							return (
+								<>
+									{/* ガイド線はデータ線を隠さないよう下に敷く */}
+									{selectedX === null ? null : (
+										<SkiaLine
+											p1={vec(selectedX, bounds.top)}
+											p2={vec(selectedX, bounds.bottom)}
+											color={theme.color8.val}
+											strokeWidth={1}
+										/>
+									)}
+									<Line
 										points={points.actualWeight}
 										color={theme.color7.val}
-										radius={3}
+										strokeWidth={months === 12 || months === 6 ? 1 : 2}
 									/>
-								) : null}
-								<Line
-									points={points.trendWeight}
-									color={theme.accentColor.val}
-									strokeWidth={months === 12 || months === 6 ? 2 : 3}
-								/>
-								{months === 1 ? (
-									<Scatter
+									{months === 1 ? (
+										<Scatter
+											points={points.actualWeight}
+											color={theme.color7.val}
+											radius={3}
+										/>
+									) : null}
+									<Line
 										points={points.trendWeight}
 										color={theme.accentColor.val}
-										radius={3}
+										strokeWidth={months === 12 || months === 6 ? 2 : 3}
 									/>
-								) : null}
-							</>
-						)}
+									{months === 1 ? (
+										<Scatter
+											points={points.trendWeight}
+											color={theme.accentColor.val}
+											radius={3}
+										/>
+									) : null}
+									{/* ハイライトは最前面に置く */}
+									{selectedX !== null && selectedActualY !== null ? (
+										<Circle
+											cx={selectedX}
+											cy={selectedActualY}
+											r={5}
+											color={theme.color7.val}
+										/>
+									) : null}
+									{selectedX !== null && selectedTrendY !== null ? (
+										<Circle
+											cx={selectedX}
+											cy={selectedTrendY}
+											r={5}
+											color={theme.accentColor.val}
+										/>
+									) : null}
+								</>
+							);
+						}}
 					/>
 				</View>
 			</GestureDetector>
+		</YStack>
+	);
+};
+
+/** カード内の1行（凡例と同じ色の印・ラベル・値） */
+const SelectedValueRow = ({
+	color,
+	label,
+	value,
+}: {
+	color: ColorTokens;
+	label: string;
+	value: string;
+}) => (
+	<XStack alignItems="center" justifyContent="space-between">
+		<XStack alignItems="center" gap="$1.5">
+			<View width={8} height={8} borderRadius={4} backgroundColor={color} />
+			<Text fontSize={11} color="$color11">
+				{label}
+			</Text>
+		</XStack>
+		<Text fontSize={12} fontWeight="700">
+			{value}
+		</Text>
+	</XStack>
+);
+
+/** タップで選択した1点の日時・実測・傾向を出すカード */
+const SelectedPointCard = ({
+	point,
+	left,
+}: {
+	point: GraphPoint;
+	left: number;
+}) => {
+	// 傾向データは移動平均のため、記録を始めて10日に満たない期間は求まらない
+	const trendLabel =
+		point.trendWeight === null ? "-" : `${point.trendWeight.toFixed(1)}kg`;
+
+	return (
+		<YStack
+			position="absolute"
+			bottom={0}
+			left={left}
+			width={CARD_WIDTH}
+			height={CARD_HEIGHT}
+			justifyContent="center"
+			paddingVertical="$1.5"
+			paddingHorizontal="$2.5"
+			gap="$1"
+			borderRadius="$4"
+			borderWidth={1}
+			borderColor="$color5"
+			backgroundColor="$background"
+			accessible
+			accessibilityLabel={`${format(new Date(point.date), "yyyy年M月d日")} 実測${point.actualWeight.toFixed(1)}キログラム 傾向${
+				point.trendWeight === null
+					? "データなし"
+					: `${point.trendWeight.toFixed(1)}キログラム`
+			}`}
+		>
+			<SelectedValueRow
+				color="$color7"
+				label="実測"
+				value={`${point.actualWeight.toFixed(1)}kg`}
+			/>
+			<SelectedValueRow color="$accentColor" label="傾向" value={trendLabel} />
+			<Text fontSize={11} color="$color11" textAlign="right">
+				{format(new Date(point.date), "yyyy/M/d")}
+			</Text>
+		</YStack>
+	);
+};
+
+/** 増減を符号つきで表す。増減なしは ± にして向きを持たせない */
+const formatDiffWeight = (diffWeight: number): string => {
+	const rounded = Math.round(diffWeight * 10) / 10;
+
+	if (rounded > 0) {
+		return `+${rounded.toFixed(1)}kg`;
+	}
+	if (rounded < 0) {
+		return `${rounded.toFixed(1)}kg`;
+	}
+
+	return `±${rounded.toFixed(1)}kg`;
+};
+
+/**
+ * 未選択のあいだ出す、表示中の期間の増減
+ *
+ * カードの枠は付けない。枠があると中身が窮屈に見えるうえ、
+ * 枠のあるカードは「タップして選んだ1点」の見た目として取っておきたいため。
+ *
+ * 増減は色を変えない。増量期か減量期かはユーザーの目的しだいで、
+ * アプリが良し悪しを決めて一喜一憂させないため
+ */
+const WindowTrendSummary = ({
+	summary,
+}: {
+	summary: TrendSummary | null;
+}) => {
+	const diffLabel =
+		summary === null ? "-" : formatDiffWeight(summary.diffWeight);
+	const rangeLabel =
+		summary === null
+			? null
+			: `${summary.startWeight.toFixed(1)} → ${summary.endWeight.toFixed(1)}kg`;
+
+	return (
+		<YStack
+			gap="$1"
+			accessible
+			accessibilityLabel={`この期間の傾向 ${diffLabel}${
+				summary === null
+					? ""
+					: ` ${summary.startWeight.toFixed(1)}から${summary.endWeight.toFixed(1)}キログラム`
+			}`}
+		>
+			<Text fontSize={11} color="$color11">
+				この期間の傾向
+			</Text>
+			<Text fontSize={17} fontWeight="700">
+				{diffLabel}
+			</Text>
+			{rangeLabel === null ? null : (
+				<Text fontSize={11} color="$color11">
+					{rangeLabel}
+				</Text>
+			)}
 		</YStack>
 	);
 };
