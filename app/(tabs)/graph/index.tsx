@@ -52,6 +52,7 @@ import {
 	View,
 	XStack,
 	YStack,
+	type YStackProps,
 	useTheme,
 } from "tamagui";
 import type { ChartBounds } from "victory-native";
@@ -66,11 +67,12 @@ const DEFAULT_MONTHS = 3;
 /** X軸の目盛りの数 */
 const X_TICK_COUNT = 4;
 
-/** 選択中の値を表示するカードの幅 */
+/** グラフの上に出す情報カードの大きさ。選択中も未選択も同じにする */
 const CARD_WIDTH = 132;
+const CARD_HEIGHT = 76;
 
 /** 選択の有無でグラフの高さが動かないよう、カードのために常に空けておく高さ */
-const CARD_AREA_HEIGHT = 76;
+const CARD_AREA_HEIGHT = CARD_HEIGHT;
 
 /** カードをプロット領域の端から離す余白 */
 const CARD_EDGE_PADDING = 4;
@@ -506,7 +508,7 @@ const GraphContent = ({
 				)}
 			</XStack>
 			{/* 選択中は1点の値、未選択のあいだは期間の増減。高さは常に確保する */}
-			<View height={CARD_AREA_HEIGHT} justifyContent="flex-end">
+			<View height={CARD_AREA_HEIGHT}>
 				{selectedPoint !== null &&
 				selectedX !== null &&
 				chartBounds !== null ? (
@@ -646,6 +648,31 @@ const GraphContent = ({
 	);
 };
 
+/**
+ * グラフの上に出す情報カードの枠
+ *
+ * 選択中（1点の値）と未選択（期間の増減）で大きさと見た目を揃え、
+ * 選択していないあいだも置き場が空いて見えないようにする
+ */
+const GraphInfoCard = ({ children, ...props }: YStackProps) => (
+	<YStack
+		width={CARD_WIDTH}
+		height={CARD_HEIGHT}
+		justifyContent="center"
+		paddingVertical="$1.5"
+		paddingHorizontal="$2.5"
+		gap="$1"
+		borderRadius="$4"
+		borderWidth={1}
+		borderColor="$color5"
+		backgroundColor="$background"
+		accessible
+		{...props}
+	>
+		{children}
+	</YStack>
+);
+
 /** カード内の1行（凡例と同じ色の印・ラベル・値） */
 const SelectedValueRow = ({
 	color,
@@ -682,19 +709,10 @@ const SelectedPointCard = ({
 		point.trendWeight === null ? "-" : `${point.trendWeight.toFixed(1)}kg`;
 
 	return (
-		<YStack
+		<GraphInfoCard
 			position="absolute"
 			bottom={0}
 			left={left}
-			width={CARD_WIDTH}
-			paddingVertical="$2"
-			paddingHorizontal="$2.5"
-			gap="$1"
-			borderRadius="$4"
-			borderWidth={1}
-			borderColor="$color5"
-			backgroundColor="$background"
-			accessible
 			accessibilityLabel={`${format(new Date(point.date), "yyyy年M月d日")} 実測${point.actualWeight.toFixed(1)}キログラム 傾向${
 				point.trendWeight === null
 					? "データなし"
@@ -710,7 +728,7 @@ const SelectedPointCard = ({
 			<Text fontSize={11} color="$color11" textAlign="right">
 				{format(new Date(point.date), "yyyy/M/d")}
 			</Text>
-		</YStack>
+		</GraphInfoCard>
 	);
 };
 
@@ -738,20 +756,33 @@ const WindowTrendSummary = ({
 	summary,
 }: {
 	summary: TrendSummary | null;
-}) => (
-	<YStack gap="$1">
-		<XStack alignItems="baseline" gap="$2">
-			<Text fontSize={12} color="$color11">
+}) => {
+	const diffLabel =
+		summary === null ? "-" : formatDiffWeight(summary.diffWeight);
+	const rangeLabel =
+		summary === null
+			? null
+			: `${summary.startWeight.toFixed(1)} → ${summary.endWeight.toFixed(1)}kg`;
+
+	return (
+		<GraphInfoCard
+			accessibilityLabel={`この期間の傾向 ${diffLabel}${
+				summary === null
+					? ""
+					: ` ${summary.startWeight.toFixed(1)}から${summary.endWeight.toFixed(1)}キログラム`
+			}`}
+		>
+			<Text fontSize={11} color="$color11">
 				この期間の傾向
 			</Text>
-			<Text fontSize={20} fontWeight="700">
-				{summary === null ? "-" : formatDiffWeight(summary.diffWeight)}
+			<Text fontSize={17} fontWeight="700">
+				{diffLabel}
 			</Text>
-		</XStack>
-		{summary === null ? null : (
-			<Text fontSize={12} color="$color11">
-				{`${summary.startWeight.toFixed(1)} → ${summary.endWeight.toFixed(1)}kg`}
-			</Text>
-		)}
-	</YStack>
-);
+			{rangeLabel === null ? null : (
+				<Text fontSize={11} color="$color11">
+					{rangeLabel}
+				</Text>
+			)}
+		</GraphInfoCard>
+	);
+};
