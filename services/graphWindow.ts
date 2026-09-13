@@ -259,3 +259,103 @@ export const formatWindowLabel = ({ startMs, endMs }: GraphWindow): string =>
 /** 最新（今日）を表示しているか */
 export const isShowingLatest = (endMs: number, nowMs: number): boolean =>
 	nowMs - endMs <= DAY_MS;
+
+/** X座標の写像に使うプロット領域の左右端(px) */
+export type PlotXBounds = {
+	left: number;
+	right: number;
+};
+
+/**
+ * 指定時刻に最も近いデータを返す
+ *
+ * 点が描かれないスケール（3ヶ月以上）でもタップで選べるよう、
+ * 当たり判定はY方向を見ず、X方向の最近傍だけで決める
+ */
+export const findNearestPoint = (
+	points: readonly GraphPoint[],
+	targetMs: number,
+): GraphPoint | null => {
+	let nearest: GraphPoint | null = null;
+	let nearestDistance = Number.POSITIVE_INFINITY;
+
+	for (const point of points) {
+		const distance = Math.abs(point.date - targetMs);
+		// 同距離なら先に見つけた（＝より過去の）点を残す
+		if (distance < nearestDistance) {
+			nearest = point;
+			nearestDistance = distance;
+		}
+	}
+
+	return nearest;
+};
+
+/** 日時をプロット領域内のX座標(px)へ写像する */
+export const msToX = ({
+	ms,
+	window,
+	bounds,
+}: {
+	ms: number;
+	window: GraphWindow;
+	bounds: PlotXBounds;
+}): number => {
+	const durationMs = window.endMs - window.startMs;
+	// 窓が潰れているときは左端に寄せる
+	if (durationMs <= 0) {
+		return bounds.left;
+	}
+
+	const ratio = (ms - window.startMs) / durationMs;
+
+	return bounds.left + ratio * (bounds.right - bounds.left);
+};
+
+/** プロット領域内のX座標(px)を日時へ写像する */
+export const xToMs = ({
+	x,
+	window,
+	bounds,
+}: {
+	x: number;
+	window: GraphWindow;
+	bounds: PlotXBounds;
+}): number => {
+	const width = bounds.right - bounds.left;
+	// レイアウト確定前は幅が 0 になるため、その場合は窓の左端を返す
+	if (width <= 0) {
+		return window.startMs;
+	}
+
+	const ratio = (x - bounds.left) / width;
+
+	return window.startMs + ratio * (window.endMs - window.startMs);
+};
+
+/**
+ * 選択中の値を表示するカードの左端(px)を求める
+ *
+ * 選択位置を中心に置きつつ、プロット領域からはみ出さないように寄せる。
+ * カードのほうが広いときは左端に合わせる（右へはみ出させない）
+ */
+export const clampCardLeft = ({
+	centerX,
+	cardWidth,
+	bounds,
+	padding = 0,
+}: {
+	centerX: number;
+	cardWidth: number;
+	bounds: PlotXBounds;
+	padding?: number;
+}): number => {
+	const minLeft = bounds.left + padding;
+	const maxLeft = bounds.right - padding - cardWidth;
+
+	if (maxLeft <= minLeft) {
+		return minLeft;
+	}
+
+	return Math.min(Math.max(centerX - cardWidth / 2, minLeft), maxLeft);
+};
