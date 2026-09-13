@@ -5,6 +5,7 @@ import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import { useEffect } from "react";
 import { useColorScheme } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const queryClient = new QueryClient();
 
@@ -24,22 +25,29 @@ export default function RootLayout() {
 	}, [loaded]);
 
 	return (
-		<TamaguiProvider
-			config={tamaguiConfig}
-			defaultTheme={colorScheme ?? undefined}
-		>
-			<ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-				<QueryClientProvider client={queryClient}>
-					<Stack>
-						<Stack.Screen
-							name="(onboarding)/index"
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-						<Stack.Screen name="+not-found" options={{ headerShown: false }} />
-					</Stack>
-				</QueryClientProvider>
-			</ThemeProvider>
-		</TamaguiProvider>
+		<GestureHandlerRootView style={{ flex: 1 }}>
+			<TamaguiProvider
+				config={tamaguiConfig}
+				defaultTheme={colorScheme ?? undefined}
+			>
+				<ThemeProvider
+					value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+				>
+					<QueryClientProvider client={queryClient}>
+						<Stack>
+							<Stack.Screen
+								name="(onboarding)/index"
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+							<Stack.Screen
+								name="+not-found"
+								options={{ headerShown: false }}
+							/>
+						</Stack>
+					</QueryClientProvider>
+				</ThemeProvider>
+			</TamaguiProvider>
+		</GestureHandlerRootView>
 	);
 }

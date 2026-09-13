@@ -1,3 +1,4 @@
+import type { GraphPoint } from "@/services/graphWindow";
 import {
 	isHealthDataAvailable,
 	queryQuantitySamples,
@@ -5,7 +6,7 @@ import {
 	saveQuantitySample,
 } from "@kingstinct/react-native-healthkit";
 import type { QuantitySampleTyped } from "@kingstinct/react-native-healthkit";
-import { endOfDay, startOfDay, subDays, subMonths } from "date-fns";
+import { endOfDay, subDays } from "date-fns";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect } from "react";
 import { AppState, type AppStateStatus } from "react-native";
@@ -74,18 +75,15 @@ export const fetchWeeklyWeights = async () => {
 	};
 };
 
-/** 直近の引数月の体重を取得する */
-export const fetchRecentWeightsByMonths = async (month: number) => {
+/**
+ * 記録されている全期間の体重を取得する
+ *
+ * HealthKit に最古の記録日を問い合わせる手段がないため、十分に過去を起点にする
+ */
+export const fetchAllWeights = async () => {
 	assertHealthDataAvailable();
 
-	const now = new Date();
-
-	/** 直近の引数月の体重 */
-	const recentWeight = await fetchWeightDataInRange(
-		startOfDay(subMonths(now, month)),
-	);
-
-	return recentWeight;
+	return await fetchWeightDataInRange(new Date(0));
 };
 
 /** 体重の平均値を算出する */
@@ -103,7 +101,7 @@ export const calcWeightAvg = (weights: readonly WeightSample[]) => {
 export const transformWeightDataForGraph = (
 	weights: readonly WeightSample[],
 	windowSize = 10, // 移動平均のウィンドウサイズ
-) => {
+): GraphPoint[] => {
 	// 日付ごとに最初の測定値だけを残す
 	const uniqueDailyWeights = Object.values(
 		weights.reduce(
@@ -125,34 +123,26 @@ export const transformWeightDataForGraph = (
 
 	// 実測データを整形
 	const transformedActualData = sortedWeights.map((sample) => ({
-		date: sample.startDate.toISOString(),
+		date: sample.startDate.getTime(),
 		weight: sample.quantity,
 	}));
 
-	// 移動平均データを計算
-	const movingAverages = sortedWeights
-		.map((_, index, array) => {
-			if (index < windowSize - 1) return null; // ウィンドウサイズ未満はスキップ
-			const window = array.slice(index - windowSize + 1, index + 1);
-			const average =
-				window.reduce((sum, sample) => sum + sample.quantity, 0) /
-				window.length;
+	// 移動平均データを計算する。全期間ぶんを扱うので日付をキーにした Map で引く
+	const movingAverages = new Map<number, number>();
+	sortedWeights.forEach((_, index, array) => {
+		if (index < windowSize - 1) return; // ウィンドウサイズ未満はスキップ
+		const window = array.slice(index - windowSize + 1, index + 1);
+		const average =
+			window.reduce((sum, sample) => sum + sample.quantity, 0) / window.length;
 
-			return {
-				date: array[index].startDate.toISOString(),
-				movingAverage: average,
-			};
-		})
-		.filter((data) => data !== null);
-
-	return transformedActualData.map((data) => {
-		const movingAverage = movingAverages.find((avg) => avg.date === data.date);
-		return {
-			date: data.date,
-			actualWeight: data.weight,
-			trendWeight: movingAverage?.movingAverage || null,
-		};
+		movingAverages.set(array[index].startDate.getTime(), average);
 	});
+
+	return transformedActualData.map((data) => ({
+		date: data.date,
+		actualWeight: data.weight,
+		trendWeight: movingAverages.get(data.date) ?? null,
+	}));
 };
 
 /** 体重データの書き込みをする */

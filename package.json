@@ -20,7 +20,8 @@
     "generate-themes": "tamagui generate-themes ./theme-builder.ts ./theme-output.ts"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "globalSetup": "<rootDir>/jest.globalSetup.js"
   },
   "dependencies": {
     "@dev-plugins/react-query": "^0.4.0",
