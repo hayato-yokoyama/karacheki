@@ -69,7 +69,7 @@ const X_TICK_COUNT = 4;
 
 /** グラフの上に出す情報カードの大きさ。選択中も未選択も同じにする */
 const CARD_WIDTH = 132;
-const CARD_HEIGHT = 76;
+const CARD_HEIGHT = 92;
 
 /** 選択の有無でグラフの高さが動かないよう、カードのために常に空けておく高さ */
 const CARD_AREA_HEIGHT = CARD_HEIGHT;
@@ -659,9 +659,9 @@ const GraphInfoCard = ({ children, ...props }: YStackProps) => (
 		width={CARD_WIDTH}
 		height={CARD_HEIGHT}
 		justifyContent="center"
-		paddingVertical="$1.5"
-		paddingHorizontal="$2.5"
-		gap="$1"
+		paddingVertical={10}
+		paddingHorizontal={14}
+		gap={5}
 		borderRadius="$4"
 		borderWidth={1}
 		borderColor="$color5"
@@ -686,11 +686,11 @@ const SelectedValueRow = ({
 	<XStack alignItems="center" justifyContent="space-between">
 		<XStack alignItems="center" gap="$1.5">
 			<View width={8} height={8} borderRadius={4} backgroundColor={color} />
-			<Text fontSize={11} color="$color11">
+			<Text fontSize={12} color="$color11">
 				{label}
 			</Text>
 		</XStack>
-		<Text fontSize={12} fontWeight="700">
+		<Text fontSize={13} fontWeight="700">
 			{value}
 		</Text>
 	</XStack>
@@ -725,7 +725,7 @@ const SelectedPointCard = ({
 				value={`${point.actualWeight.toFixed(1)}kg`}
 			/>
 			<SelectedValueRow color="$accentColor" label="傾向" value={trendLabel} />
-			<Text fontSize={11} color="$color11" textAlign="right">
+			<Text fontSize={12} color="$color11" textAlign="right">
 				{format(new Date(point.date), "yyyy/M/d")}
 			</Text>
 		</GraphInfoCard>
@@ -772,14 +772,14 @@ const WindowTrendSummary = ({
 					: ` ${summary.startWeight.toFixed(1)}から${summary.endWeight.toFixed(1)}キログラム`
 			}`}
 		>
-			<Text fontSize={11} color="$color11">
+			<Text fontSize={12} color="$color11">
 				この期間の傾向
 			</Text>
-			<Text fontSize={17} fontWeight="700">
+			<Text fontSize={21} fontWeight="700">
 				{diffLabel}
 			</Text>
 			{rangeLabel === null ? null : (
-				<Text fontSize={11} color="$color11">
+				<Text fontSize={12} color="$color11">
 					{rangeLabel}
 				</Text>
 			)}
