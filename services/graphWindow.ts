@@ -3,6 +3,19 @@ import { addMonths, format, subMonths } from "date-fns";
 /** 1日のミリ秒 */
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * 指を離したあと、離した瞬間の速度で何秒ぶん進み続けるか
+ *
+ * 1回のスワイプで進む距離を決める値。大きくするとよく滑る
+ */
+const FLING_DECAY_SECONDS = 0.6;
+
+/** 慣性スクロールのアニメーション時間 */
+export const FLING_DURATION_MS = 600;
+
+/** 「今日へ」で今日まで戻るときのアニメーション時間 */
+export const SCROLL_TO_LATEST_DURATION_MS = 450;
+
 /** グラフに描画する1点（X軸はタイムスタンプ） */
 export type GraphPoint = {
 	date: number;
@@ -73,6 +86,36 @@ export const panToEndMs = ({
 	const msPerPx = (currentWindow.endMs - currentWindow.startMs) / chartWidth;
 
 	return endMs - deltaX * msPerPx;
+};
+
+/**
+ * 指を離したあと、慣性で滑っていく先の終端時刻を求める
+ *
+ * @param velocityX 指を離した瞬間の横方向の速度(px/秒)
+ */
+export const flingToEndMs = ({
+	endMs,
+	velocityX,
+	chartWidth,
+	months,
+}: {
+	endMs: number;
+	velocityX: number;
+	chartWidth: number;
+	months: number;
+}): number =>
+	panToEndMs({
+		endMs,
+		deltaX: velocityX * FLING_DECAY_SECONDS,
+		chartWidth,
+		months,
+	});
+
+/** アニメーションの進み具合。終わりに向かって減速する */
+export const easeOutCubic = (progress: number): number => {
+	const clamped = Math.min(Math.max(progress, 0), 1);
+
+	return 1 - (1 - clamped) ** 3;
 };
 
 /**

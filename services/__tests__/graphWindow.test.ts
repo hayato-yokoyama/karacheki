@@ -1,6 +1,8 @@
 import {
 	type GraphPoint,
 	clampWindowEnd,
+	easeOutCubic,
+	flingToEndMs,
 	getWindow,
 	getYRange,
 	isShowingLatest,
@@ -252,5 +254,74 @@ describe("isShowingLatest", () => {
 
 	it("遡っていれば false", () => {
 		expect(isShowingLatest(at("2026-05-15T00:00:00Z"), nowMs)).toBe(false);
+	});
+});
+
+describe("flingToEndMs", () => {
+	const currentEndMs = at("2026-06-15T00:00:00Z");
+	const chartWidth = 300;
+
+	it("速く払うほど遠くまで滑る", () => {
+		const slow = flingToEndMs({
+			endMs: currentEndMs,
+			velocityX: 500,
+			chartWidth,
+			months: 3,
+		});
+		const fast = flingToEndMs({
+			endMs: currentEndMs,
+			velocityX: 2000,
+			chartWidth,
+			months: 3,
+		});
+		expect(currentEndMs - fast).toBeGreaterThan(currentEndMs - slow);
+	});
+
+	it("右へ払うと過去、左へ払うと未来へ滑る", () => {
+		expect(
+			flingToEndMs({
+				endMs: currentEndMs,
+				velocityX: 1000,
+				chartWidth,
+				months: 3,
+			}),
+		).toBeLessThan(currentEndMs);
+		expect(
+			flingToEndMs({
+				endMs: currentEndMs,
+				velocityX: -1000,
+				chartWidth,
+				months: 3,
+			}),
+		).toBeGreaterThan(currentEndMs);
+	});
+
+	it("速度が 0 なら動かない", () => {
+		expect(
+			flingToEndMs({
+				endMs: currentEndMs,
+				velocityX: 0,
+				chartWidth,
+				months: 3,
+			}),
+		).toBe(currentEndMs);
+	});
+});
+
+describe("easeOutCubic", () => {
+	it("開始と終了は 0 と 1", () => {
+		expect(easeOutCubic(0)).toBe(0);
+		expect(easeOutCubic(1)).toBe(1);
+	});
+
+	it("範囲外の進捗は 0〜1 に丸める", () => {
+		expect(easeOutCubic(-1)).toBe(0);
+		expect(easeOutCubic(2)).toBe(1);
+	});
+
+	it("終わりに向かって減速する（前半のほうが多く進む）", () => {
+		const firstHalf = easeOutCubic(0.5);
+		expect(firstHalf).toBeGreaterThan(0.5);
+		expect(easeOutCubic(1) - firstHalf).toBeLessThan(firstHalf);
 	});
 });

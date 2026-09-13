@@ -1,8 +1,12 @@
 import { ErrorHealthData } from "@/components/errorHealthData";
 import {
+	FLING_DURATION_MS,
 	type GraphPoint,
 	type GraphWindow,
+	SCROLL_TO_LATEST_DURATION_MS,
 	clampWindowEnd,
+	easeOutCubic,
+	flingToEndMs,
 	formatWindowLabel,
 	getWindow,
 	getYRange,
@@ -19,7 +23,7 @@ import { matchFont } from "@shopify/react-native-skia";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Stack } from "expo-router";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type LayoutChangeEvent, Platform } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import {
@@ -198,6 +202,58 @@ const GraphContent = ({
 		chartWidthRef.current = event.nativeEvent.layout.width;
 	};
 
+	/** 表示位置を端に収める */
+	const clampToEdges = useCallback((targetEndMs: number) => {
+		const { months: currentMonths, oldestMs: currentOldestMs } = panRef.current;
+
+		return clampWindowEnd({
+			endMs: targetEndMs,
+			months: currentMonths,
+			oldestMs: currentOldestMs,
+			nowMs: Date.now(),
+		});
+	}, []);
+
+	// 実行中のアニメーションのフレーム ID
+	const animationRef = useRef<number | null>(null);
+
+	const stopAnimation = useCallback(() => {
+		if (animationRef.current !== null) {
+			cancelAnimationFrame(animationRef.current);
+			animationRef.current = null;
+		}
+	}, []);
+
+	/** 現在位置から目標位置まで、減速しながらスライドする */
+	const animateToEndMs = useCallback(
+		(targetEndMs: number, durationMs: number) => {
+			stopAnimation();
+
+			const fromEndMs = panRef.current.endMs;
+			const toEndMs = clampToEdges(targetEndMs);
+			const startedAt = Date.now();
+
+			const step = () => {
+				const progress = (Date.now() - startedAt) / durationMs;
+				const eased = easeOutCubic(progress);
+
+				onChangeEndMs(clampToEdges(fromEndMs + (toEndMs - fromEndMs) * eased));
+
+				if (progress < 1) {
+					animationRef.current = requestAnimationFrame(step);
+					return;
+				}
+				animationRef.current = null;
+			};
+
+			animationRef.current = requestAnimationFrame(step);
+		},
+		[clampToEdges, onChangeEndMs, stopAnimation],
+	);
+
+	// 画面から離れるときにアニメーションを止める
+	useEffect(() => stopAnimation, [stopAnimation]);
+
 	const panGesture = useMemo(
 		() =>
 			Gesture.Pan()
@@ -206,12 +262,10 @@ const GraphContent = ({
 				// 縦スクロールを潰さないよう、横方向が優勢なときだけパンを開始する
 				.activeOffsetX([-10, 10])
 				.failOffsetY([-10, 10])
+				// 慣性で滑っている途中に触られたら、その場で止めて指に追従させる
+				.onBegin(stopAnimation)
 				.onChange((event) => {
-					const {
-						months: currentMonths,
-						endMs: currentEndMs,
-						oldestMs: currentOldestMs,
-					} = panRef.current;
+					const { months: currentMonths, endMs: currentEndMs } = panRef.current;
 					const pannedEndMs = panToEndMs({
 						endMs: currentEndMs,
 						deltaX: event.changeX,
@@ -219,16 +273,28 @@ const GraphContent = ({
 						months: currentMonths,
 					});
 					// 端で行き過ぎが溜まらないよう、state に入れる前に丸める
-					onChangeEndMs(
-						clampWindowEnd({
-							endMs: pannedEndMs,
+					onChangeEndMs(clampToEdges(pannedEndMs));
+				})
+				.onEnd((event, success) => {
+					// 途中でキャンセルされたときは滑らせない
+					if (!success) {
+						return;
+					}
+
+					// 指を離したあとも慣性で滑らせて、1回のスワイプで長く移動できるようにする
+					const { months: currentMonths, endMs: currentEndMs } = panRef.current;
+
+					animateToEndMs(
+						flingToEndMs({
+							endMs: currentEndMs,
+							velocityX: event.velocityX,
+							chartWidth: chartWidthRef.current,
 							months: currentMonths,
-							oldestMs: currentOldestMs,
-							nowMs: Date.now(),
 						}),
+						FLING_DURATION_MS,
 					);
 				}),
-		[onChangeEndMs],
+		[animateToEndMs, clampToEdges, onChangeEndMs, stopAnimation],
 	);
 
 	return (
@@ -239,7 +305,12 @@ const GraphContent = ({
 					{formatWindowLabel(visibleWindow)}
 				</Text>
 				{isShowingLatest(clampedEndMs, nowMs) ? null : (
-					<Button size="$2" onPress={() => onChangeEndMs(Date.now())}>
+					<Button
+						size="$2"
+						onPress={() =>
+							animateToEndMs(Date.now(), SCROLL_TO_LATEST_DURATION_MS)
+						}
+					>
 						今日へ
 					</Button>
 				)}
