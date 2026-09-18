@@ -3,10 +3,10 @@ import {
 	getBodyPhotoUri,
 	listBodyPhotos,
 } from "@/services/bodyPhotoService";
-import { Trash2 } from "@tamagui/lucide-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Trash } from "lucide-react-native";
 import { Alert, Image } from "react-native";
 import { Button, Paragraph, SizableText, Spinner, YStack } from "tamagui";
 
@@ -87,7 +87,7 @@ export default function PhotoDetail() {
 				/>
 				<SizableText textAlign="center">{takenAt}</SizableText>
 				<Button
-					icon={<Trash2 color="$red10" />}
+					icon={<Trash />}
 					color="$red10"
 					onPress={handlePressDelete}
 					disabled={isPending}

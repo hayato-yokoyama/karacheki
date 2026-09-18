@@ -1,5 +1,5 @@
-import { Settings, SquarePlus } from "@tamagui/lucide-icons";
 import { Link } from "expo-router";
+import { Settings } from "lucide-react-native";
 import { Button, H2, ListItem, Paragraph, YGroup, YStack } from "tamagui";
 
 export const ErrorHealthData = () => {

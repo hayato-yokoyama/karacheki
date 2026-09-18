@@ -1,7 +1,10 @@
 import { Tabs } from "expo-router";
 
-import { ChartLine, Home, Images } from "@tamagui/lucide-icons";
+import { ChartLine, House, Images } from "lucide-react-native";
 import { useTheme } from "tamagui";
+
+/** タブバーのアイコンサイズ。Tamagui の size="$1" と同じ値 */
+const TAB_ICON_SIZE = 20;
 
 export default function TabLayout() {
 	const theme = useTheme();
@@ -18,7 +21,9 @@ export default function TabLayout() {
 				name="home"
 				options={{
 					title: "ホーム",
-					tabBarIcon: ({ color }) => <Home color={color as string} size="$1" />,
+					tabBarIcon: ({ color }) => (
+						<House color={color} size={TAB_ICON_SIZE} />
+					),
 					headerShown: false,
 				}}
 			/>
@@ -27,7 +32,7 @@ export default function TabLayout() {
 				options={{
 					title: "グラフ",
 					tabBarIcon: ({ color }) => (
-						<ChartLine color={color as string} size="$1" />
+						<ChartLine color={color} size={TAB_ICON_SIZE} />
 					),
 				}}
 			/>
@@ -36,7 +41,7 @@ export default function TabLayout() {
 				options={{
 					title: "Before/After",
 					tabBarIcon: ({ color }) => (
-						<Images color={color as string} size="$1" />
+						<Images color={color} size={TAB_ICON_SIZE} />
 					),
 					headerShown: false,
 				}}

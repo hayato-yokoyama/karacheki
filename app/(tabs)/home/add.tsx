@@ -2,8 +2,8 @@ import { saveWeight } from "@/services/weightService";
 import RNDateTimePicker, {
 	type DateTimePickerChangeEvent,
 } from "@react-native-community/datetimepicker";
-import { Lightbulb } from "@tamagui/lucide-icons";
 import { useRouter } from "expo-router";
+import { Lightbulb } from "lucide-react-native";
 import { useState } from "react";
 import { Alert } from "react-native";
 import {
@@ -17,16 +17,19 @@ import {
 	Text,
 	XStack,
 	YStack,
+	useTheme,
 } from "tamagui";
 
 export default function Add() {
+	const theme = useTheme();
+
 	return (
 		<ScrollView>
 			<YStack paddingVertical="$8" paddingHorizontal="$4" gap="$4">
 				<Card padding="$4">
 					<YStack gap="$2">
 						<XStack gap="$2">
-							<Lightbulb />
+							<Lightbulb color={theme.color.val} />
 							<SizableText fontWeight="bold">
 								体重の自動入力をお勧めしています
 							</SizableText>
@@ -66,7 +69,10 @@ const WeightInputForm = () => {
 			Alert.alert("完了", "体重を追加しました");
 			router.back();
 		} catch (error) {
-			Alert.alert("エラー", "体重の追加に失敗しました。  \n設定アプリからヘルスケアのアクセスが許可されていることを確認してください。");
+			Alert.alert(
+				"エラー",
+				"体重の追加に失敗しました。  \n設定アプリからヘルスケアのアクセスが許可されていることを確認してください。",
+			);
 		}
 	};
 

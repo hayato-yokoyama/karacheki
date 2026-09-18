@@ -4,10 +4,10 @@ import {
 	pickBodyPhoto,
 } from "@/services/bodyPhotoService";
 import type { BodyPhoto } from "@/services/bodyPhotoService";
-import { Check, ImagePlus } from "@tamagui/lucide-icons";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Stack, useRouter } from "expo-router";
+import { Check, ImagePlus } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import { Alert, FlatList, Image, useWindowDimensions } from "react-native";
 import {
@@ -195,7 +195,7 @@ export default function Photos() {
 								alignItems="center"
 								justifyContent="center"
 							>
-								<Check size={14} color="$background" />
+								<Check size={14} color={theme.background.val} />
 							</View>
 						)}
 					</View>
