@@ -39,3 +39,7 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+# Tamagui
+# babel-plugin / CLI の生成物。再生成できるのでコミットしない
+.tamagui/

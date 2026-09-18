@@ -15,6 +15,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "test": "jest --watchAll",
+    "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "lint:html": "markuplint \"**/*.html\"",
     "generate-themes": "tamagui generate-themes ./theme-builder.ts ./theme-output.ts"
