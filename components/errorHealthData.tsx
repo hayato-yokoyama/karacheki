@@ -1,6 +1,14 @@
 import { Link } from "expo-router";
 import { Settings } from "lucide-react-native";
-import { Button, H2, ListItem, Paragraph, YGroup, YStack } from "tamagui";
+import {
+	Button,
+	H2,
+	ListItem,
+	Paragraph,
+	SizableText,
+	YGroup,
+	YStack,
+} from "tamagui";
 
 export const ErrorHealthData = () => {
 	return (
@@ -19,26 +27,44 @@ export const ErrorHealthData = () => {
 
 			<YGroup>
 				<YGroup.Item>
-					<ListItem icon={Settings} fontWeight="bold">
-						ヘルスケアアクセスの設定手順
+					<ListItem icon={Settings}>
+						<SizableText fontWeight="bold">
+							ヘルスケアアクセスの設定手順
+						</SizableText>
 					</ListItem>
 				</YGroup.Item>
 				<YGroup.Item>
-					<ListItem fontSize="$3">1. iPhoneの「設定」アプリを開く</ListItem>
-				</YGroup.Item>
-				<YGroup.Item>
-					<ListItem fontSize="$3">2.「アプリ」→「ヘルスケア」を選択</ListItem>
-				</YGroup.Item>
-				<YGroup.Item>
-					<ListItem fontSize="$3">
-						3.「データアクセスとデバイス」を選択
+					<ListItem>
+						<SizableText fontSize="$3">
+							1. iPhoneの「設定」アプリを開く
+						</SizableText>
 					</ListItem>
 				</YGroup.Item>
 				<YGroup.Item>
-					<ListItem fontSize="$3">4.「からチェキ」を選択</ListItem>
+					<ListItem>
+						<SizableText fontSize="$3">
+							2.「アプリ」→「ヘルスケア」を選択
+						</SizableText>
+					</ListItem>
 				</YGroup.Item>
 				<YGroup.Item>
-					<ListItem fontSize="$3">5.「すべてオンにする」を選択</ListItem>
+					<ListItem>
+						<SizableText fontSize="$3">
+							3.「データアクセスとデバイス」を選択
+						</SizableText>
+					</ListItem>
+				</YGroup.Item>
+				<YGroup.Item>
+					<ListItem>
+						<SizableText fontSize="$3">4.「からチェキ」を選択</SizableText>
+					</ListItem>
+				</YGroup.Item>
+				<YGroup.Item>
+					<ListItem>
+						<SizableText fontSize="$3">
+							5.「すべてオンにする」を選択
+						</SizableText>
+					</ListItem>
 				</YGroup.Item>
 			</YGroup>
 		</YStack>
