@@ -1,15 +1,15 @@
-import type { GraphPoint } from "@/services/graphWindow";
+import type { QuantitySampleTyped } from "@kingstinct/react-native-healthkit";
 import {
 	isHealthDataAvailable,
 	queryQuantitySamples,
 	requestAuthorization,
 	saveQuantitySample,
 } from "@kingstinct/react-native-healthkit";
-import type { QuantitySampleTyped } from "@kingstinct/react-native-healthkit";
 import { endOfDay, subDays } from "date-fns";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect } from "react";
 import { AppState, type AppStateStatus } from "react-native";
+import type { GraphPoint } from "@/services/graphWindow";
 
 /**
  * 体重の型識別子

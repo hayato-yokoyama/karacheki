@@ -1,10 +1,3 @@
-import { ErrorHealthData } from "@/components/errorHealthData";
-import { scheduleDailyWeightNotification } from "@/services/notificationService";
-import {
-	calcWeightAvg,
-	fetchWeeklyWeights,
-	useWeightRefetchOnActive,
-} from "@/services/weightService";
 import { useQuery } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
@@ -15,16 +8,23 @@ import type { AppStateStatus } from "react-native";
 import { AppState } from "react-native";
 import {
 	Button,
+	Card,
 	H2,
 	Paragraph,
 	ScrollView,
 	SizableText,
 	Spinner,
+	useTheme,
 	XStack,
 	YStack,
-	useTheme,
 } from "tamagui";
-import { Card } from "tamagui";
+import { ErrorHealthData } from "@/components/errorHealthData";
+import { scheduleDailyWeightNotification } from "@/services/notificationService";
+import {
+	calcWeightAvg,
+	fetchWeeklyWeights,
+	useWeightRefetchOnActive,
+} from "@/services/weightService";
 
 // アプリ起動中の通知の動作設定（バナー表示、通知センター表示、通知音、バッジ表示）
 Notifications.setNotificationHandler({

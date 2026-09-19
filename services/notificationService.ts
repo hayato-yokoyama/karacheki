@@ -1,5 +1,5 @@
-import { calcWeightAvg, fetchWeeklyWeights } from "@/services/weightService";
 import * as Notifications from "expo-notifications";
+import { calcWeightAvg, fetchWeeklyWeights } from "@/services/weightService";
 
 /** 毎朝8時の通知スケジュールを組む */
 export async function scheduleDailyWeightNotification() {

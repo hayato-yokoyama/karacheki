@@ -1,9 +1,3 @@
-import {
-	getBodyPhotoUri,
-	listBodyPhotos,
-	pickBodyPhoto,
-} from "@/services/bodyPhotoService";
-import type { BodyPhoto } from "@/services/bodyPhotoService";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Stack, useRouter } from "expo-router";
@@ -15,11 +9,17 @@ import {
 	Paragraph,
 	SizableText,
 	Spinner,
+	useTheme,
 	View,
 	XStack,
 	YStack,
-	useTheme,
 } from "tamagui";
+import type { BodyPhoto } from "@/services/bodyPhotoService";
+import {
+	getBodyPhotoUri,
+	listBodyPhotos,
+	pickBodyPhoto,
+} from "@/services/bodyPhotoService";
 
 /** 一覧の外側の余白 */
 const LIST_PADDING = 16;
@@ -212,6 +212,7 @@ export default function Photos() {
 			selectedCount,
 			selectedIds,
 			theme.accentColor.val,
+			theme.background.val,
 			theme.background05.val,
 		],
 	);

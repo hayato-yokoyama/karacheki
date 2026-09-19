@@ -1,14 +1,14 @@
-import {
-	deleteBodyPhoto,
-	getBodyPhotoUri,
-	listBodyPhotos,
-} from "@/services/bodyPhotoService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Trash } from "lucide-react-native";
 import { Alert, Image } from "react-native";
 import { Button, Paragraph, SizableText, Spinner, YStack } from "tamagui";
+import {
+	deleteBodyPhoto,
+	getBodyPhotoUri,
+	listBodyPhotos,
+} from "@/services/bodyPhotoService";
 
 export default function PhotoDetail() {
 	const router = useRouter();

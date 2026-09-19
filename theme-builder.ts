@@ -1,8 +1,8 @@
-import {
-	defaultSubThemes,
-	defaultComponentThemes,
-} from "@tamagui/themes/v3-themes";
 import { createThemeBuilder } from "@tamagui/theme-builder";
+import {
+	defaultComponentThemes,
+	defaultSubThemes,
+} from "@tamagui/themes/v3-themes";
 
 const palettes = {
 	light: [

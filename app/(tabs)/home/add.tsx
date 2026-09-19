@@ -1,4 +1,3 @@
-import { saveWeight } from "@/services/weightService";
 import RNDateTimePicker, {
 	type DateTimePickerChangeEvent,
 } from "@react-native-community/datetimepicker";
@@ -14,11 +13,11 @@ import {
 	Paragraph,
 	ScrollView,
 	SizableText,
-	Text,
+	useTheme,
 	XStack,
 	YStack,
-	useTheme,
 } from "tamagui";
+import { saveWeight } from "@/services/weightService";
 
 export default function Add() {
 	const theme = useTheme();
@@ -68,7 +67,7 @@ const WeightInputForm = () => {
 
 			Alert.alert("完了", "体重を追加しました");
 			router.back();
-		} catch (error) {
+		} catch {
 			Alert.alert(
 				"エラー",
 				"体重の追加に失敗しました。  \n設定アプリからヘルスケアのアクセスが許可されていることを確認してください。",
