@@ -3,10 +3,10 @@ import {
 	getBodyPhotoUri,
 	listBodyPhotos,
 } from "@/services/bodyPhotoService";
-import { Trash2 } from "@tamagui/lucide-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Trash } from "lucide-react-native";
 import { Alert, Image } from "react-native";
 import { Button, Paragraph, SizableText, Spinner, YStack } from "tamagui";
 
@@ -86,9 +86,11 @@ export default function PhotoDetail() {
 					resizeMode="contain"
 				/>
 				<SizableText textAlign="center">{takenAt}</SizableText>
+				{/* NOTE: 元々付いていた color="$red10" は config v3 に存在しないトークンで
+				    （あるのは $red10Light / $red10Dark）、v1 でも解決されていなかった。
+				    v2 では未解決の文字列がそのまま lucide に渡ってアイコンが消えるので外す */}
 				<Button
-					icon={<Trash2 color="$red10" />}
-					color="$red10"
+					icon={<Trash />}
 					onPress={handlePressDelete}
 					disabled={isPending}
 				>

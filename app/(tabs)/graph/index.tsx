@@ -37,7 +37,14 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import * as Haptics from "expo-haptics";
 import { Stack } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	Fragment,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { type LayoutChangeEvent, Platform } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import {
@@ -202,13 +209,17 @@ export default function Graph() {
 							/>
 						</Tabs.Content>
 
-						<Tabs.List separator={<Separator vertical />} marginTop="$4">
-							{MONTH_OPTIONS.map((month) => (
-								<Tabs.Tab key={month} flex={1} value={String(month)}>
-									<SizableText>
-										{month === 12 ? "1年" : `${month}ヶ月`}
-									</SizableText>
-								</Tabs.Tab>
+						{/* NOTE: Tamagui v2 で Group（Tabs.List）の separator prop が無くなったので手で挟む */}
+						<Tabs.List marginTop="$4">
+							{MONTH_OPTIONS.map((month, index) => (
+								<Fragment key={month}>
+									{index > 0 && <Separator vertical />}
+									<Tabs.Tab flex={1} value={String(month)}>
+										<SizableText>
+											{month === 12 ? "1年" : `${month}ヶ月`}
+										</SizableText>
+									</Tabs.Tab>
+								</Fragment>
 							))}
 						</Tabs.List>
 					</Tabs>

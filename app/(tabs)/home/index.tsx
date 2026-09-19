@@ -1,3 +1,18 @@
+import { ErrorHealthData } from "@/components/errorHealthData";
+import { scheduleDailyWeightNotification } from "@/services/notificationService";
+import {
+	calcWeightAvg,
+	fetchWeeklyWeights,
+	useWeightRefetchOnActive,
+} from "@/services/weightService";
+import { useQuery } from "@tanstack/react-query";
+import * as Linking from "expo-linking";
+import * as Notifications from "expo-notifications";
+import { Link, Stack } from "expo-router";
+import { Bell, Plus } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import type { AppStateStatus } from "react-native";
+import { AppState } from "react-native";
 import {
 	Button,
 	H2,
@@ -5,26 +20,11 @@ import {
 	ScrollView,
 	SizableText,
 	Spinner,
-	useTheme,
 	XStack,
 	YStack,
+	useTheme,
 } from "tamagui";
-import { useQuery } from "@tanstack/react-query";
-import * as Notifications from "expo-notifications";
-import { useEffect, useState } from "react";
-import { Link, Stack } from "expo-router";
 import { Card } from "tamagui";
-import { scheduleDailyWeightNotification } from "@/services/notificationService";
-import {
-	calcWeightAvg,
-	fetchWeeklyWeights,
-	useWeightRefetchOnActive,
-} from "@/services/weightService";
-import { Bell, Plus } from "@tamagui/lucide-icons";
-import * as Linking from "expo-linking";
-import type { AppStateStatus } from "react-native";
-import { AppState } from "react-native";
-import { ErrorHealthData } from "@/components/errorHealthData";
 
 // アプリ起動中の通知の動作設定（バナー表示、通知センター表示、通知音、バッジ表示）
 Notifications.setNotificationHandler({
@@ -171,6 +171,8 @@ export default function Index() {
 
 /** 通知設定誘導ボタン */
 const NotificationSettingsCard = () => {
+	const theme = useTheme();
+
 	// 通知許可設定の状態管理
 	const [isEnabledNotifications, setIsEnabledNotifications] = useState(false);
 
@@ -213,7 +215,7 @@ const NotificationSettingsCard = () => {
 		// TODO:端末設定ではなくアプリ内で通知設定を保存できるようにする
 		<Card padding="$4">
 			<XStack alignItems="center" gap="$4">
-				<Bell />
+				<Bell color={theme.color.val} />
 				<YStack flex={1} gap="$4">
 					<Paragraph flex={1} fontSize="$4">
 						通知を有効にすると、
