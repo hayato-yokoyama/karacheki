@@ -96,6 +96,29 @@ xcrun simctl ui booted appearance light
 
 - （未実施）
 
+## 「Can't find Tamagui configuration」で起動しないとき
+
+テーマの context は `@tamagui/web` のモジュールインスタンスに紐づくので、
+**node_modules に `@tamagui/web` が 2 つ以上あると、親テーマが見つからず落ちる**。
+バージョンが全部揃っていても、npm が hoist に失敗して物理コピーが増えれば同じことが起きる。
+型チェックもバンドルも通ってしまい、実機・Simulator で起動して初めて分かる。
+
+```sh
+# 1 以外ならアウト
+find node_modules -path "*@tamagui/web/package.json" | wc -l
+
+npx @tamagui/cli check   # バージョン不一致のほうはこれで分かる
+```
+
+増えていたら、部分的な `npm install` を重ねたのが原因なので作り直す。
+
+```sh
+rm -rf node_modules package-lock.json && npm install && npm dedupe
+```
+
+`npx expo export --platform ios` のモジュール数も目安になる。
+重複していると倍増する（正常時 5,350 → 重複時 11,407 だった）。
+
 ## 崩れていたら
 
 原因を切り分けやすいようにコミットを分けてある。
