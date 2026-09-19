@@ -94,7 +94,22 @@ xcrun simctl ui booted appearance light
 
 確認したらここに日付と結果を書き足す。
 
-- （未実施）
+### 2026-09-19 / iPhone 17 Pro Simulator (iOS 26.5)
+
+重点 5 箇所はすべて確認済み。ダークモードも確認済み。
+
+見つかった崩れは 2 件で、どちらも修正済み（コミット `🐛 目視確認で出た崩れ 2 件を直す`）。
+
+| 症状 | 原因 |
+| --- | --- |
+| ヘルスケア設定手順のアイコンとテキストが両端に離れる | `ListItemFrame` が `justifyContent: "space-between"`。素の `SizableText` には `flexGrow: 1` が無いため伸びなかった。`ListItem.Text` に変更 |
+| 写真詳細の削除アイコンが表示されない | Button の `color="$red10"` が config v3 に存在しないトークン（あるのは `$red10Light` / `$red10Dark`）。v1 では Tamagui 製アイコンがテーマ色にフォールバックしていたが、v2 では未解決の文字列が lucide に渡って描画されない。指定を外した |
+
+削除ボタンはもともと赤くなっていなかった（v1 から `$red10` が解決されていなかった）ため、
+デフォルト色のままで確定とした。赤くする場合はテーマに red を足す話になる。
+
+起動時に `Can't find Tamagui configuration` で落ちる問題も出たが、
+lockfile の作り直しで解消（下の節を参照）。
 
 ## 「Can't find Tamagui configuration」で起動しないとき
 
