@@ -212,6 +212,7 @@ export default function Photos() {
 			selectedCount,
 			selectedIds,
 			theme.accentColor.val,
+			theme.background.val,
 			theme.background05.val,
 		],
 	);
