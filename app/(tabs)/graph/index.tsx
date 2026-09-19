@@ -1,36 +1,7 @@
-import { ErrorHealthData } from "@/components/errorHealthData";
-import {
-	FLING_DURATION_MS,
-	type GraphPoint,
-	type GraphWindow,
-	SCROLL_TO_LATEST_DURATION_MS,
-	type TrendSummary,
-	clampCardLeft,
-	clampWindowEnd,
-	easeOutCubic,
-	findNearestPoint,
-	flingToEndMs,
-	formatWindowLabel,
-	getInitialEndMs,
-	getTrendSummary,
-	getWindow,
-	getXTickValues,
-	getYRange,
-	isShowingLatest,
-	msToX,
-	panToEndMs,
-	sliceByWindow,
-	xToMs,
-} from "@/services/graphWindow";
-import {
-	fetchAllWeights,
-	transformWeightDataForGraph,
-	useWeightRefetchOnActive,
-} from "@/services/weightService";
 import {
 	Circle,
-	Line as SkiaLine,
 	matchFont,
+	Line as SkiaLine,
 	vec,
 } from "@shopify/react-native-skia";
 import { useQuery } from "@tanstack/react-query";
@@ -56,13 +27,42 @@ import {
 	Spinner,
 	Tabs,
 	Text,
+	useTheme,
 	View,
 	XStack,
 	YStack,
-	useTheme,
 } from "tamagui";
 import type { ChartBounds } from "victory-native";
 import { CartesianChart, Line, Scatter } from "victory-native";
+import { ErrorHealthData } from "@/components/errorHealthData";
+import {
+	clampCardLeft,
+	clampWindowEnd,
+	easeOutCubic,
+	FLING_DURATION_MS,
+	findNearestPoint,
+	flingToEndMs,
+	formatWindowLabel,
+	type GraphPoint,
+	type GraphWindow,
+	getInitialEndMs,
+	getTrendSummary,
+	getWindow,
+	getXTickValues,
+	getYRange,
+	isShowingLatest,
+	msToX,
+	panToEndMs,
+	SCROLL_TO_LATEST_DURATION_MS,
+	sliceByWindow,
+	type TrendSummary,
+	xToMs,
+} from "@/services/graphWindow";
+import {
+	fetchAllWeights,
+	transformWeightDataForGraph,
+	useWeightRefetchOnActive,
+} from "@/services/weightService";
 
 /** グラフの表示期間幅（月） */
 const MONTH_OPTIONS = [1, 3, 6, 12] as const;
@@ -751,11 +751,7 @@ const formatDiffWeight = (diffWeight: number): string => {
  * 増減は色を変えない。増量期か減量期かはユーザーの目的しだいで、
  * アプリが良し悪しを決めて一喜一憂させないため
  */
-const WindowTrendSummary = ({
-	summary,
-}: {
-	summary: TrendSummary | null;
-}) => {
+const WindowTrendSummary = ({ summary }: { summary: TrendSummary | null }) => {
 	const diffLabel =
 		summary === null ? "-" : formatDiffWeight(summary.diffWeight);
 	const rangeLabel =

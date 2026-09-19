@@ -1,4 +1,3 @@
-import tamaguiConfig from "@/tamagui.config";
 import { TamaguiProvider } from "@tamagui/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
@@ -6,6 +5,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import { useEffect } from "react";
 import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import tamaguiConfig from "@/tamagui.config";
 
 const queryClient = new QueryClient();
 

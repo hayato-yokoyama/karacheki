@@ -1,5 +1,3 @@
-import { getBodyPhotoUri, listBodyPhotos } from "@/services/bodyPhotoService";
-import type { BodyPhoto } from "@/services/bodyPhotoService";
 import { useQuery } from "@tanstack/react-query";
 import {
 	differenceInCalendarDays,
@@ -13,10 +11,12 @@ import {
 	Paragraph,
 	SizableText,
 	Spinner,
+	useTheme,
 	XStack,
 	YStack,
-	useTheme,
 } from "tamagui";
+import type { BodyPhoto } from "@/services/bodyPhotoService";
+import { getBodyPhotoUri, listBodyPhotos } from "@/services/bodyPhotoService";
 
 /** 並べる写真の縦横比。一覧のセルと揃えている */
 const PHOTO_ASPECT_RATIO = 3 / 4;

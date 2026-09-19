@@ -1,11 +1,11 @@
 import {
-	type GraphPoint,
 	clampCardLeft,
 	clampWindowEnd,
 	easeOutCubic,
 	findNearestPoint,
 	flingToEndMs,
 	formatWindowLabel,
+	type GraphPoint,
 	getInitialEndMs,
 	getTrendSummary,
 	getWindow,

@@ -16,7 +16,8 @@
     "web": "expo start --web",
     "test": "jest --watchAll",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
     "lint:html": "markuplint \"**/*.html\"",
     "generate-themes": "tamagui generate-themes ./theme-builder.ts ./theme-output.ts"
   },
@@ -76,7 +77,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
-    "@biomejs/biome": "1.9.4",
+    "@biomejs/biome": "2.5.14",
     "@tamagui/animations-moti": "^2.7.7",
     "@types/jest": "^29.5.12",
     "@types/react": "~19.2.4",

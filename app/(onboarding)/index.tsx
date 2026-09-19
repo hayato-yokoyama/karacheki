@@ -1,11 +1,10 @@
-import { Button, Image, useTheme } from "tamagui";
-import Onboarding from "react-native-onboarding-swiper";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Link, Redirect } from "expo-router";
-import { Dimensions } from "react-native";
 import LottieView from "lottie-react-native";
 import { useEffect, useState } from "react";
-
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Dimensions } from "react-native";
+import Onboarding from "react-native-onboarding-swiper";
+import { Button, Image, useTheme } from "tamagui";
 
 const { width } = Dimensions.get("window");
 

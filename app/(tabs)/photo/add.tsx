@@ -1,4 +1,3 @@
-import { addBodyPhoto } from "@/services/bodyPhotoService";
 import RNDateTimePicker, {
 	type DateTimePickerChangeEvent,
 } from "@react-native-community/datetimepicker";
@@ -8,6 +7,7 @@ import { useState } from "react";
 import type { ImageLoadEventData, NativeSyntheticEvent } from "react-native";
 import { Alert, Image } from "react-native";
 import { Button, Label, Paragraph, ScrollView, XStack, YStack } from "tamagui";
+import { addBodyPhoto } from "@/services/bodyPhotoService";
 
 export default function Add() {
 	const router = useRouter();

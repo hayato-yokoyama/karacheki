@@ -1,4 +1,3 @@
-import { saveWeight } from "@/services/weightService";
 import RNDateTimePicker, {
 	type DateTimePickerChangeEvent,
 } from "@react-native-community/datetimepicker";
@@ -15,10 +14,11 @@ import {
 	ScrollView,
 	SizableText,
 	Text,
+	useTheme,
 	XStack,
 	YStack,
-	useTheme,
 } from "tamagui";
+import { saveWeight } from "@/services/weightService";
 
 export default function Add() {
 	const theme = useTheme();
