@@ -3,6 +3,7 @@ import RNDateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import { Minus, Plus } from "lucide-react-native";
 import { useState } from "react";
 import { Alert } from "react-native";
 import {
@@ -22,11 +23,19 @@ import {
 	RM_FORMULA_LABEL,
 } from "@/services/oneRepMax";
 
-/** レップ数の選択肢。換算の精度が落ちる 13 以上は選べないようにする */
-const REPS_OPTIONS = Array.from({ length: MAX_REPS }, (_, index) => index + 1);
+/** 選べるレップ数の下限 */
+const MIN_REPS = 1;
 
-/** レップ数のボタンを並べる列数 */
-const REPS_COLUMN_COUNT = 4;
+/**
+ * レップ数の初期値
+ *
+ * 1 を初期値にすると、押し忘れたまま保存したときに 1 レップの記録として残り、
+ * 「本当に挙げられる重量」であるはずの実測 PR が汚れる
+ */
+const DEFAULT_REPS = 5;
+
+/** レップ数の表示幅。1 桁と 2 桁で ± ボタンの位置が動かないようにする */
+const REPS_VALUE_WIDTH = 32;
 
 export default function Add() {
 	const router = useRouter();
@@ -34,37 +43,23 @@ export default function Add() {
 
 	const [exercise, setExercise] = useState<LiftExercise>("benchPress");
 	const [weight, setWeight] = useState<string>("");
-	/**
-	 * レップ数。初期値を入れない
-	 *
-	 * 1 を初期値にすると、押し忘れたまま保存したときに 1 レップの記録として残り、
-	 * 「本当に挙げられる重量」であるはずの実測 PR が汚れる
-	 */
-	const [reps, setReps] = useState<number | null>(null);
+	const [reps, setReps] = useState<number>(DEFAULT_REPS);
 	const [performedAt, setPerformedAt] = useState<Date>(new Date());
 
 	const weightNumber = Number(weight);
 	// 記録を消す以外に直す手段がないので、あり得ない値は保存させない
 	const canSave =
-		weight !== "" &&
-		Number.isFinite(weightNumber) &&
-		weightNumber > 0 &&
-		reps !== null;
+		weight !== "" && Number.isFinite(weightNumber) && weightNumber > 0;
 
 	const { mutate: saveRecord, isPending } = useMutation({
-		mutationFn: () => {
-			if (reps === null) {
-				throw new Error("レップ数が選ばれていません。");
-			}
-
-			return addLiftRecord({
+		mutationFn: () =>
+			addLiftRecord({
 				exercise,
 				// 入力を弾かず、扱う桁に合わせて丸める
 				weight: Math.round(weightNumber * 10) / 10,
 				reps,
 				performedAt,
-			});
-		},
+			}),
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ["liftRecords"] });
 			router.back();
@@ -96,23 +91,37 @@ export default function Add() {
 					/>
 				</XStack>
 
-				<YStack gap="$2">
+				{/* 重量・実施日と同じ「ラベル + 右に入力」の行にして、数字の並びが
+				    重量のキーパッドに見えないようにする */}
+				<XStack alignItems="center" justifyContent="space-between">
 					<Label htmlFor="reps">レップ数</Label>
-					<XStack flexWrap="wrap" gap="$2">
-						{REPS_OPTIONS.map((option) => (
-							<Button
-								key={option}
-								// キーボードを出さずに選べるよう、1〜12 をそのまま並べる
-								width={`${100 / REPS_COLUMN_COUNT - 3}%`}
-								theme={option === reps ? "accent" : undefined}
-								onPress={() => setReps(option)}
-							>
-								{/* Button が文字列の子しか Text で包まないため、数値のまま渡さない */}
-								{String(option)}
-							</Button>
-						))}
+					<XStack alignItems="center" gap="$3">
+						<Button
+							size="$3"
+							circular
+							icon={<Minus />}
+							disabled={reps <= MIN_REPS}
+							opacity={reps <= MIN_REPS ? 0.5 : 1}
+							onPress={() => setReps(Math.max(MIN_REPS, reps - 1))}
+						/>
+						<SizableText
+							size="$6"
+							fontWeight="bold"
+							width={REPS_VALUE_WIDTH}
+							textAlign="center"
+						>
+							{String(reps)}
+						</SizableText>
+						<Button
+							size="$3"
+							circular
+							icon={<Plus />}
+							disabled={reps >= MAX_REPS}
+							opacity={reps >= MAX_REPS ? 0.5 : 1}
+							onPress={() => setReps(Math.min(MAX_REPS, reps + 1))}
+						/>
 					</XStack>
-				</YStack>
+				</XStack>
 
 				<XStack alignItems="center" justifyContent="space-between">
 					<Label htmlFor="performedAt">実施日</Label>
