@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 
-import { ChartLine, House, Images } from "lucide-react-native";
+import { ChartLine, Dumbbell, House, Images } from "lucide-react-native";
 import { useTheme } from "tamagui";
 
 /** タブバーのアイコンサイズ。Tamagui の size="$1" と同じ値 */
@@ -34,6 +34,16 @@ export default function TabLayout() {
 					tabBarIcon: ({ color }) => (
 						<ChartLine color={color} size={TAB_ICON_SIZE} />
 					),
+				}}
+			/>
+			<Tabs.Screen
+				name="lift"
+				options={{
+					title: "BIG3",
+					tabBarIcon: ({ color }) => (
+						<Dumbbell color={color} size={TAB_ICON_SIZE} />
+					),
+					headerShown: false,
 				}}
 			/>
 			<Tabs.Screen
