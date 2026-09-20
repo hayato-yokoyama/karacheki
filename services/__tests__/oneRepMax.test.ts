@@ -1,8 +1,11 @@
 import {
+	buildRmTableRow,
 	estimateOneRepMax,
 	getLiftPr,
 	type LiftExercise,
 	type LiftRecord,
+	RM_TABLE_REPS,
+	RM_TABLE_WEIGHTS,
 	roundOneRepMax,
 } from "@/services/oneRepMax";
 
@@ -178,5 +181,32 @@ describe("getLiftPr", () => {
 		const afterDelete = records.filter((target) => target.id !== "b");
 
 		expect(getLiftPr(afterDelete, "benchPress").estimated?.id).toBe("a");
+	});
+});
+
+describe("換算表", () => {
+	it("60kg から 300kg まで 2.5kg 刻みで並ぶ", () => {
+		expect(RM_TABLE_WEIGHTS).toHaveLength(97);
+		expect(RM_TABLE_WEIGHTS.at(0)).toBe(60);
+		expect(RM_TABLE_WEIGHTS.at(1)).toBe(62.5);
+		expect(RM_TABLE_WEIGHTS.at(-1)).toBe(300);
+	});
+
+	it("1 行は 1〜12 レップの 12 列になる", () => {
+		expect(RM_TABLE_REPS).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+		expect(buildRmTableRow("benchPress", 85)).toHaveLength(12);
+	});
+
+	it("表の値は画面に出るのと同じ丸めたあとの値になる", () => {
+		// 「100kg を狙うなら 85kg を何レップか」を表から読めるようにするため、
+		// 自己ベストの表示と同じ値が並んでいる必要がある
+		expect(buildRmTableRow("benchPress", 85)).toEqual([
+			85, 89, 91, 94, 96, 98, 100, 102, 104, 106, 108, 111,
+		]);
+	});
+
+	it("種目で式が変わる", () => {
+		expect(buildRmTableRow("squat", 85).at(4)).toBe(98);
+		expect(buildRmTableRow("benchPress", 85).at(4)).toBe(96);
 	});
 });

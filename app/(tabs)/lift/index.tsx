@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { Plus, Trophy } from "lucide-react-native";
+import { ChevronRight, Plus, Trophy } from "lucide-react-native";
 import { type ReactNode, useCallback, useMemo } from "react";
 import { Alert, FlatList } from "react-native";
 import ReanimatedSwipeable, {
@@ -38,6 +38,9 @@ const BADGE_ICON_SIZE = 14;
 
 /** 一覧の左右の余白 */
 const LIST_PADDING = 16;
+
+/** 換算表へ進む矢印の大きさ */
+const CHEVRON_SIZE = 16;
 
 /** スワイプで現れる削除ボタンの幅 */
 const DELETE_ACTION_WIDTH = 88;
@@ -217,12 +220,35 @@ export default function Lift() {
 						{exerciseRecords.length === 0 ? (
 							<EmptyRecords exercise={exercise} />
 						) : (
-							<>
-								<PrCards exercise={exercise} pr={pr} />
-								<SizableText size="$5" fontWeight="bold">
-									記録
-								</SizableText>
-							</>
+							<PrCards exercise={exercise} pr={pr} />
+						)}
+
+						{/*
+						 * 「100kg を挙げるには今の重量を何レップか」を逆に引くための導線。
+						 * 記録が 0 件でも表そのものは役に立つので、常に出す
+						 */}
+						<XStack
+							alignItems="center"
+							justifyContent="space-between"
+							paddingVertical="$3"
+							borderTopWidth={1}
+							borderBottomWidth={1}
+							borderColor="$borderColor"
+							onPress={() =>
+								router.push({
+									pathname: "/(tabs)/lift/table",
+									params: { exercise },
+								})
+							}
+						>
+							<SizableText size="$3">換算表を見る</SizableText>
+							<ChevronRight size={CHEVRON_SIZE} color={theme.color11.val} />
+						</XStack>
+
+						{exerciseRecords.length > 0 && (
+							<SizableText size="$5" fontWeight="bold">
+								記録
+							</SizableText>
 						)}
 					</YStack>
 				}

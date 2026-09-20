@@ -56,6 +56,31 @@ const RM_DIVISOR: Record<LiftExercise, number> = {
 	deadlift: 33.3,
 };
 
+/** 換算表に並べる重量(kg)の下限・上限・刻み */
+const RM_TABLE_MIN_WEIGHT = 60;
+const RM_TABLE_MAX_WEIGHT = 300;
+const RM_TABLE_WEIGHT_STEP = 2.5;
+
+/**
+ * 換算表の行になる重量
+ *
+ * 刻みはプレートの最小単位に近い 2.5kg にして、実際に組める重量がそのまま
+ * 表にあるようにする
+ */
+export const RM_TABLE_WEIGHTS = Array.from(
+	{
+		length:
+			(RM_TABLE_MAX_WEIGHT - RM_TABLE_MIN_WEIGHT) / RM_TABLE_WEIGHT_STEP + 1,
+	},
+	(_, index) => RM_TABLE_MIN_WEIGHT + index * RM_TABLE_WEIGHT_STEP,
+);
+
+/** 換算表の列になるレップ数 */
+export const RM_TABLE_REPS = Array.from(
+	{ length: MAX_REPS },
+	(_, index) => index + 1,
+);
+
 /** 画面に出す換算式。推定値の出どころを見せるためのもの */
 export const RM_FORMULA_LABEL: Record<LiftExercise, string> = {
 	benchPress: "重量 × レップ ÷ 40 + 重量",
@@ -84,6 +109,17 @@ export const estimateOneRepMax = ({
  */
 export const roundOneRepMax = (value: number) =>
 	Math.round(Math.round(value * 10) / 10);
+
+/**
+ * 換算表の 1 行ぶんの推定 1RM を返す
+ *
+ * 画面に出す値をそのまま並べるため、丸めたあとの値を返す。表から読んだ数字と
+ * 自己ベストの数字が食い違わないようにする
+ */
+export const buildRmTableRow = (exercise: LiftExercise, weight: number) =>
+	RM_TABLE_REPS.map((reps) =>
+		roundOneRepMax(estimateOneRepMax({ exercise, weight, reps })),
+	);
 
 /**
  * 先に到達したのはどちらかを判定する

@@ -11,6 +11,13 @@ export default function Layout() {
 					title: "記録の追加",
 				}}
 			/>
+			<Stack.Screen
+				name="table"
+				options={{
+					presentation: "modal",
+					title: "換算表",
+				}}
+			/>
 		</Stack>
 	);
 }
