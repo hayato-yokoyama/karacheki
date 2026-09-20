@@ -5,7 +5,7 @@ import {
 	requestAuthorization,
 	saveQuantitySample,
 } from "@kingstinct/react-native-healthkit";
-import { endOfDay, subDays } from "date-fns";
+import { differenceInCalendarDays, endOfDay, subDays } from "date-fns";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect } from "react";
 import { AppState, type AppStateStatus } from "react-native";
@@ -97,10 +97,23 @@ export const calcWeightAvg = (weights: readonly WeightSample[]) => {
 	return weightsAvg;
 };
 
-/** X軸:日時,Y軸:体重(kg) のグラフ用に整形する */
+/**
+ * 傾向データ（移動平均）の対象期間（日）
+ *
+ * その点の日付を含めて直近この日数ぶんの測定値を平均する
+ */
+const TREND_WINDOW_DAYS = 10;
+
+/**
+ * X軸:日時,Y軸:体重(kg) のグラフ用に整形する
+ *
+ * 傾向データは「直近 windowDays 日」の平均で求める。
+ * 件数で区切ると、測定が飛んでいる時期ほど平均の対象期間が長くなり、
+ * 測定頻度によって傾向線の意味が変わってしまうため
+ */
 export const transformWeightDataForGraph = (
 	weights: readonly WeightSample[],
-	windowSize = 10, // 移動平均のウィンドウサイズ
+	windowDays = TREND_WINDOW_DAYS,
 ): GraphPoint[] => {
 	// 日付ごとに最初の測定値だけを残す
 	const uniqueDailyWeights = Object.values(
@@ -121,28 +134,31 @@ export const transformWeightDataForGraph = (
 		(a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
 	);
 
-	// 実測データを整形
-	const transformedActualData = sortedWeights.map((sample) => ({
-		date: sample.startDate.getTime(),
-		weight: sample.quantity,
-	}));
+	// 日付順に並んでいるので、窓から外れた先頭を進めるだけで各点の窓が求まる
+	let windowStart = 0;
 
-	// 移動平均データを計算する。全期間ぶんを扱うので日付をキーにした Map で引く
-	const movingAverages = new Map<number, number>();
-	sortedWeights.forEach((_, index, array) => {
-		if (index < windowSize - 1) return; // ウィンドウサイズ未満はスキップ
-		const window = array.slice(index - windowSize + 1, index + 1);
+	return sortedWeights.map((sample, index) => {
+		// 窓の左端を「その点の windowDays 日前」まで進める
+		while (
+			differenceInCalendarDays(
+				sample.startDate,
+				sortedWeights[windowStart].startDate,
+			) >= windowDays
+		) {
+			windowStart += 1;
+		}
+
+		// 期間の先頭など windowDays 日ぶん揃っていない区間も、揃っている測定値だけで平均する
+		const window = sortedWeights.slice(windowStart, index + 1);
 		const average =
-			window.reduce((sum, sample) => sum + sample.quantity, 0) / window.length;
+			window.reduce((sum, target) => sum + target.quantity, 0) / window.length;
 
-		movingAverages.set(array[index].startDate.getTime(), average);
+		return {
+			date: sample.startDate.getTime(),
+			actualWeight: sample.quantity,
+			trendWeight: average,
+		};
 	});
-
-	return transformedActualData.map((data) => ({
-		date: data.date,
-		actualWeight: data.weight,
-		trendWeight: movingAverages.get(data.date) ?? null,
-	}));
 };
 
 /** 体重データの書き込みをする */
