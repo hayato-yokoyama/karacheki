@@ -304,9 +304,24 @@ ERROR  [Error: Cannot find native module 'ExpoImageManipulator']
 依存パッケージや `app.json` を変えたらリビルドが要る、というだけのこと。Simulator なら手元で完結する。
 
 ```sh
+rm -rf ios
 npm ci
 npm run ios
 ```
+
+`rm -rf ios` を省かないこと。**`expo run:ios` は `ios/` がすでにあると prebuild を走らせない**ため、
+`app.json` 由来の Info.plist（カメラ権限）や新しい依存が反映されないまま焼き上がることがある。
+
+入っているバイナリが新しいかどうかは、カメラ権限の文言が Info.plist にあるかで判別できる
+（モジュールと権限は同じビルドで入る）。何も出なければ古いバイナリ。
+
+```sh
+plutil -p "$(xcrun simctl get_app_container booted com.h-yokoyama.karacheki.dev)/Info.plist" | grep -i camera
+```
+
+なお `npm run dev` の `Opening on iOS...` は**シミュレータ**を開く。EAS で実機ビルドを焼いても
+シミュレータのアプリは古いままなので、実機を見たいときは iPhone 側で「からチェキ.dev」を起動して繋ぎ、
+シミュレータのログで判断しない。
 
 カメラ権限の説明文（`NSCameraUsageDescription`）も `app.json` 由来で Info.plist に焼き込まれるため、
 同じリビルドが要る。入っていない状態で撮影に進むと iOS がアプリを落とす。
