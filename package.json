@@ -25,6 +25,15 @@
     "preset": "jest-expo",
     "globalSetup": "<rootDir>/jest.globalSetup.js"
   },
+  "expo": {
+    "autolinking": {
+      "apple": {
+        "buildFromSource": [
+          "expo-image-manipulator"
+        ]
+      }
+    }
+  },
   "dependencies": {
     "@dev-plugins/react-query": "^0.4.0",
     "@expo/vector-icons": "^15.0.2",

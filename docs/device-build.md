@@ -296,6 +296,41 @@ ASC API キーがあれば通らない**。2026-09-12 の提出は Apple ID ロ�
 
 ## トラブルシューティング
 
+### プリコンパイル済み XCFramework のモジュールが見つからない
+
+SDK 54 以降、Expo のモジュールは**プリコンパイル済みの XCFramework**として配られるものがある。
+ビルドログで、そのモジュールだけ `Compiling ... -dummy.m` ではなく次の行が出ていたらこの経路。
+
+```
+› Executing expo-image-manipulator Pods/ExpoImageManipulator » [Expo] Switch ExpoImageManipulator XCFramework for build configuration
+```
+
+この経路に乗ったモジュールは、リンクは通っているのに実行時に
+`Cannot find native module '...'` になることがある。`package.json` の
+`expo.autolinking.apple.buildFromSource` に**パッケージ名**を並べると、そのモジュールだけ
+従来どおりソースからコンパイルされる（expo-image-manipulator はこれで回避している）。
+
+```json
+"expo": {
+  "autolinking": {
+    "apple": {
+      "buildFromSource": ["expo-image-manipulator"]
+    }
+  }
+}
+```
+
+autolinking の設定なので、変えたら `rm -rf ios` からやり直す。
+効いていれば、次のビルドで `Compiling expo-image-manipulator Pods/ExpoImageManipulator » ...` に変わる。
+
+モジュールが登録対象になっているかは、生成物を直接見るのが速い。
+
+```sh
+grep -n "ImageManipulator" "ios/Pods/Target Support Files/Pods-dev/ExpoModulesProvider.swift"
+```
+
+ここに出てこない場合は autolinking がそもそも拾えていないので、`buildFromSource` では直らない。
+
 ### `Cannot find native module 'ExpoImageManipulator'` で写真タブが落ちる
 
 ```
