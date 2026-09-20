@@ -46,6 +46,9 @@ SDK 54 は Xcode 16 系なので条件を満たさない。
 
 EAS を使わず手元で完結する。Xcode 26.6 が入っていれば動く。**EAS に投げる前の切り分けはここでやる**のが速い。
 
+ただし `npm run ios` が焼いて入れるのは **Simulator のアプリだけ**で、iPhone には何も入らない。
+ネイティブを変えたあと実機で見たいときは、必ず手順3の EAS ビルドからやり直す。
+
 ```sh
 npm run ios          # prebuild → CocoaPods → xcodebuild → 起動（初回 10 分ほど）
 ```
