@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, Stack, useRouter } from "expo-router";
+import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Plus, Trophy } from "lucide-react-native";
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo } from "react";
 import { Alert, FlatList } from "react-native";
 import {
 	Button,
@@ -21,6 +21,7 @@ import {
 import {
 	estimateOneRepMax,
 	getLiftPr,
+	isLiftExercise,
 	LIFT_EXERCISE_LABEL,
 	type LiftExercise,
 	type LiftPr,
@@ -51,8 +52,16 @@ export default function Lift() {
 	const router = useRouter();
 	const queryClient = useQueryClient();
 
-	/** 表示中の種目。最後に選んだ種目は覚えず、開くたびにベンチプレスから始める */
-	const [exercise, setExercise] = useState<LiftExercise>("benchPress");
+	/**
+	 * 表示中の種目
+	 *
+	 * 画面の state ではなく遷移のパラメータで持つ。追加画面から戻ったときに、
+	 * 記録した種目のタブに必ず着地させるため
+	 */
+	const { exercise: exerciseParam } = useLocalSearchParams<{
+		exercise?: string;
+	}>();
+	const exercise = isLiftExercise(exerciseParam) ? exerciseParam : "benchPress";
 
 	const {
 		data: records,
@@ -123,7 +132,12 @@ export default function Lift() {
 				size="$2"
 				icon={<Plus />}
 				chromeless
-				onPress={() => router.push("/(tabs)/lift/add")}
+				onPress={() =>
+					router.push({
+						pathname: "/(tabs)/lift/add",
+						params: { exercise },
+					})
+				}
 			>
 				記録
 			</Button>
@@ -163,10 +177,13 @@ export default function Lift() {
 				contentContainerStyle={{ padding: LIST_PADDING }}
 				ListHeaderComponent={
 					<YStack gap="$4" paddingBottom="$4">
-						<LiftExerciseTabs exercise={exercise} onChange={setExercise} />
+						<LiftExerciseTabs
+							exercise={exercise}
+							onChange={(value) => router.setParams({ exercise: value })}
+						/>
 
 						{exerciseRecords.length === 0 ? (
-							<EmptyRecords />
+							<EmptyRecords exercise={exercise} />
 						) : (
 							<>
 								<PrCards exercise={exercise} pr={pr} />
@@ -189,10 +206,10 @@ export default function Lift() {
 }
 
 /** まだ記録がない種目の表示 */
-const EmptyRecords = () => (
+const EmptyRecords = ({ exercise }: { exercise: LiftExercise }) => (
 	<YStack paddingVertical="$8" alignItems="center" gap="$4">
 		<Paragraph>まだ記録がありません。</Paragraph>
-		<Link href="/(tabs)/lift/add" asChild>
+		<Link href={{ pathname: "/(tabs)/lift/add", params: { exercise } }} asChild>
 			<Button icon={<Plus />}>記録を追加</Button>
 		</Link>
 	</YStack>

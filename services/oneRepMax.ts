@@ -14,6 +14,11 @@ export const LIFT_EXERCISE_LABEL: Record<LiftExercise, string> = {
 	deadlift: "デッドリフト",
 };
 
+/** 画面間で受け渡した値が BIG3 の種目かどうかを確かめる */
+export const isLiftExercise = (value: unknown): value is LiftExercise =>
+	typeof value === "string" &&
+	(LIFT_EXERCISES as readonly string[]).includes(value);
+
 /** 入力できるレップ数の上限。これを超えると推定の精度が落ちる */
 export const MAX_REPS = 12;
 

@@ -2,7 +2,7 @@ import RNDateTimePicker, {
 	type DateTimePickerChangeEvent,
 } from "@react-native-community/datetimepicker";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Minus, Plus } from "lucide-react-native";
 import { useState } from "react";
 import { Alert } from "react-native";
@@ -15,10 +15,10 @@ import {
 	XStack,
 	YStack,
 } from "tamagui";
-import { LiftExerciseTabs } from "@/components/liftExerciseTabs";
 import { addLiftRecord } from "@/services/liftRecordService";
 import {
-	type LiftExercise,
+	isLiftExercise,
+	LIFT_EXERCISE_LABEL,
 	MAX_REPS,
 	RM_FORMULA_LABEL,
 } from "@/services/oneRepMax";
@@ -41,7 +41,18 @@ export default function Add() {
 	const router = useRouter();
 	const queryClient = useQueryClient();
 
-	const [exercise, setExercise] = useState<LiftExercise>("benchPress");
+	const { exercise: exerciseParam } = useLocalSearchParams<{
+		exercise?: string;
+	}>();
+
+	/**
+	 * 記録する種目
+	 *
+	 * 一覧で選んでいる種目をそのまま記録する。ここで種目を選べると、
+	 * ベンチプレスの一覧を見ながらデッドリフトを足せてしまう
+	 */
+	const exercise = isLiftExercise(exerciseParam) ? exerciseParam : "benchPress";
+
 	const [weight, setWeight] = useState<string>("");
 	const [reps, setReps] = useState<number>(DEFAULT_REPS);
 	const [performedAt, setPerformedAt] = useState<Date>(new Date());
@@ -76,9 +87,11 @@ export default function Add() {
 
 	return (
 		<ScrollView>
+			{/* 何の種目を記録しているのかは、入力欄ではなくタイトルで示す */}
+			<Stack.Screen
+				options={{ title: `${LIFT_EXERCISE_LABEL[exercise]}の記録` }}
+			/>
 			<YStack paddingVertical="$8" paddingHorizontal="$4" gap="$6">
-				<LiftExerciseTabs exercise={exercise} onChange={setExercise} />
-
 				<XStack alignItems="center" justifyContent="space-between">
 					<Label htmlFor="weight">重量（kg）</Label>
 					<Input
