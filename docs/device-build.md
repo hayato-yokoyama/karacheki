@@ -50,6 +50,10 @@ EAS を使わず手元で完結する。Xcode 26.6 が入っていれば動く�
 npm run ios          # prebuild → CocoaPods → xcodebuild → 起動（初回 10 分ほど）
 ```
 
+`npm run ios` は `APP_VARIANT=development` 付きで、EAS の development ビルドと同じ
+**「からチェキ.dev」（`com.h-yokoyama.karacheki.dev`）**を作る。付け忘れると本番バリアントが
+焼き上がり、端末に同じ URL スキームを持つアプリが2つ並んで取り違えが起きる。
+
 `ios/` は `prebuild` の生成物で gitignore 済み。設定の正は `app.json` / `app.config.ts` なので、
 `ios/` を直接編集しない。おかしくなったら `rm -rf ios` して作り直す。
 
@@ -301,9 +305,36 @@ ERROR  [Error: Cannot find native module 'ExpoImageManipulator']
 それを import している写真タブの画面がまとめて評価に失敗し、`missing the required default export`
 の警告も連鎖して出る（この警告は原因ではなく結果）。
 
-依存パッケージや `app.json` を変えたらリビルドが要る、というだけのこと。Simulator なら手元で完結する。
+依存パッケージや `app.json` を変えたらリビルドが要る。ただし**リビルドしたのに直らないときは、
+JS を読み込んでいるアプリがビルドしたアプリと違う**ことを疑う。
+
+`exp+karacheki://` は dev client を含むビルドが**すべて**登録するため、「からチェキ」と
+「からチェキ.dev」の両方が端末にいると、`npm run dev` のディープリンクをどちらが開くかは iOS 任せになる
+（#57 と同じ衝突）。古い方が開けば、新しくビルドしたはずのモジュールは当然見つからない。
+
+見分け方は Metro のログ。バンドルを読み込む直前に、どの Bundle ID を開いたかが出る。
+
+```
+› Opening on iPhone 17 Pro (com.h-yokoyama.karacheki)       ← 本番バリアント
+› Opening on iPhone 17 Pro (com.h-yokoyama.karacheki.dev)   ← dev バリアント
+```
+
+入っているアプリが新しいかどうかは、カメラ権限の文言が Info.plist にあるかで判別できる
+（モジュールと権限は同じビルドで入る）。
 
 ```sh
+for id in com.h-yokoyama.karacheki com.h-yokoyama.karacheki.dev; do
+  echo "== $id"
+  plutil -p "$(xcrun simctl get_app_container booted "$id" 2>/dev/null)/Info.plist" 2>/dev/null \
+    | grep -i NSCameraUsageDescription || echo "  なし（未インストール、または古いビルド）"
+done
+```
+
+確実なのは、紛らわしい方を消してから焼き直すこと。
+
+```sh
+xcrun simctl uninstall booted com.h-yokoyama.karacheki
+xcrun simctl uninstall booted com.h-yokoyama.karacheki.dev
 rm -rf ios
 npm ci
 npm run ios
@@ -311,13 +342,7 @@ npm run ios
 
 `rm -rf ios` を省かないこと。**`expo run:ios` は `ios/` がすでにあると prebuild を走らせない**ため、
 `app.json` 由来の Info.plist（カメラ権限）や新しい依存が反映されないまま焼き上がることがある。
-
-入っているバイナリが新しいかどうかは、カメラ権限の文言が Info.plist にあるかで判別できる
-（モジュールと権限は同じビルドで入る）。何も出なければ古いバイナリ。
-
-```sh
-plutil -p "$(xcrun simctl get_app_container booted com.h-yokoyama.karacheki.dev)/Info.plist" | grep -i camera
-```
+バリアントを切り替えたときも、`ios/` は前のバリアントのまま残る。
 
 なお `npm run dev` の `Opening on iOS...` は**シミュレータ**を開く。EAS で実機ビルドを焼いても
 シミュレータのアプリは古いままなので、実機を見たいときは iPhone 側で「からチェキ.dev」を起動して繋ぎ、
