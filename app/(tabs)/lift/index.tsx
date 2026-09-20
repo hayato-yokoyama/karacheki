@@ -167,9 +167,17 @@ export default function Lift() {
 				data={exerciseRecords}
 				keyExtractor={(record) => record.id}
 				renderItem={renderItem}
-				contentContainerStyle={{ padding: LIST_PADDING }}
+				// 行は全幅にして、余白は行の内側で取る。スワイプで出る削除ボタンを
+				// 画面の右端まで届かせるため
+				style={{ backgroundColor: theme.background0.val }}
+				contentContainerStyle={{ paddingBottom: LIST_PADDING }}
 				ListHeaderComponent={
-					<YStack gap="$4" paddingBottom="$4">
+					<YStack
+						gap="$4"
+						paddingHorizontal={LIST_PADDING}
+						paddingTop={LIST_PADDING}
+						paddingBottom="$4"
+					>
 						<LiftExerciseTabs
 							exercise={exercise}
 							onChange={(value) => router.setParams({ exercise: value })}
@@ -345,12 +353,17 @@ const LiftRecordRow = ({
 				</Button>
 			)}
 		>
-			{/* 行が透けると、スワイプ中に下の削除ボタンが見えてしまう */}
+			{/*
+			 * 行が透けるとスワイプ中に下の削除ボタンが見えてしまうので背景を敷く。
+			 * PR カードと同じ色にするとカードとリストの区別が付かなくなるため、
+			 * 画面と同じ色にして区切り線でリストを表す
+			 */}
 			<XStack
 				paddingVertical="$3"
+				paddingHorizontal={LIST_PADDING}
 				alignItems="center"
 				gap="$3"
-				backgroundColor="$background"
+				backgroundColor="$background0"
 				borderBottomWidth={1}
 				borderBottomColor="$borderColor"
 			>
