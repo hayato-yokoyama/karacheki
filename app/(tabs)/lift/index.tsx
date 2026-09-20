@@ -21,6 +21,7 @@ import {
 import {
 	estimateOneRepMax,
 	getLiftPr,
+	LIFT_EXERCISE_LABEL,
 	type LiftExercise,
 	type LiftPr,
 	type LiftRecord,
@@ -114,7 +115,8 @@ export default function Lift() {
 	);
 
 	const screenOptions = {
-		title: "BIG3",
+		// タブバーが「BIG3」なので、ヘッダーは選択中の種目を出す
+		title: LIFT_EXERCISE_LABEL[exercise],
 		headerStyle: { backgroundColor: theme.background0.val },
 		headerRight: () => (
 			<Button

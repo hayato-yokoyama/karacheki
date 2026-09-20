@@ -26,7 +26,17 @@ export const LiftExerciseTabs = ({
 			{LIFT_EXERCISES.map((value, index) => (
 				<Fragment key={value}>
 					{index > 0 && <Separator vertical />}
-					<Tabs.Tab flex={1} value={value}>
+					{/*
+					 * 選択中はアクセントテーマに切り替える
+					 *
+					 * Tabs.Tab の既定は backgroundColor を $backgroundActive にするだけで、
+					 * このテーマでは未選択との差がほとんど出ず、どれを選んでいるか分からない
+					 */}
+					<Tabs.Tab
+						flex={1}
+						value={value}
+						theme={value === exercise ? "accent" : undefined}
+					>
 						<SizableText size="$3">{LIFT_EXERCISE_LABEL[value]}</SizableText>
 					</Tabs.Tab>
 				</Fragment>
