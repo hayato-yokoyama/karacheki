@@ -214,7 +214,18 @@ export default function Graph() {
 							{MONTH_OPTIONS.map((month, index) => (
 								<Fragment key={month}>
 									{index > 0 && <Separator vertical />}
-									<Tabs.Tab flex={1} value={String(month)}>
+									{/*
+									 * 選択中はアクセントテーマに切り替える
+									 *
+									 * Tabs.Tab の既定は backgroundColor を $backgroundActive に
+									 * するだけで、このテーマでは未選択との差がほとんど出ず、
+									 * どの期間を選んでいるか分からない
+									 */}
+									<Tabs.Tab
+										flex={1}
+										value={String(month)}
+										theme={month === months ? "accent" : undefined}
+									>
 										<SizableText>
 											{month === 12 ? "1年" : `${month}ヶ月`}
 										</SizableText>
