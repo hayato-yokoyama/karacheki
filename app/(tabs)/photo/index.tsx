@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import * as Linking from "expo-linking";
 import { Stack, useRouter } from "expo-router";
 import { Check, ImagePlus } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
@@ -14,11 +15,13 @@ import {
 	XStack,
 	YStack,
 } from "tamagui";
-import type { BodyPhoto } from "@/services/bodyPhotoService";
+import type { BodyPhoto, PickedPhoto } from "@/services/bodyPhotoService";
 import {
+	CameraPermissionDeniedError,
 	getBodyPhotoUri,
 	listBodyPhotos,
 	pickBodyPhoto,
+	takeBodyPhoto,
 } from "@/services/bodyPhotoService";
 
 /** 一覧の外側の余白 */
@@ -67,28 +70,73 @@ export default function Photos() {
 	);
 	const selectedCount = selectedPhotos.length;
 
-	/** フォトライブラリから1枚選び、撮影日の確認画面へ進む */
-	const handlePressAdd = useCallback(async () => {
-		try {
-			const picked = await pickBodyPhoto();
-
-			if (!picked) {
-				return;
-			}
-
+	/** 選んだ・撮った写真をトリミング画面へ渡す */
+	const goToCrop = useCallback(
+		(picked: PickedPhoto) => {
 			router.push({
-				pathname: "/(tabs)/photo/add",
+				pathname: "/(tabs)/photo/crop",
 				params: {
 					uri: picked.uri,
 					takenAt: picked.takenAt.toISOString(),
+					width: String(picked.width),
+					height: String(picked.height),
 				},
 			});
+		},
+		[router],
+	);
+
+	/** カメラで1枚撮る */
+	const handleTakePhoto = useCallback(async () => {
+		try {
+			const taken = await takeBodyPhoto();
+
+			if (taken) {
+				goToCrop(taken);
+			}
+		} catch (error) {
+			// 一度拒否すると OS はもうダイアログを出さないので、設定へ送り出す
+			if (error instanceof CameraPermissionDeniedError) {
+				Alert.alert(
+					"カメラを使えません",
+					"設定アプリからカメラへのアクセスを許可してください。",
+					[
+						{ text: "キャンセル", style: "cancel" },
+						{ text: "設定を開く", onPress: () => Linking.openSettings() },
+					],
+				);
+				return;
+			}
+
+			// 原因を決めつけず、切り分けできるよう内容はログに残す
+			console.error(error);
+			Alert.alert("エラー", "写真を撮れませんでした");
+		}
+	}, [goToCrop]);
+
+	/** フォトライブラリから1枚選ぶ */
+	const handlePickPhoto = useCallback(async () => {
+		try {
+			const picked = await pickBodyPhoto();
+
+			if (picked) {
+				goToCrop(picked);
+			}
 		} catch (error) {
 			// 原因を決めつけず、切り分けできるよう内容はログに残す
 			console.error(error);
 			Alert.alert("エラー", "写真を選べませんでした");
 		}
-	}, [router]);
+	}, [goToCrop]);
+
+	/** 撮るか、ライブラリから選ぶかを尋ねる */
+	const handlePressAdd = useCallback(() => {
+		Alert.alert("写真を追加", undefined, [
+			{ text: "撮影する", onPress: handleTakePhoto },
+			{ text: "ライブラリから選ぶ", onPress: handlePickPhoto },
+			{ text: "キャンセル", style: "cancel" },
+		]);
+	}, [handlePickPhoto, handleTakePhoto]);
 
 	const handleStartSelect = useCallback(() => {
 		setIsSelecting(true);

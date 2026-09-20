@@ -46,9 +46,20 @@ SDK 54 は Xcode 16 系なので条件を満たさない。
 
 EAS を使わず手元で完結する。Xcode 26.6 が入っていれば動く。**EAS に投げる前の切り分けはここでやる**のが速い。
 
+ただし `npm run ios` が焼いて入れるのは **Simulator のアプリだけ**で、iPhone には何も入らない。
+ネイティブを変えたあと実機で見たいときは、必ず手順3の EAS ビルドからやり直す。
+
+**ネイティブモジュールを足した直後は、切り分けもここではなく EAS ビルドで行う。**
+#65 では、ローカルビルドだけモジュールが登録されない状態にはまった（トラブルシューティングに記録）。
+JS だけの変更なら、これまでどおりここで完結する。
+
 ```sh
 npm run ios          # prebuild → CocoaPods → xcodebuild → 起動（初回 10 分ほど）
 ```
+
+`npm run ios` は `APP_VARIANT=development` 付きで、EAS の development ビルドと同じ
+**「からチェキ.dev」（`com.h-yokoyama.karacheki.dev`）**を作る。付け忘れると本番バリアントが
+焼き上がり、端末に同じ URL スキームを持つアプリが2つ並んで取り違えが起きる。
 
 `ios/` は `prebuild` の生成物で gitignore 済み。設定の正は `app.json` / `app.config.ts` なので、
 `ios/` を直接編集しない。おかしくなったら `rm -rf ios` して作り直す。
@@ -289,6 +300,112 @@ ASC API キーがあれば通らない**。2026-09-12 の提出は Apple ID ロ�
 
 ## トラブルシューティング
 
+### `Cannot find native module '...'`（#65 で踏んだ）
+
+**QR / ディープリンクで端末に渡るのは Metro のバンドル（JS）だけ。**
+ネイティブモジュールは端末に入っているバイナリに焼き込まれているので、
+依存を足したあとに JS だけ新しくしても、古いバイナリには当然そのモジュールが無い。
+`services/bodyPhotoService.ts` の import が落ち、それを読む写真タブ一式が評価に失敗して
+`missing the required default export` の WARN も連鎖する（WARN は結果であって原因ではない）。
+
+実機はビルドし直して**入れ直す**しかない。
+
+```sh
+rm -rf ios        # autolinking の設定を変えたなら prebuild からやり直す
+npm ci
+npm run build:device
+```
+
+焼き上がったページの QR から iPhone にインストールし直し、そのあとで `npm run dev` の QR を読む。
+
+間違えやすいところ。
+
+- **`npm run ios` では直らない。** Simulator にしか入らないので iPhone のアプリは古いまま
+- Metro の `Opening on iOS...` も Simulator の話。実機の判断材料にしない。
+  iPhone 側で「からチェキ.dev」を手で起動して繋ぐ
+
+> **未解明**: `buildFromSource` を入れてソースビルドに切り替えたあと、`rm -rf ios` から焼き直した
+> **Simulator のビルドでも**同じエラーが出た（焼きたてのバイナリがその場で入って起動しているので、
+> 古いバイナリでは説明がつかない）。EAS の development ビルドでは問題なく動いたため深追いしていない。
+> ネイティブを足した直後の検証は EAS ビルドで行うのが無難。
+
+`package.json` の `buildFromSource` は、EAS ビルドが通ったときの構成をそのまま残している。
+外しても通るかは未確認なので、触るなら EAS ビルドで確認してから。
+
+```json
+"expo": {
+  "autolinking": {
+    "apple": {
+      "buildFromSource": ["expo-image-manipulator"]
+    }
+  }
+}
+```
+
+モジュールが登録対象に入っているかを見たいときは、生成物を直接読む。
+
+```sh
+grep -n "ImageManipulator" "ios/Pods/Target Support Files/Pods-dev/ExpoModulesProvider.swift"
+```
+
+### ネイティブモジュールが無くて写真タブがまとめて落ちる
+
+```
+ERROR  [Error: Cannot find native module 'ExpoImageManipulator']
+ WARN  Route "./(tabs)/photo/[id].tsx" is missing the required default export.
+```
+
+`npm i` で入るのは JS だけで、**すでに入っているアプリのバイナリにはネイティブ側が足りていない**。
+`services/bodyPhotoService.ts` はトリミングのために `expo-image-manipulator` を読み込むので、
+それを import している写真タブの画面がまとめて評価に失敗し、`missing the required default export`
+の警告も連鎖して出る（この警告は原因ではなく結果）。
+
+依存パッケージや `app.json` を変えたらリビルドが要る。ただし**リビルドしたのに直らないときは、
+JS を読み込んでいるアプリがビルドしたアプリと違う**ことを疑う。
+
+`exp+karacheki://` は dev client を含むビルドが**すべて**登録するため、「からチェキ」と
+「からチェキ.dev」の両方が端末にいると、`npm run dev` のディープリンクをどちらが開くかは iOS 任せになる
+（#57 と同じ衝突）。古い方が開けば、新しくビルドしたはずのモジュールは当然見つからない。
+
+見分け方は Metro のログ。バンドルを読み込む直前に、どの Bundle ID を開いたかが出る。
+
+```
+› Opening on iPhone 17 Pro (com.h-yokoyama.karacheki)       ← 本番バリアント
+› Opening on iPhone 17 Pro (com.h-yokoyama.karacheki.dev)   ← dev バリアント
+```
+
+入っているアプリが新しいかどうかは、カメラ権限の文言が Info.plist にあるかで判別できる
+（モジュールと権限は同じビルドで入る）。
+
+```sh
+for id in com.h-yokoyama.karacheki com.h-yokoyama.karacheki.dev; do
+  echo "== $id"
+  plutil -p "$(xcrun simctl get_app_container booted "$id" 2>/dev/null)/Info.plist" 2>/dev/null \
+    | grep -i NSCameraUsageDescription || echo "  なし（未インストール、または古いビルド）"
+done
+```
+
+確実なのは、紛らわしい方を消してから焼き直すこと。
+
+```sh
+xcrun simctl uninstall booted com.h-yokoyama.karacheki
+xcrun simctl uninstall booted com.h-yokoyama.karacheki.dev
+rm -rf ios
+npm ci
+npm run ios
+```
+
+`rm -rf ios` を省かないこと。**`expo run:ios` は `ios/` がすでにあると prebuild を走らせない**ため、
+`app.json` 由来の Info.plist（カメラ権限）や新しい依存が反映されないまま焼き上がることがある。
+バリアントを切り替えたときも、`ios/` は前のバリアントのまま残る。
+
+なお `npm run dev` の `Opening on iOS...` は**シミュレータ**を開く。EAS で実機ビルドを焼いても
+シミュレータのアプリは古いままなので、実機を見たいときは iPhone 側で「からチェキ.dev」を起動して繋ぎ、
+シミュレータのログで判断しない。
+
+カメラ権限の説明文（`NSCameraUsageDescription`）も `app.json` 由来で Info.plist に焼き込まれるため、
+同じリビルドが要る。入っていない状態で撮影に進むと iOS がアプリを落とす。
+
 ### ビルドが Pods のヘッダ not found で落ちる
 
 ```
@@ -352,4 +469,6 @@ Simulator でも大半は見られるようになったが、実機でしか確�
   - 初回起動時にヘルスケアの読み取り／書き込み許可ダイアログが出る
   - 実機には実データの蓄積があるので、移動平均やグラフの見え方は実機で確認する
 - **通知** — 毎朝8時のローカル通知と、その本文（週平均と変化幅）
-- **カメラ撮影** — 未実装。`cameraPermission: false` のままなので、着手時に `app.json` の変更とリビルドが要る
+- **カメラ撮影** — #65 で実装済み。`app.json` の `cameraPermission` と `expo-image-manipulator` を
+  入れたので、**古いビルドのままでは動かない**（後述のトラブルシューティング）。Simulator でも
+  カメラ UI は出せないため、撮影経路の確認は実機で行う。ライブラリ選択とトリミングは Simulator で確認できる
