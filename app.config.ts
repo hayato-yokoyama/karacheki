@@ -6,6 +6,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 	...config,
 	name: IS_DEV ? "からチェキ.dev" : "からチェキ",
 	slug: "karacheki",
+	// dev と本番で URL スキームを分ける。
+	// 共通だと両方が同じスキームを持ち、ディープリンクでどちらが開くか iOS 任せになる
+	scheme: IS_DEV ? "karachekidev" : "karacheki",
 	// app.json の ios / android 設定を消さないよう展開してから上書きする
 	ios: {
 		...config.ios,
