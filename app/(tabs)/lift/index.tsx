@@ -16,7 +16,10 @@ import {
 	XStack,
 	YStack,
 } from "tamagui";
-import { LiftExerciseTabs } from "@/components/liftExerciseTabs";
+import {
+	SegmentedControl,
+	type SegmentOption,
+} from "@/components/segmentedControl";
 import {
 	deleteLiftRecord,
 	listLiftRecords,
@@ -26,12 +29,17 @@ import {
 	getLiftPr,
 	isLiftExercise,
 	LIFT_EXERCISE_LABEL,
+	LIFT_EXERCISES,
 	type LiftExercise,
 	type LiftPr,
 	type LiftRecord,
 	RM_FORMULA_LABEL,
 	roundOneRepMax,
 } from "@/services/oneRepMax";
+
+/** BIG3 の種目切り替えの選択肢 */
+const LIFT_EXERCISE_SEGMENTS: SegmentOption<LiftExercise>[] =
+	LIFT_EXERCISES.map((value) => ({ value, label: LIFT_EXERCISE_LABEL[value] }));
 
 /** PR バッジのアイコンサイズ */
 const BADGE_ICON_SIZE = 14;
@@ -223,8 +231,9 @@ export default function Lift() {
 						paddingTop={LIST_PADDING}
 						paddingBottom="$4"
 					>
-						<LiftExerciseTabs
-							exercise={exercise}
+						<SegmentedControl
+							options={LIFT_EXERCISE_SEGMENTS}
+							value={exercise}
 							onChange={(value) => router.setParams({ exercise: value })}
 						/>
 
