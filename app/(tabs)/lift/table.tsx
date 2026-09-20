@@ -18,6 +18,14 @@ const WEIGHT_COLUMN_WIDTH = 52;
 const TABLE_PADDING = 12;
 
 /**
+ * 1 行おきに敷く色
+ *
+ * 12 列を横に追うと目が滑るので縞を入れる。テーマのトークンは明暗で意味が
+ * 変わるため、どちらでも薄く乗る不透明度の低いグレーを直接指定する
+ */
+const ZEBRA_BACKGROUND = "rgba(127, 127, 127, 0.09)";
+
+/**
  * RM 換算表
  *
  * 「100kg を挙げるなら今の 85kg を何レップやればいいか」を逆に引くためのもの。
@@ -44,16 +52,16 @@ export default function Table() {
 				<XStack
 					paddingVertical="$2"
 					borderBottomWidth={1}
-					borderBottomColor="$borderColor"
+					borderBottomColor="$color11"
 				>
-					<SizableText size="$1" color="$color11" width={WEIGHT_COLUMN_WIDTH}>
+					<SizableText size="$1" fontWeight="bold" width={WEIGHT_COLUMN_WIDTH}>
 						kg
 					</SizableText>
 					{RM_TABLE_REPS.map((reps) => (
 						<SizableText
 							key={reps}
 							size="$1"
-							color="$color11"
+							fontWeight="bold"
 							flex={1}
 							textAlign="center"
 						>
@@ -66,9 +74,12 @@ export default function Table() {
 			<FlatList
 				data={RM_TABLE_WEIGHTS}
 				keyExtractor={(weight) => String(weight)}
-				contentContainerStyle={{ paddingHorizontal: TABLE_PADDING }}
-				renderItem={({ item }) => (
-					<TableRow exercise={exercise} weight={item} />
+				renderItem={({ item, index }) => (
+					<TableRow
+						exercise={exercise}
+						weight={item}
+						isStriped={index % 2 === 1}
+					/>
 				)}
 			/>
 		</YStack>
@@ -79,14 +90,17 @@ export default function Table() {
 const TableRow = ({
 	exercise,
 	weight,
+	isStriped,
 }: {
 	exercise: LiftExercise;
 	weight: number;
+	isStriped: boolean;
 }) => (
+	// 縞が画面の端まで届くよう、左右の余白は行の内側で取る
 	<XStack
 		paddingVertical="$2"
-		borderBottomWidth={1}
-		borderBottomColor="$borderColor"
+		paddingHorizontal={TABLE_PADDING}
+		backgroundColor={isStriped ? ZEBRA_BACKGROUND : undefined}
 	>
 		<SizableText size="$1" fontWeight="bold" width={WEIGHT_COLUMN_WIDTH}>
 			{weight.toFixed(1)}
