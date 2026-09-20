@@ -4,6 +4,8 @@
 
 - 2026-09-12: SDK 52 のまま dev client で実機検証を完了。体重の読み書き・通知・写真選択すべて動作
 - 2026-09-12: SDK 57 へアップグレード（#46 手順4）。Xcode 26.6 でのビルドと Simulator 起動まで確認済み
+- 2026-09-20: dev / 本番で URL スキームを分けた（#57）。dev 版をリビルドし、実機の QR から
+  「からチェキ.dev」が開くことを確認。本番側の `karacheki://` は次の production ビルドで入る
 
 ## これで入るもの
 
@@ -11,6 +13,7 @@
 | --- | --- |
 | アプリ名 | からチェキ.dev |
 | Bundle ID | `com.h-yokoyama.karacheki.dev` |
+| URL スキーム | `karachekidev://` と `exp+karacheki://`（App Store 版は `karacheki://` のみ） |
 | ビルド種別 | development（dev client + internal distribution / Ad Hoc） |
 
 App Store 版（`com.h-yokoyama.karacheki`）とは別アプリとして入るので、**普段使いのアプリは消えない**。
@@ -139,7 +142,11 @@ npm run build:device
 npm run dev
 ```
 
-Mac と iPhone を同じネットワークに置き、**ホーム画面から `からチェキ.dev` を直接起動**して接続する。
+Mac と iPhone を同じネットワークに置き、ターミナルの QR を iPhone のカメラで読む。
+**開くのは `からチェキ.dev` だけ**（#57 で確認済み）。ホーム画面から直接起動して繋いでもよい。
+
+QR の中身は `scheme` ではなく slug 由来の `exp+karacheki://` になる。
+これを登録するのは dev client を含むビルドだけなので、App Store 版は反応しない。
 
 初回起動時の「ローカルネットワーク上のデバイスの検索を求めています」は**必ず許可する**。
 拒否すると開発サーバに接続できない。
@@ -298,18 +305,25 @@ rm -rf ios && npm run ios
 
 同種の症状は `node_modules` が `package-lock.json` とズレているときにも出る。`npm ci` で揃える（手順0）。
 
-### QR を読むと本番の「からチェキ」が開いてしまう
+### QR を読むと本番の「からチェキ」が開いてしまう（#57 / 解消済み）
 
-`app.json` の `scheme` が `myapp` のまま dev / 本番で共通なうえ、expo-dev-client が `exp+karacheki://` を登録するため、
-App Store 版と dev 版が同じ URL スキームを持っている。どちらが開くかは iOS 任せになる。
-
-回避策はディープリンクを使わないこと。**アプリを直接起動して `Enter URL manually` で繋ぐ**。
-
-恒久対応するなら `app.config.ts` で dev だけスキームを分ける（ネイティブ設定なのでリビルドが必要）。
+原因は `scheme` が `myapp` のまま dev / 本番で共通だったこと。両方が同じ URL スキームを
+登録している状態で、どちらが開くかは iOS 任せだった。`app.config.ts` で分けて解消している。
 
 ```ts
-scheme: IS_DEV ? "karachekidev" : "myapp",
+scheme: IS_DEV ? "karachekidev" : "karacheki",
 ```
+
+当初は「expo-dev-client が `exp+karacheki://` を登録するので、それも衝突している」と見ていたが、
+**これは誤りだった**。`exp+karacheki://` を登録するのは dev client を含むビルドだけで、
+App Store 版には入らない。衝突していたのは `myapp://` だけ。
+
+**ネイティブ設定なので、古いビルドが入ったままだと直らない。** 手順3からやり直す。
+本番側も `myapp` から `karacheki` に変えてあるので、次の本番ビルドで置き換わる
+（`myapp://` で開く外部リンクは配っていないため、壊れるものはない）。
+
+それでも本番が開くなら、App Store 版と dev 版のどちらかが古いビルドのまま。
+切り分けは **`Enter URL manually` で Metro の URL を手入力**する（ディープリンクを通らない）。
 
 ### アプリが「インターネット接続がオフラインのようです」で繋がらない
 
