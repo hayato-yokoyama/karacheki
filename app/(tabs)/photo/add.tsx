@@ -30,7 +30,8 @@ export default function Add() {
 		mutationFn: () => addBodyPhoto(uri, selectedDate),
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ["bodyPhotos"] });
-			router.back();
+			// 1つ戻るとトリミング画面に出てしまう。保存し終えたら一覧まで戻す
+			router.dismissTo("/(tabs)/photo");
 		},
 		onError: () => {
 			Alert.alert("エラー", "写真の保存に失敗しました");
