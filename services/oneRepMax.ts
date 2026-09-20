@@ -75,10 +75,15 @@ export const RM_TABLE_WEIGHTS = Array.from(
 	(_, index) => RM_TABLE_MIN_WEIGHT + index * RM_TABLE_WEIGHT_STEP,
 );
 
-/** 換算表の列になるレップ数 */
+/**
+ * 換算表の列になるレップ数
+ *
+ * 1 レップは換算せず挙上重量をそのまま返すので、列にしても重量を繰り返すだけ。
+ * 2 から始める
+ */
 export const RM_TABLE_REPS = Array.from(
-	{ length: MAX_REPS },
-	(_, index) => index + 1,
+	{ length: MAX_REPS - 1 },
+	(_, index) => index + 2,
 );
 
 /** 画面に出す換算式。推定値の出どころを見せるためのもの */

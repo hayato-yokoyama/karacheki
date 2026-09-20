@@ -227,13 +227,10 @@ export default function Lift() {
 						 * 「100kg を挙げるには今の重量を何レップか」を逆に引くための導線。
 						 * 記録が 0 件でも表そのものは役に立つので、常に出す
 						 */}
-						<XStack
-							alignItems="center"
-							justifyContent="space-between"
-							paddingVertical="$3"
-							borderTopWidth={1}
-							borderBottomWidth={1}
-							borderColor="$borderColor"
+						<Button
+							size="$3"
+							alignSelf="flex-start"
+							iconAfter={<ChevronRight size={CHEVRON_SIZE} />}
 							onPress={() =>
 								router.push({
 									pathname: "/(tabs)/lift/table",
@@ -241,9 +238,8 @@ export default function Lift() {
 								})
 							}
 						>
-							<SizableText size="$3">換算表を見る</SizableText>
-							<ChevronRight size={CHEVRON_SIZE} color={theme.color11.val} />
-						</XStack>
+							換算表を見る
+						</Button>
 
 						{exerciseRecords.length > 0 && (
 							<SizableText size="$5" fontWeight="bold">

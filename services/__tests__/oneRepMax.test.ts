@@ -192,21 +192,23 @@ describe("換算表", () => {
 		expect(RM_TABLE_WEIGHTS.at(-1)).toBe(300);
 	});
 
-	it("1 行は 1〜12 レップの 12 列になる", () => {
-		expect(RM_TABLE_REPS).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-		expect(buildRmTableRow("benchPress", 85)).toHaveLength(12);
+	it("1 レップの列は持たず、2〜12 レップの 11 列になる", () => {
+		// 1 レップは換算しないので、列にしても挙上重量を繰り返すだけになる
+		expect(RM_TABLE_REPS).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+		expect(buildRmTableRow("benchPress", 85)).toHaveLength(11);
 	});
 
 	it("表の値は画面に出るのと同じ丸めたあとの値になる", () => {
 		// 「100kg を狙うなら 85kg を何レップか」を表から読めるようにするため、
 		// 自己ベストの表示と同じ値が並んでいる必要がある
 		expect(buildRmTableRow("benchPress", 85)).toEqual([
-			85, 89, 91, 94, 96, 98, 100, 102, 104, 106, 108, 111,
+			89, 91, 94, 96, 98, 100, 102, 104, 106, 108, 111,
 		]);
 	});
 
 	it("種目で式が変わる", () => {
-		expect(buildRmTableRow("squat", 85).at(4)).toBe(98);
-		expect(buildRmTableRow("benchPress", 85).at(4)).toBe(96);
+		// 先頭が 2 レップなので、5 レップは 4 列目
+		expect(buildRmTableRow("squat", 85).at(3)).toBe(98);
+		expect(buildRmTableRow("benchPress", 85).at(3)).toBe(96);
 	});
 });
