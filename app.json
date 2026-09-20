@@ -5,7 +5,11 @@
 		"icon": "./assets/images/icon.png",
 		"userInterfaceStyle": "automatic",
 		"ios": {
-			"supportsTablet": false
+			"supportsTablet": false,
+			"infoPlist": {
+				"CFBundleDevelopmentRegion": "ja",
+				"CFBundleLocalizations": ["ja"]
+			}
 		},
 		"android": {
 			"adaptiveIcon": {
