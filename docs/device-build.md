@@ -49,6 +49,10 @@ EAS を使わず手元で完結する。Xcode 26.6 が入っていれば動く�
 ただし `npm run ios` が焼いて入れるのは **Simulator のアプリだけ**で、iPhone には何も入らない。
 ネイティブを変えたあと実機で見たいときは、必ず手順3の EAS ビルドからやり直す。
 
+**ネイティブモジュールを足した直後は、切り分けもここではなく EAS ビルドで行う。**
+#65 で、ローカルビルドだけモジュールが登録されず EAS ビルドでは動く、という状態に何度もはまった
+（トラブルシューティングに記録）。JS だけの変更なら、これまでどおりここで完結する。
+
 ```sh
 npm run ios          # prebuild → CocoaPods → xcodebuild → 起動（初回 10 分ほど）
 ```
@@ -296,19 +300,25 @@ ASC API キーがあれば通らない**。2026-09-12 の提出は Apple ID ロ�
 
 ## トラブルシューティング
 
-### プリコンパイル済み XCFramework のモジュールが見つからない
+### `Cannot find native module '...'`（#65 で踏んだ。EAS ビルドでは起きない）
 
-SDK 54 以降、Expo のモジュールは**プリコンパイル済みの XCFramework**として配られるものがある。
-ビルドログで、そのモジュールだけ `Compiling ... -dummy.m` ではなく次の行が出ていたらこの経路。
+expo-image-manipulator を足したとき、**`npm run ios` で焼いたローカルビルドだけ**
+実行時に `Cannot find native module 'ExpoImageManipulator'` になった。
+`npm run build:device`（EAS）で焼いたものは同じコードで問題なく動いた。
 
-```
-› Executing expo-image-manipulator Pods/ExpoImageManipulator » [Expo] Switch ExpoImageManipulator XCFramework for build configuration
-```
+確かめたこと。いずれも原因ではなかった。
 
-この経路に乗ったモジュールは、リンクは通っているのに実行時に
-`Cannot find native module '...'` になることがある。`package.json` の
-`expo.autolinking.apple.buildFromSource` に**パッケージ名**を並べると、そのモジュールだけ
-従来どおりソースからコンパイルされる（expo-image-manipulator はこれで回避している）。
+- `npx expo-modules-autolinking search --platform apple` では正しく解決されている
+- Swift 側は `Name("ExpoImageManipulator")`、JS 側は `requireNativeModule('ExpoImageManipulator')` で一致
+- `rm -rf ios` からの prebuild をやり直しても、dev バリアントで焼いても再現
+- `expo.autolinking.apple.buildFromSource` でソースビルドに切り替えても再現
+  （`Compiling ... ExpoImageManipulator-dummy.m` に変わることは確認済み）
+
+つまり**ローカルの Xcode ビルド固有**で、Expo モジュールの登録まで届いていなかった。
+深追いより EAS に投げる方が速い。**ネイティブを足した直後の検証は EAS ビルドで行う。**
+
+`package.json` の `buildFromSource` は、EAS ビルドが通ったときの構成をそのまま残している。
+外しても直るかは未確認なので、触るなら EAS ビルドで確認してから。
 
 ```json
 "expo": {
@@ -320,18 +330,13 @@ SDK 54 以降、Expo のモジュールは**プリコンパイル済みの XCFra
 }
 ```
 
-autolinking の設定なので、変えたら `rm -rf ios` からやり直す。
-効いていれば、次のビルドで `Compiling expo-image-manipulator Pods/ExpoImageManipulator » ...` に変わる。
-
-モジュールが登録対象になっているかは、生成物を直接見るのが速い。
+モジュールが登録対象に入っているかを見たいときは、生成物を直接読む。
 
 ```sh
 grep -n "ImageManipulator" "ios/Pods/Target Support Files/Pods-dev/ExpoModulesProvider.swift"
 ```
 
-ここに出てこない場合は autolinking がそもそも拾えていないので、`buildFromSource` では直らない。
-
-### `Cannot find native module 'ExpoImageManipulator'` で写真タブが落ちる
+### ネイティブモジュールが無くて写真タブがまとめて落ちる
 
 ```
 ERROR  [Error: Cannot find native module 'ExpoImageManipulator']
