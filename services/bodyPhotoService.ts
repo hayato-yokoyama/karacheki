@@ -2,10 +2,29 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // SDK 54 で File / Directory ベースの新 API に置き換わった。
 // 関数ベースの従来 API は legacy として残っているため、まずはそのまま使う
 import * as FileSystem from "expo-file-system/legacy";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
+import { Image } from "react-native";
+import type { CropRect } from "@/services/cropRect";
 
 /** Before/After 写真のメタデータの保存キー */
 const STORAGE_KEY = "bodyPhotos";
+
+/**
+ * 保存する画像の長辺の上限（px）
+ *
+ * 一覧のセルは約130px、詳細は全画面（3x端末で約1200px）なのでこれで足りる。
+ * iPhone の原寸のまま溜めると1枚で数MBになり、端末内に持ち続けるには重い
+ */
+const MAX_LONG_SIDE = 1440;
+
+/**
+ * 保存する JPEG の品質
+ *
+ * 取り込みは無圧縮（quality: 1）にして、トリミング後のここで1度だけ圧縮する。
+ * 取り込みと保存で2回エンコードすると、そのぶん画質が落ちる
+ */
+const SAVE_COMPRESS = 0.8;
 
 /** Before/After 写真のメタデータ */
 export type BodyPhoto = {
@@ -204,16 +223,59 @@ const parseExifDateTimeOriginal = (value: unknown) => {
 	return isInRange ? date : null;
 };
 
+/** トリミングにかける前の、選ばれた・撮られた写真 */
+export type PickedPhoto = {
+	uri: string;
+	takenAt: Date;
+	/** 元画像の大きさ（px）。トリミングの座標計算に使う */
+	width: number;
+	height: number;
+};
+
+/**
+ * カメラの権限が下りていないことを、他の失敗と区別して伝える
+ *
+ * 一度拒否されると OS はダイアログを出さないため、呼び出し側は
+ * 「設定アプリから許可してほしい」と案内する必要がある
+ */
+export class CameraPermissionDeniedError extends Error {
+	constructor() {
+		super("カメラへのアクセスが許可されていません。");
+		this.name = "CameraPermissionDeniedError";
+	}
+}
+
+/**
+ * 画像の大きさを求める
+ *
+ * ピッカーは width / height を 0 で返すことがある。0 のままでは
+ * トリミングの倍率計算が成り立たないので、そのときだけ実ファイルから測る
+ */
+const resolveImageSize = (asset: ImagePicker.ImagePickerAsset) => {
+	if (asset.width > 0 && asset.height > 0) {
+		return Promise.resolve({ width: asset.width, height: asset.height });
+	}
+
+	return new Promise<{ width: number; height: number }>((resolve, reject) => {
+		Image.getSize(
+			asset.uri,
+			(width, height) => resolve({ width, height }),
+			reject,
+		);
+	});
+};
+
 /**
  * フォトライブラリから写真を1枚選ぶ
  *
  * 撮影日はEXIFから取り、取れなければ今日にフォールバックする
  */
-export const pickBodyPhoto = async () => {
+export const pickBodyPhoto = async (): Promise<PickedPhoto | null> => {
 	const result = await ImagePicker.launchImageLibraryAsync({
 		mediaTypes: ["images"],
 		allowsMultipleSelection: false,
-		quality: 0.8,
+		// トリミング後に1度だけ圧縮するため、ここでは落とさずに受け取る
+		quality: 1,
 		exif: true,
 	});
 
@@ -231,5 +293,69 @@ export const pickBodyPhoto = async () => {
 		uri: asset.uri,
 		takenAt:
 			parseExifDateTimeOriginal(asset.exif?.DateTimeOriginal) ?? new Date(),
+		...(await resolveImageSize(asset)),
 	};
+};
+
+/**
+ * カメラで写真を1枚撮る
+ *
+ * 撮影日は今。撮り忘れた日のぶんを後から撮ることもあるため、
+ * この後の確認画面で直せるようにしてある
+ */
+export const takeBodyPhoto = async (): Promise<PickedPhoto | null> => {
+	const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+	if (!permission.granted) {
+		throw new CameraPermissionDeniedError();
+	}
+
+	const result = await ImagePicker.launchCameraAsync({
+		mediaTypes: ["images"],
+		// トリミング後に1度だけ圧縮するため、ここでは落とさずに受け取る
+		quality: 1,
+	});
+
+	if (result.canceled) {
+		return null;
+	}
+
+	const asset = result.assets.at(0);
+
+	if (!asset) {
+		return null;
+	}
+
+	return {
+		uri: asset.uri,
+		takenAt: new Date(),
+		...(await resolveImageSize(asset)),
+	};
+};
+
+/**
+ * 切り抜いた画像を作る
+ *
+ * 保存されるのは切り抜いた後の1枚だけで、元の写真には触れない
+ * （フォトライブラリの写真はそのまま、撮影したものはキャッシュに残る）
+ */
+export const cropBodyPhoto = async (uri: string, rect: CropRect) => {
+	const context = ImageManipulator.manipulate(uri).crop(rect);
+
+	// 上限より小さいものを引き伸ばしても粗くなるだけなので、超えるときだけ縮める
+	const resized =
+		Math.max(rect.width, rect.height) > MAX_LONG_SIDE
+			? context.resize(
+					rect.width >= rect.height
+						? { width: MAX_LONG_SIDE }
+						: { height: MAX_LONG_SIDE },
+				)
+			: context;
+
+	const image = await resized.renderAsync();
+
+	return image.saveAsync({
+		compress: SAVE_COMPRESS,
+		format: SaveFormat.JPEG,
+	});
 };

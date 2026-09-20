@@ -35,7 +35,7 @@
 				"expo-image-picker",
 				{
 					"photosPermission": "Before/Afterの写真を選ぶために写真へのアクセスを許可します。",
-					"cameraPermission": false,
+					"cameraPermission": "Before/Afterの写真を撮るためにカメラへのアクセスを許可します。",
 					"microphonePermission": false
 				}
 			],
