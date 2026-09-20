@@ -289,6 +289,28 @@ ASC API キーがあれば通らない**。2026-09-12 の提出は Apple ID ロ�
 
 ## トラブルシューティング
 
+### `Cannot find native module 'ExpoImageManipulator'` で写真タブが落ちる
+
+```
+ERROR  [Error: Cannot find native module 'ExpoImageManipulator']
+ WARN  Route "./(tabs)/photo/[id].tsx" is missing the required default export.
+```
+
+`npm i` で入るのは JS だけで、**すでに入っているアプリのバイナリにはネイティブ側が足りていない**。
+`services/bodyPhotoService.ts` はトリミングのために `expo-image-manipulator` を読み込むので、
+それを import している写真タブの画面がまとめて評価に失敗し、`missing the required default export`
+の警告も連鎖して出る（この警告は原因ではなく結果）。
+
+依存パッケージや `app.json` を変えたらリビルドが要る、というだけのこと。Simulator なら手元で完結する。
+
+```sh
+npm ci
+npm run ios
+```
+
+カメラ権限の説明文（`NSCameraUsageDescription`）も `app.json` 由来で Info.plist に焼き込まれるため、
+同じリビルドが要る。入っていない状態で撮影に進むと iOS がアプリを落とす。
+
 ### ビルドが Pods のヘッダ not found で落ちる
 
 ```
@@ -352,4 +374,6 @@ Simulator でも大半は見られるようになったが、実機でしか確�
   - 初回起動時にヘルスケアの読み取り／書き込み許可ダイアログが出る
   - 実機には実データの蓄積があるので、移動平均やグラフの見え方は実機で確認する
 - **通知** — 毎朝8時のローカル通知と、その本文（週平均と変化幅）
-- **カメラ撮影** — 未実装。`cameraPermission: false` のままなので、着手時に `app.json` の変更とリビルドが要る
+- **カメラ撮影** — #65 で実装済み。`app.json` の `cameraPermission` と `expo-image-manipulator` を
+  入れたので、**古いビルドのままでは動かない**（後述のトラブルシューティング）。Simulator でも
+  カメラ UI は出せないため、撮影経路の確認は実機で行う。ライブラリ選択とトリミングは Simulator で確認できる
