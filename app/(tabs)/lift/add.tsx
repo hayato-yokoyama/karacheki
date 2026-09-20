@@ -107,7 +107,8 @@ export default function Add() {
 								theme={option === reps ? "accent" : undefined}
 								onPress={() => setReps(option)}
 							>
-								{option}
+								{/* Button が文字列の子しか Text で包まないため、数値のまま渡さない */}
+								{String(option)}
 							</Button>
 						))}
 					</XStack>
