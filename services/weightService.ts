@@ -102,7 +102,7 @@ export const calcWeightAvg = (weights: readonly WeightSample[]) => {
  *
  * その点の日付を含めて直近この日数ぶんの測定値を平均する
  */
-const TREND_WINDOW_DAYS = 7;
+const TREND_WINDOW_DAYS = 10;
 
 /**
  * X軸:日時,Y軸:体重(kg) のグラフ用に整形する

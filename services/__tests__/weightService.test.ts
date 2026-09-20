@@ -102,14 +102,14 @@ describe("transformWeightDataForGraph", () => {
 		expect(points.at(-1)?.trendWeight).toBe(70);
 	});
 
-	it("既定では直近7日で平均する", () => {
+	it("既定では直近10日で平均する", () => {
 		const points = transformWeightDataForGraph([
 			sample("2026-06-01T09:00:00+09:00", 100),
-			sample("2026-06-02T09:00:00+09:00", 70),
-			sample("2026-06-08T09:00:00+09:00", 70),
+			sample("2026-06-02T09:00:00+09:00", 60),
+			sample("2026-06-11T09:00:00+09:00", 80),
 		]);
 
-		// 6/08 の点からは 6/02 までが窓。6/01 は外れる
+		// 6/11 の点からは 6/02 までが窓。ちょうど10日離れた 6/01 は外れる
 		expect(points.at(-1)?.trendWeight).toBe(70);
 	});
 
