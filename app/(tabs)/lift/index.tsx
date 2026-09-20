@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronRight, Plus, Trophy } from "lucide-react-native";
+import { Plus, Trophy } from "lucide-react-native";
 import { type ReactNode, useCallback, useMemo } from "react";
 import { Alert, FlatList } from "react-native";
 import ReanimatedSwipeable, {
@@ -38,9 +38,6 @@ const BADGE_ICON_SIZE = 14;
 
 /** 一覧の左右の余白 */
 const LIST_PADDING = 16;
-
-/** 換算表へ進む矢印の大きさ */
-const CHEVRON_SIZE = 16;
 
 /** スワイプで現れる削除ボタンの幅 */
 const DELETE_ACTION_WIDTH = 88;
@@ -155,19 +152,33 @@ export default function Lift() {
 		title: LIFT_EXERCISE_LABEL[exercise],
 		headerStyle: { backgroundColor: theme.background0.val },
 		headerRight: () => (
-			<Button
-				size="$2"
-				icon={<Plus />}
-				chromeless
-				onPress={() =>
-					router.push({
-						pathname: "/(tabs)/lift/add",
-						params: { exercise },
-					})
-				}
-			>
-				記録
-			</Button>
+			<XStack alignItems="center">
+				<Button
+					size="$2"
+					chromeless
+					onPress={() =>
+						router.push({
+							pathname: "/(tabs)/lift/table",
+							params: { exercise },
+						})
+					}
+				>
+					換算表
+				</Button>
+				<Button
+					size="$2"
+					icon={<Plus />}
+					chromeless
+					onPress={() =>
+						router.push({
+							pathname: "/(tabs)/lift/add",
+							params: { exercise },
+						})
+					}
+				>
+					記録
+				</Button>
+			</XStack>
 		),
 	};
 
@@ -222,24 +233,6 @@ export default function Lift() {
 						) : (
 							<PrCards exercise={exercise} pr={pr} />
 						)}
-
-						{/*
-						 * 「100kg を挙げるには今の重量を何レップか」を逆に引くための導線。
-						 * 記録が 0 件でも表そのものは役に立つので、常に出す
-						 */}
-						<Button
-							size="$3"
-							alignSelf="flex-start"
-							iconAfter={<ChevronRight size={CHEVRON_SIZE} />}
-							onPress={() =>
-								router.push({
-									pathname: "/(tabs)/lift/table",
-									params: { exercise },
-								})
-							}
-						>
-							換算表を見る
-						</Button>
 
 						{exerciseRecords.length > 0 && (
 							<SizableText size="$5" fontWeight="bold">

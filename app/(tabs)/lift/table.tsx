@@ -12,11 +12,14 @@ import {
 	RM_TABLE_WEIGHTS,
 } from "@/services/oneRepMax";
 
-/** 重量の列の幅。見出しの「kg/回数」が収まる幅 */
-const WEIGHT_COLUMN_WIDTH = 56;
+/** 表の文字の大きさ。数字が読み取れることを列数より優先する */
+const TABLE_FONT_SIZE = "$4";
 
-/** レップ数の列の幅。横スクロールなしで 8 列ぶん見える幅 */
-const REP_COLUMN_WIDTH = 40;
+/** 重量の列の幅。見出しの「kg\回数」が収まる幅 */
+const WEIGHT_COLUMN_WIDTH = 68;
+
+/** レップ数の列の幅。横スクロールなしで 6 列ぶん見える幅 */
+const REP_COLUMN_WIDTH = 48;
 
 /** 表の左右の余白 */
 const TABLE_PADDING = 12;
@@ -69,16 +72,16 @@ export default function Table() {
 						borderBottomColor="$color11"
 					>
 						<SizableText
-							size="$1"
+							size={TABLE_FONT_SIZE}
 							fontWeight="bold"
 							width={WEIGHT_COLUMN_WIDTH}
 						>
-							kg/回数
+							kg\回数
 						</SizableText>
 						{RM_TABLE_REPS.map((reps) => (
 							<SizableText
 								key={reps}
-								size="$1"
+								size={TABLE_FONT_SIZE}
 								fontWeight="bold"
 								width={REP_COLUMN_WIDTH}
 								textAlign="center"
@@ -123,13 +126,17 @@ const TableRow = ({
 		paddingHorizontal={TABLE_PADDING}
 		backgroundColor={isStriped ? ZEBRA_BACKGROUND : undefined}
 	>
-		<SizableText size="$1" fontWeight="bold" width={WEIGHT_COLUMN_WIDTH}>
+		<SizableText
+			size={TABLE_FONT_SIZE}
+			fontWeight="bold"
+			width={WEIGHT_COLUMN_WIDTH}
+		>
 			{formatTableWeight(weight)}
 		</SizableText>
 		{buildRmTableRow(exercise, weight).map((value, index) => (
 			<SizableText
 				key={RM_TABLE_REPS[index]}
-				size="$1"
+				size={TABLE_FONT_SIZE}
 				color="$color11"
 				width={REP_COLUMN_WIDTH}
 				textAlign="center"
