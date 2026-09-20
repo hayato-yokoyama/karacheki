@@ -50,8 +50,8 @@ EAS を使わず手元で完結する。Xcode 26.6 が入っていれば動く�
 ネイティブを変えたあと実機で見たいときは、必ず手順3の EAS ビルドからやり直す。
 
 **ネイティブモジュールを足した直後は、切り分けもここではなく EAS ビルドで行う。**
-#65 で、ローカルビルドだけモジュールが登録されず EAS ビルドでは動く、という状態に何度もはまった
-（トラブルシューティングに記録）。JS だけの変更なら、これまでどおりここで完結する。
+#65 では、ローカルビルドだけモジュールが登録されない状態にはまった（トラブルシューティングに記録）。
+JS だけの変更なら、これまでどおりここで完結する。
 
 ```sh
 npm run ios          # prebuild → CocoaPods → xcodebuild → 起動（初回 10 分ほど）
@@ -300,25 +300,37 @@ ASC API キーがあれば通らない**。2026-09-12 の提出は Apple ID ロ�
 
 ## トラブルシューティング
 
-### `Cannot find native module '...'`（#65 で踏んだ。EAS ビルドでは起きない）
+### `Cannot find native module '...'`（#65 で踏んだ）
 
-expo-image-manipulator を足したとき、**`npm run ios` で焼いたローカルビルドだけ**
-実行時に `Cannot find native module 'ExpoImageManipulator'` になった。
-`npm run build:device`（EAS）で焼いたものは同じコードで問題なく動いた。
+**QR / ディープリンクで端末に渡るのは Metro のバンドル（JS）だけ。**
+ネイティブモジュールは端末に入っているバイナリに焼き込まれているので、
+依存を足したあとに JS だけ新しくしても、古いバイナリには当然そのモジュールが無い。
+`services/bodyPhotoService.ts` の import が落ち、それを読む写真タブ一式が評価に失敗して
+`missing the required default export` の WARN も連鎖する（WARN は結果であって原因ではない）。
 
-確かめたこと。いずれも原因ではなかった。
+実機はビルドし直して**入れ直す**しかない。
 
-- `npx expo-modules-autolinking search --platform apple` では正しく解決されている
-- Swift 側は `Name("ExpoImageManipulator")`、JS 側は `requireNativeModule('ExpoImageManipulator')` で一致
-- `rm -rf ios` からの prebuild をやり直しても、dev バリアントで焼いても再現
-- `expo.autolinking.apple.buildFromSource` でソースビルドに切り替えても再現
-  （`Compiling ... ExpoImageManipulator-dummy.m` に変わることは確認済み）
+```sh
+rm -rf ios        # autolinking の設定を変えたなら prebuild からやり直す
+npm ci
+npm run build:device
+```
 
-つまり**ローカルの Xcode ビルド固有**で、Expo モジュールの登録まで届いていなかった。
-深追いより EAS に投げる方が速い。**ネイティブを足した直後の検証は EAS ビルドで行う。**
+焼き上がったページの QR から iPhone にインストールし直し、そのあとで `npm run dev` の QR を読む。
+
+間違えやすいところ。
+
+- **`npm run ios` では直らない。** Simulator にしか入らないので iPhone のアプリは古いまま
+- Metro の `Opening on iOS...` も Simulator の話。実機の判断材料にしない。
+  iPhone 側で「からチェキ.dev」を手で起動して繋ぐ
+
+> **未解明**: `buildFromSource` を入れてソースビルドに切り替えたあと、`rm -rf ios` から焼き直した
+> **Simulator のビルドでも**同じエラーが出た（焼きたてのバイナリがその場で入って起動しているので、
+> 古いバイナリでは説明がつかない）。EAS の development ビルドでは問題なく動いたため深追いしていない。
+> ネイティブを足した直後の検証は EAS ビルドで行うのが無難。
 
 `package.json` の `buildFromSource` は、EAS ビルドが通ったときの構成をそのまま残している。
-外しても直るかは未確認なので、触るなら EAS ビルドで確認してから。
+外しても通るかは未確認なので、触るなら EAS ビルドで確認してから。
 
 ```json
 "expo": {
