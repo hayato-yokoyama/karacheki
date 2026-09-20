@@ -3,6 +3,7 @@ import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Plus, Trophy } from "lucide-react-native";
 import { type ReactNode, useCallback, useMemo } from "react";
 import { Alert, FlatList } from "react-native";
+import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import {
 	Button,
 	Card,
@@ -35,6 +36,17 @@ const BADGE_ICON_SIZE = 14;
 
 /** 一覧の左右の余白 */
 const LIST_PADDING = 16;
+
+/** スワイプで現れる削除ボタンの幅 */
+const DELETE_ACTION_WIDTH = 88;
+
+/**
+ * 削除ボタンの色
+ *
+ * このプロジェクトはカスタムテーマで既定のテーマを差し替えているため $red10 は
+ * 解決されない。トークンとして存在する $red10Light を使う
+ */
+const DELETE_ACTION_COLOR = "$red10Light";
 
 /** 挙上重量の表示。入力した値をそのまま見せる */
 const formatWeight = (weight: number) => `${weight.toFixed(1)}kg`;
@@ -93,34 +105,15 @@ export default function Lift() {
 		},
 	});
 
-	/** 誤入力した記録を消せるようにする。編集はないので、消して入れ直してもらう */
-	const handleLongPressRecord = useCallback(
-		(record: LiftRecord) => {
-			Alert.alert(
-				"記録を削除しますか？",
-				`${record.performedAt}  ${formatSet(record)}\n削除した記録は元に戻せません。`,
-				[
-					{ text: "キャンセル", style: "cancel" },
-					{
-						text: "削除",
-						style: "destructive",
-						onPress: () => removeRecord(record.id),
-					},
-				],
-			);
-		},
-		[removeRecord],
-	);
-
 	const renderItem = useCallback(
 		({ item }: { item: LiftRecord }) => (
 			<LiftRecordRow
 				record={item}
 				pr={pr}
-				onLongPress={() => handleLongPressRecord(item)}
+				onDelete={() => removeRecord(item.id)}
 			/>
 		),
-		[pr, handleLongPressRecord],
+		[pr, removeRecord],
 	);
 
 	const screenOptions = {
@@ -187,15 +180,9 @@ export default function Lift() {
 						) : (
 							<>
 								<PrCards exercise={exercise} pr={pr} />
-								<XStack alignItems="baseline" justifyContent="space-between">
-									<SizableText size="$5" fontWeight="bold">
-										記録
-									</SizableText>
-									{/* 長押し以外に削除の入口がないので、そこにあることだけは伝える */}
-									<SizableText size="$1" color="$color11">
-										長押しで削除
-									</SizableText>
-								</XStack>
+								<SizableText size="$5" fontWeight="bold">
+									記録
+								</SizableText>
 							</>
 						)}
 					</YStack>
@@ -332,38 +319,56 @@ const getPrBadgeLabel = (record: LiftRecord, pr: LiftPr) => {
 const LiftRecordRow = ({
 	record,
 	pr,
-	onLongPress,
+	onDelete,
 }: {
 	record: LiftRecord;
 	pr: LiftPr;
-	onLongPress: () => void;
+	onDelete: () => void;
 }) => {
 	const theme = useTheme();
 	const badgeLabel = getPrBadgeLabel(record, pr);
 
 	return (
-		<XStack
-			paddingVertical="$3"
-			alignItems="center"
-			gap="$3"
-			borderBottomWidth={1}
-			borderBottomColor="$borderColor"
-			onLongPress={onLongPress}
-		>
-			<SizableText size="$3" color="$color11">
-				{record.performedAt}
-			</SizableText>
-			<SizableText size="$4" fontWeight="bold">
-				{formatSet(record)}
-			</SizableText>
-			{badgeLabel && (
-				<XStack alignItems="center" gap="$1">
-					<Trophy size={BADGE_ICON_SIZE} color={theme.accentColor.val} />
-					<SizableText size="$2" color="$accentColor">
-						{badgeLabel}
-					</SizableText>
-				</XStack>
+		<ReanimatedSwipeable
+			friction={2}
+			rightThreshold={DELETE_ACTION_WIDTH / 2}
+			renderRightActions={() => (
+				<Button
+					width={DELETE_ACTION_WIDTH}
+					height="100%"
+					borderRadius={0}
+					backgroundColor={DELETE_ACTION_COLOR}
+					color="white"
+					onPress={onDelete}
+				>
+					削除
+				</Button>
 			)}
-		</XStack>
+		>
+			{/* 行が透けると、スワイプ中に下の削除ボタンが見えてしまう */}
+			<XStack
+				paddingVertical="$3"
+				alignItems="center"
+				gap="$3"
+				backgroundColor="$background"
+				borderBottomWidth={1}
+				borderBottomColor="$borderColor"
+			>
+				<SizableText size="$3" color="$color11">
+					{record.performedAt}
+				</SizableText>
+				<SizableText size="$4" fontWeight="bold">
+					{formatSet(record)}
+				</SizableText>
+				{badgeLabel && (
+					<XStack alignItems="center" gap="$1">
+						<Trophy size={BADGE_ICON_SIZE} color={theme.accentColor.val} />
+						<SizableText size="$2" color="$accentColor">
+							{badgeLabel}
+						</SizableText>
+					</XStack>
+				)}
+			</XStack>
+		</ReanimatedSwipeable>
 	);
 };
