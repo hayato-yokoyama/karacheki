@@ -8,24 +8,14 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import * as Haptics from "expo-haptics";
 import { Stack } from "expo-router";
-import {
-	Fragment,
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type LayoutChangeEvent, Platform } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import {
 	Button,
 	type ColorTokens,
 	ScrollView,
-	Separator,
-	SizableText,
 	Spinner,
-	Tabs,
 	Text,
 	useTheme,
 	View,
@@ -35,6 +25,10 @@ import {
 import type { ChartBounds } from "victory-native";
 import { CartesianChart, Line, Scatter } from "victory-native";
 import { ErrorHealthData } from "@/components/errorHealthData";
+import {
+	SegmentedControl,
+	type SegmentOption,
+} from "@/components/segmentedControl";
 import {
 	clampCardLeft,
 	clampWindowEnd,
@@ -66,6 +60,16 @@ import {
 
 /** グラフの表示期間幅（月） */
 const MONTH_OPTIONS = [1, 3, 6, 12] as const;
+
+/**
+ * 期間切り替えの選択肢
+ *
+ * セグメントの値は文字列のため、月数は文字列にして持つ
+ */
+const MONTH_SEGMENTS: SegmentOption<string>[] = MONTH_OPTIONS.map((month) => ({
+	value: String(month),
+	label: month === 12 ? "1年" : `${month}ヶ月`,
+}));
 
 /** 初期表示の期間幅（月） */
 const DEFAULT_MONTHS = 3;
@@ -191,38 +195,25 @@ export default function Graph() {
 						</XStack>
 					</XStack>
 					{/* グラフ */}
-					<Tabs
-						value={String(months)}
-						onValueChange={(value) => setMonths(Number(value))}
-						orientation="horizontal"
-						flexDirection="column"
+					<YStack
 						width="100%"
 						height={GRAPH_HEIGHT + 70}
 						overflow="hidden"
+						gap="$4"
 					>
-						<Tabs.Content value={String(months)}>
-							<GraphContent
-								months={months}
-								endMs={endMs ?? initialEndMs}
-								onChangeEndMs={setEndMs}
-								data={weightForGraph}
-							/>
-						</Tabs.Content>
-
-						{/* NOTE: Tamagui v2 で Group（Tabs.List）の separator prop が無くなったので手で挟む */}
-						<Tabs.List marginTop="$4">
-							{MONTH_OPTIONS.map((month, index) => (
-								<Fragment key={month}>
-									{index > 0 && <Separator vertical />}
-									<Tabs.Tab flex={1} value={String(month)}>
-										<SizableText>
-											{month === 12 ? "1年" : `${month}ヶ月`}
-										</SizableText>
-									</Tabs.Tab>
-								</Fragment>
-							))}
-						</Tabs.List>
-					</Tabs>
+						<GraphContent
+							months={months}
+							endMs={endMs ?? initialEndMs}
+							onChangeEndMs={setEndMs}
+							data={weightForGraph}
+						/>
+						{/* 表示期間幅の切り替え */}
+						<SegmentedControl
+							options={MONTH_SEGMENTS}
+							value={String(months)}
+							onChange={(value) => setMonths(Number(value))}
+						/>
+					</YStack>
 				</YStack>
 			</ScrollView>
 		</>
