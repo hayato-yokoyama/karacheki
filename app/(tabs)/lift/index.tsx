@@ -3,7 +3,9 @@ import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Plus, Trophy } from "lucide-react-native";
 import { type ReactNode, useCallback, useMemo } from "react";
 import { Alert, FlatList } from "react-native";
-import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import ReanimatedSwipeable, {
+	type SwipeableMethods,
+} from "react-native-gesture-handler/ReanimatedSwipeable";
 import {
 	Button,
 	Card,
@@ -105,15 +107,44 @@ export default function Lift() {
 		},
 	});
 
+	/**
+	 * 削除の前に確認する
+	 *
+	 * PR はそう何度も更新できるものではないので、消すのは例外的な操作になる。
+	 * スワイプが意図せず最後まで進んだときに、確認なしで消えるのは割に合わない
+	 */
+	const handlePressDelete = useCallback(
+		(record: LiftRecord, swipeable: SwipeableMethods) => {
+			Alert.alert(
+				"記録を削除しますか？",
+				`${record.performedAt}  ${formatSet(record)}\n削除した記録は元に戻せません。`,
+				[
+					{
+						text: "キャンセル",
+						style: "cancel",
+						// 開いたままだと次の操作の邪魔になる
+						onPress: () => swipeable.close(),
+					},
+					{
+						text: "削除",
+						style: "destructive",
+						onPress: () => removeRecord(record.id),
+					},
+				],
+			);
+		},
+		[removeRecord],
+	);
+
 	const renderItem = useCallback(
 		({ item }: { item: LiftRecord }) => (
 			<LiftRecordRow
 				record={item}
 				pr={pr}
-				onDelete={() => removeRecord(item.id)}
+				onPressDelete={(swipeable) => handlePressDelete(item, swipeable)}
 			/>
 		),
-		[pr, removeRecord],
+		[pr, handlePressDelete],
 	);
 
 	const screenOptions = {
@@ -327,11 +358,11 @@ const getPrBadgeLabel = (record: LiftRecord, pr: LiftPr) => {
 const LiftRecordRow = ({
 	record,
 	pr,
-	onDelete,
+	onPressDelete,
 }: {
 	record: LiftRecord;
 	pr: LiftPr;
-	onDelete: () => void;
+	onPressDelete: (swipeable: SwipeableMethods) => void;
 }) => {
 	const theme = useTheme();
 	const badgeLabel = getPrBadgeLabel(record, pr);
@@ -340,14 +371,14 @@ const LiftRecordRow = ({
 		<ReanimatedSwipeable
 			friction={2}
 			rightThreshold={DELETE_ACTION_WIDTH / 2}
-			renderRightActions={() => (
+			renderRightActions={(_progress, _translation, swipeable) => (
 				<Button
 					width={DELETE_ACTION_WIDTH}
 					height="100%"
 					borderRadius={0}
 					backgroundColor={DELETE_ACTION_COLOR}
 					color="white"
-					onPress={onDelete}
+					onPress={() => onPressDelete(swipeable)}
 				>
 					削除
 				</Button>
@@ -358,29 +389,31 @@ const LiftRecordRow = ({
 			 * PR カードと同じ色にするとカードとリストの区別が付かなくなるため、
 			 * 画面と同じ色にして区切り線でリストを表す
 			 */}
-			<XStack
-				paddingVertical="$3"
-				paddingHorizontal={LIST_PADDING}
-				alignItems="center"
-				gap="$3"
-				backgroundColor="$background0"
-				borderBottomWidth={1}
-				borderBottomColor="$borderColor"
-			>
-				<SizableText size="$3" color="$color11">
-					{record.performedAt}
-				</SizableText>
-				<SizableText size="$4" fontWeight="bold">
-					{formatSet(record)}
-				</SizableText>
-				{badgeLabel && (
-					<XStack alignItems="center" gap="$1">
-						<Trophy size={BADGE_ICON_SIZE} color={theme.accentColor.val} />
-						<SizableText size="$2" color="$accentColor">
-							{badgeLabel}
-						</SizableText>
-					</XStack>
-				)}
+			<XStack paddingHorizontal={LIST_PADDING} backgroundColor="$background0">
+				{/* 区切り線は行の内側に引いて、画面全体の余白に合わせる */}
+				<XStack
+					flex={1}
+					paddingVertical="$3"
+					alignItems="center"
+					gap="$3"
+					borderBottomWidth={1}
+					borderBottomColor="$borderColor"
+				>
+					<SizableText size="$3" color="$color11">
+						{record.performedAt}
+					</SizableText>
+					<SizableText size="$4" fontWeight="bold">
+						{formatSet(record)}
+					</SizableText>
+					{badgeLabel && (
+						<XStack alignItems="center" gap="$1">
+							<Trophy size={BADGE_ICON_SIZE} color={theme.accentColor.val} />
+							<SizableText size="$2" color="$accentColor">
+								{badgeLabel}
+							</SizableText>
+						</XStack>
+					)}
+				</XStack>
 			</XStack>
 		</ReanimatedSwipeable>
 	);
