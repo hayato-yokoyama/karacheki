@@ -160,7 +160,7 @@ export default function Add() {
 					</Button>
 					{/* 何が起きる入力なのかを、保存する前に見せておく */}
 					<SizableText size="$1" color="$color11" textAlign="center">
-						推定 1RM = {RM_FORMULA_LABEL[exercise]}
+						推定1RM = {RM_FORMULA_LABEL[exercise]}
 					</SizableText>
 				</YStack>
 			</YStack>

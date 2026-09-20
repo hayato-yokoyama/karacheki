@@ -254,7 +254,7 @@ const PrCards = ({ exercise, pr }: { exercise: LiftExercise; pr: LiftPr }) => {
 	return (
 		<YStack gap="$2">
 			{isSameRecord ? (
-				<PrCard title="実測PR = 換算PR" value={formatWeight(actual.weight)}>
+				<PrCard title="実測1RM = 推定1RM" value={formatWeight(actual.weight)}>
 					<SizableText size="$2" color="$color11">
 						{actual.performedAt}
 					</SizableText>
@@ -262,7 +262,7 @@ const PrCards = ({ exercise, pr }: { exercise: LiftExercise; pr: LiftPr }) => {
 			) : (
 				<XStack gap="$2">
 					<PrCard
-						title="実測PR"
+						title="実測1RM"
 						value={actual ? formatWeight(actual.weight) : undefined}
 						emptyMessage="1 レップの記録がまだありません"
 					>
@@ -273,7 +273,7 @@ const PrCards = ({ exercise, pr }: { exercise: LiftExercise; pr: LiftPr }) => {
 						)}
 					</PrCard>
 					<PrCard
-						title="換算PR"
+						title="推定1RM"
 						value={estimated ? formatEstimated(estimated) : undefined}
 					>
 						{estimated && (
@@ -291,13 +291,13 @@ const PrCards = ({ exercise, pr }: { exercise: LiftExercise; pr: LiftPr }) => {
 				</XStack>
 			)}
 
-			{/* 推定値が何から出ているかを、隠さず小さく置いておく */}
+			{/* 1RM という単位そのものと、推定値の出どころを小さく置いておく */}
 			<YStack paddingHorizontal="$1">
 				<SizableText size="$1" color="$color11">
-					1RM = 1回だけ挙げられる重量の推定値
+					1RM = 1回しか反復できない最大の重量（Repetition Maximum）
 				</SizableText>
 				<SizableText size="$1" color="$color11">
-					{RM_FORMULA_LABEL[exercise]}
+					推定1RM は {RM_FORMULA_LABEL[exercise]} で換算
 				</SizableText>
 			</YStack>
 		</YStack>
@@ -335,23 +335,23 @@ const PrCard = ({
 );
 
 /**
- * その記録が PR なら付けるラベルを返す
+ * その記録が自己ベストなら付けるラベルを返す
  *
- * 実測と換算が同じ記録のときにバッジを 2 つ並べても同じ事実の繰り返しにしかならない
+ * 実測と推定が同じ記録のときにバッジを 2 つ並べても同じ事実の繰り返しにしかならない
  */
 const getPrBadgeLabel = (record: LiftRecord, pr: LiftPr) => {
 	const isActualPr = pr.actual?.id === record.id;
 	const isEstimatedPr = pr.estimated?.id === record.id;
 
 	if (isActualPr && isEstimatedPr) {
-		return "実測=換算PR";
+		return "実測=推定1RM";
 	}
 
 	if (isActualPr) {
-		return "実測PR";
+		return "実測1RM";
 	}
 
-	return isEstimatedPr ? "換算PR" : null;
+	return isEstimatedPr ? "推定1RM" : null;
 };
 
 /** 記録一覧の 1 行 */
