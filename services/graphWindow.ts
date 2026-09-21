@@ -420,7 +420,8 @@ export const getTrendSummary = (
  * 数値だけを返して kg は呼び出し側で添える。
  * 増減なしは ± にして向きを持たせない。
  *
- * ホームの統計カード（#78）でも同じ値を出すので、整形はここに置く
+ * ホーム（#78）は桁数を選べる独自の整形を持っているので、いまは共有していない。
+ * 揃えるなら桁数を引数に足してそちらから呼ぶ形になる
  */
 export const formatDiffWeight = (diffWeight: number): string => {
 	const rounded = Math.round(diffWeight * 10) / 10;

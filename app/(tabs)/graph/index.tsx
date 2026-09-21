@@ -18,10 +18,7 @@ import Svg, { Line as SvgLine, Path as SvgPath } from "react-native-svg";
 import { SizableText, Spinner, useTheme, View, XStack, YStack } from "tamagui";
 import type { ChartBounds } from "victory-native";
 import { CartesianChart, Line, Scatter } from "victory-native";
-import {
-	HealthAccessRow,
-	HealthAccessSheet,
-} from "@/components/healthAccessGuide";
+import { HealthPermissionGuide } from "@/components/errorHealthData";
 import {
 	SegmentedControl,
 	type SegmentOption,
@@ -141,7 +138,8 @@ export default function Graph() {
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: ["graphWeights", "all"],
+		// ホームと同じキャッシュを見る。同じ全期間のデータを二重に取りに行かない
+		queryKey: ["weights", "all"],
 		queryFn: fetchAllWeights,
 	});
 
@@ -932,36 +930,32 @@ const SelectedPointPill = ({
  * 体重データが無いときの画面
  *
  * 傾向の数値はプレースホルダにして置き場だけ見せ、
- * 何をすれば埋まるのかをカードの中と下部のボタンで示す
+ * 何をすれば埋まるのかをカードの中と下部のボタンで示す。
+ *
+ * ヘルスケアの案内は、デザインでは手順を別画面に送る 1 行だが、
+ * ホーム（#78）が入れた `HealthPermissionGuide` をそのまま使う。
+ * 同じ案内をタブごとに違う形で出すより、部品ごと揃えたほうが迷わない
  */
-const GraphEmpty = () => {
-	const [isGuideOpen, setIsGuideOpen] = useState(false);
-
-	return (
-		<Screen>
-			<ScreenScrollView withBottomAction>
-				<ScreenHeader
-					label={formatWindowLabel(getWindow(Date.now(), DEFAULT_MONTHS))}
-					title="グラフ"
-				/>
-				<YStack paddingHorizontal={4}>
-					<WindowTrendSummary summary={null} />
-				</YStack>
-				<EmptyGraphCard />
-				<HealthAccessRow onPress={() => setIsGuideOpen(true)} />
-			</ScreenScrollView>
-			<BottomActionBar>
-				<Link href="/(tabs)/home/add" asChild>
-					<PrimaryButton icon={Plus}>体重を入力する</PrimaryButton>
-				</Link>
-			</BottomActionBar>
-			<HealthAccessSheet
-				open={isGuideOpen}
-				onClose={() => setIsGuideOpen(false)}
+const GraphEmpty = () => (
+	<Screen>
+		<ScreenScrollView withBottomAction>
+			<ScreenHeader
+				label={formatWindowLabel(getWindow(Date.now(), DEFAULT_MONTHS))}
+				title="グラフ"
 			/>
-		</Screen>
-	);
-};
+			<YStack paddingHorizontal={4}>
+				<WindowTrendSummary summary={null} />
+			</YStack>
+			<EmptyGraphCard />
+			<HealthPermissionGuide />
+		</ScreenScrollView>
+		<BottomActionBar>
+			<Link href="/(tabs)/home/add" asChild>
+				<PrimaryButton icon={Plus}>体重を入力する</PrimaryButton>
+			</Link>
+		</BottomActionBar>
+	</Screen>
+);
 
 /** データなしのカードの高さと、中に敷く下絵の大きさ */
 const EMPTY_CARD_HEIGHT = 268;

@@ -5,11 +5,22 @@ import {
 	requestAuthorization,
 	saveQuantitySample,
 } from "@kingstinct/react-native-healthkit";
-import { differenceInCalendarDays, endOfDay, subDays } from "date-fns";
+import {
+	differenceInCalendarDays,
+	endOfDay,
+	format,
+	startOfDay,
+	subDays,
+} from "date-fns";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect } from "react";
 import { AppState, type AppStateStatus } from "react-native";
-import type { GraphPoint } from "@/services/graphWindow";
+import {
+	type GraphPoint,
+	getTrendSummary,
+	getWindow,
+	type TrendSummary,
+} from "@/services/graphWindow";
 
 /**
  * 体重の型識別子
@@ -199,4 +210,126 @@ export const useWeightRefetchOnActive = (refetch: () => void) => {
 			subscription.remove();
 		};
 	}, [refetch]);
+};
+
+/**
+ * 最後に測った体重を返す
+ *
+ * HealthKit は測定日時の順で返すとは限らないため、日時で選び直す
+ */
+export const getLatestWeight = (weights: readonly WeightSample[]) =>
+	weights.reduce<WeightSample | null>(
+		(latest, sample) =>
+			latest === null || sample.startDate > latest.startDate ? sample : latest,
+		null,
+	)?.quantity ?? null;
+
+/** ホームのスパークラインに並べる週の数 */
+export const WEEKLY_AVERAGE_WEEKS = 8;
+
+/** ホームの「3ヶ月の傾向」で見る期間（月） */
+export const TREND_MONTHS = 3;
+
+/** 1 週間（7 日）の期間 */
+export type WeekRange = {
+	/** 週の始まり（その日の 0:00） */
+	startMs: number;
+	/** 週の終わり（その日の 23:59:59.999） */
+	endMs: number;
+};
+
+/** 1 週間ぶんの平均 */
+export type WeeklyAverage = WeekRange & {
+	/** その週の平均。1 件も測っていなければ null */
+	average: number | null;
+};
+
+/**
+ * 「今週」から数えて weeksAgo 週前の 7 日間を返す
+ *
+ * 週はカレンダーの週ではなく「今日を最終日とする 7 日間」で区切る。
+ * 日付の境目で切ることで、ヒーローに出す期間（9/15 – 9/21）と
+ * 平均の対象がそのまま一致する
+ */
+export const getWeekRange = (weeksAgo: number, now: Date): WeekRange => {
+	const end = endOfDay(subDays(now, weeksAgo * 7));
+
+	return {
+		startMs: startOfDay(subDays(end, 6)).getTime(),
+		endMs: end.getTime(),
+	};
+};
+
+/** 週の期間の表示（`9/15 – 9/21`） */
+export const formatWeekRangeLabel = ({ startMs, endMs }: WeekRange) =>
+	`${format(startMs, "M/d")} – ${format(endMs, "M/d")}`;
+
+/**
+ * 直近 weeks 週ぶんの週平均を古い順に返す
+ *
+ * 測定がない週は average を null にして週自体は残す。
+ * 間引くと横軸の間隔が詰まり、測っていない期間がスパークラインから消えてしまう
+ */
+export const getWeeklyAverages = (
+	weights: readonly WeightSample[],
+	now: Date,
+	weeks = WEEKLY_AVERAGE_WEEKS,
+): WeeklyAverage[] =>
+	Array.from({ length: weeks }, (_, index) => {
+		// 配列の末尾を今週にするため、古い週から順に作る
+		const range = getWeekRange(weeks - 1 - index, now);
+		const samples = weights.filter(
+			(sample) =>
+				sample.startDate.getTime() >= range.startMs &&
+				sample.startDate.getTime() <= range.endMs,
+		);
+
+		return { ...range, average: calcWeightAvg(samples) };
+	});
+
+/** ホームに出す集計 */
+export type HomeWeightSummary = {
+	/** 直近 WEEKLY_AVERAGE_WEEKS 週の週平均。古い順 */
+	weeklyAverages: WeeklyAverage[];
+	/** 今週 */
+	currentWeek: WeeklyAverage;
+	/** 先週 */
+	prevWeek: WeeklyAverage;
+	/** 先週比。どちらかの週に測定がなければ null */
+	weekOverWeekDiff: number | null;
+	/** 3ヶ月の傾向。傾向データが 2 点そろわなければ null */
+	trend: TrendSummary | null;
+};
+
+/**
+ * ホームに出す値をまとめて求める
+ *
+ * 全期間の測定値から画面が必要とするものだけを取り出す。
+ * 期間ごとに HealthKit へ問い合わせ直さないので、
+ * ヒーローと統計カードとスパークラインが必ず同じデータを見る
+ */
+export const summarizeWeightsForHome = (
+	weights: readonly WeightSample[],
+	now: Date = new Date(),
+): HomeWeightSummary => {
+	const weeklyAverages = getWeeklyAverages(weights, now);
+
+	// 週の数は 2 以上の定数なので、今週と先週は必ず取れる
+	const currentWeek = weeklyAverages[weeklyAverages.length - 1];
+	const prevWeek = weeklyAverages[weeklyAverages.length - 2];
+
+	return {
+		weeklyAverages,
+		currentWeek,
+		prevWeek,
+		weekOverWeekDiff:
+			currentWeek.average !== null && prevWeek.average !== null
+				? currentWeek.average - prevWeek.average
+				: null,
+		// グラフと同じ傾向データ（移動平均）の両端で増減を見る。指標を画面ごとに変えない
+		trend: getTrendSummary(
+			transformWeightDataForGraph(weights),
+			getWindow(now.getTime(), TREND_MONTHS),
+		),
+	};
 };
