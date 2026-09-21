@@ -371,6 +371,14 @@ const TrendCard = ({ summary }: { summary: HomeWeightSummary }) => {
 	);
 };
 
+/**
+ * BIG3 の重量の表示
+ *
+ * 3 種目を横に並べるので、実測（0.1kg 刻み）と推定（整数）で桁数の見え方が
+ * 揃うよう、意味の無い末尾の 0 は落とす。95.0 は 95、95.5 は 95.5 のまま出す
+ */
+const formatLiftWeight = (weight: number) => String(Number(weight.toFixed(1)));
+
 /** 種目ごとの自己ベスト。実測が無ければ推定 1RM を出す */
 const getBestLift = (
 	records: readonly LiftRecord[],
@@ -379,12 +387,12 @@ const getBestLift = (
 	const { actual, estimated } = getLiftPr(records, exercise);
 
 	if (actual) {
-		return { weight: actual.weight.toFixed(1), isActual: true };
+		return { weight: formatLiftWeight(actual.weight), isActual: true };
 	}
 
 	if (estimated) {
 		return {
-			weight: String(roundOneRepMax(estimateOneRepMax(estimated))),
+			weight: formatLiftWeight(roundOneRepMax(estimateOneRepMax(estimated))),
 			isActual: false,
 		};
 	}
