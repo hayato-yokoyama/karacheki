@@ -62,6 +62,16 @@ export type ColorTokens = {
 	sheetOverlay: string;
 	/** ボトムシートのグラブハンドル */
 	sheetHandle: string;
+	/** グラフの目盛り線（#79） */
+	graphGrid: string;
+	/** グラフの実測データの線（#79） */
+	graphActualLine: string;
+	/** グラフのデータなし表示（破線の枠・プレースホルダの数値）（#79） */
+	graphPlaceholder: string;
+	/** タップした値を出すピルの地（#79） */
+	graphTooltipBackground: string;
+	/** タップした値を出すピルの文字（#79） */
+	graphTooltipText: string;
 	/** ヒーローカードの上に載る文字（ライト・ダーク共通） */
 	onHero: string;
 	/** ヒーローカードの上の補助文字 */
@@ -120,6 +130,11 @@ export const lightColorTokens: ColorTokens = {
 	photoPlaceholderIcon: "#7D8AA3",
 	sheetOverlay: "rgba(16,24,40,0.42)",
 	sheetHandle: "#E2E5EC",
+	graphGrid: "#E6E9EF",
+	graphActualLine: "#9CA6BB",
+	graphPlaceholder: "#C3CAD8",
+	graphTooltipBackground: "#12151C",
+	graphTooltipText: "#FFFFFF",
 	...heroOnColors,
 };
 
@@ -152,6 +167,13 @@ export const darkColorTokens: ColorTokens = {
 	photoPlaceholderIcon: "#5B677B",
 	sheetOverlay: "rgba(16,24,40,0.42)",
 	sheetHandle: "#262E3A",
+	graphGrid: "#232B37",
+	graphActualLine: "#617089",
+	// 本文色とのコントラストを取りたい textPlaceholder（#98A2B3）より一段暗い。
+	// グラフのデータなし表示は面積が大きく、明るいと「データがある」ように見えてしまうため
+	graphPlaceholder: "#37414F",
+	graphTooltipBackground: "#EEF1F6",
+	graphTooltipText: "#0B0E13",
 	...heroOnColors,
 };
 

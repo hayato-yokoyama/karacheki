@@ -1,6 +1,7 @@
 import {
 	addMonths,
 	format,
+	getYear,
 	startOfDay,
 	startOfMonth,
 	subMonths,
@@ -252,9 +253,19 @@ export const getXTickValues = (
 	return tickValues;
 };
 
-/** 表示中の期間のラベル */
-export const formatWindowLabel = ({ startMs, endMs }: GraphWindow): string =>
-	`${format(startMs, "yyyy/M/d")} 〜 ${format(endMs, "yyyy/M/d")}`;
+/**
+ * 表示中の期間のラベル
+ *
+ * 見出しの上に置く 13px の 1 行なので、同じ年のあいだは終わりの年を省いて短くする（#79）。
+ *
+ * 年をまたぐときは省かない。1年スケールだと「2025/9/21 – 9/21」と
+ * 同じ日付が並んで、いつまでの話なのか読み取れなくなるため
+ */
+export const formatWindowLabel = ({ startMs, endMs }: GraphWindow): string => {
+	const isSameYear = getYear(startMs) === getYear(endMs);
+
+	return `${format(startMs, "yyyy/M/d")} – ${format(endMs, isSameYear ? "M/d" : "yyyy/M/d")}`;
+};
 
 /** 最新（今日）を表示しているか */
 export const isShowingLatest = (endMs: number, nowMs: number): boolean =>
@@ -400,4 +411,27 @@ export const getTrendSummary = (
 		endWeight,
 		diffWeight: endWeight - startWeight,
 	};
+};
+
+/**
+ * 増減を符号つきの数値にする。単位は付けない
+ *
+ * グラフの見出しでは数値（68px）と単位（20px）を別の大きさで並べるため、
+ * 数値だけを返して kg は呼び出し側で添える。
+ * 増減なしは ± にして向きを持たせない。
+ *
+ * ホーム（#78）は桁数を選べる独自の整形を持っているので、いまは共有していない。
+ * 揃えるなら桁数を引数に足してそちらから呼ぶ形になる
+ */
+export const formatDiffWeight = (diffWeight: number): string => {
+	const rounded = Math.round(diffWeight * 10) / 10;
+
+	if (rounded > 0) {
+		return `+${rounded.toFixed(1)}`;
+	}
+	if (rounded < 0) {
+		return rounded.toFixed(1);
+	}
+
+	return `±${rounded.toFixed(1)}`;
 };

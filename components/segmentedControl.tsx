@@ -44,6 +44,9 @@ export const SegmentedControl = <TValue extends string>({
 					backgroundColor={isSelected ? "$accentFill" : "transparent"}
 					pressStyle={{ opacity: 0.85 }}
 					onPress={() => onChange(option.value)}
+					// Tamagui は tabIndex が 0 のときしか accessible を補わないので自分で付ける。
+					// 付けないと VoiceOver が選択肢として拾わず、選択中かどうかも読まれない
+					accessible
 					accessibilityRole="tab"
 					accessibilityState={{ selected: isSelected }}
 					accessibilityLabel={option.label}

@@ -4,6 +4,7 @@ import {
 	easeOutCubic,
 	findNearestPoint,
 	flingToEndMs,
+	formatDiffWeight,
 	formatWindowLabel,
 	type GraphPoint,
 	getInitialEndMs,
@@ -489,13 +490,41 @@ describe("getXTickValues", () => {
 });
 
 describe("formatWindowLabel", () => {
-	it("開始日と終了日を並べる", () => {
+	it("開始日と終了日を並べる。終わりは年を省く", () => {
 		expect(
 			formatWindowLabel({
 				startMs: at("2026-03-05T00:00:00Z"),
 				endMs: at("2026-06-15T00:00:00Z"),
 			}),
-		).toBe("2026/3/5 〜 2026/6/15");
+		).toBe("2026/3/5 – 6/15");
+	});
+
+	it("年をまたぐときは終了日にも年を付ける", () => {
+		expect(
+			formatWindowLabel({
+				startMs: at("2025-09-21T00:00:00Z"),
+				endMs: at("2026-09-21T00:00:00Z"),
+			}),
+		).toBe("2025/9/21 – 2026/9/21");
+	});
+});
+
+describe("formatDiffWeight", () => {
+	it("増えていれば + を付ける", () => {
+		expect(formatDiffWeight(1.24)).toBe("+1.2");
+	});
+
+	it("減っていれば - のままにする", () => {
+		expect(formatDiffWeight(-0.84)).toBe("-0.8");
+	});
+
+	it("増減なしは ± にして向きを持たせない", () => {
+		expect(formatDiffWeight(0)).toBe("±0.0");
+	});
+
+	it("小数第2位で四捨五入した結果が 0 なら ± にする", () => {
+		expect(formatDiffWeight(0.04)).toBe("±0.0");
+		expect(formatDiffWeight(-0.04)).toBe("±0.0");
 	});
 });
 
