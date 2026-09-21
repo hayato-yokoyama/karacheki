@@ -35,6 +35,20 @@ export type IllustrationProps = {
 const GLOW_SIZE = 330;
 
 /**
+ * カードを浮かせる影
+ *
+ * `SurfaceCard` の既定の影はダークで透明（境界線で面を分ける方針）だが、
+ * オンボーディングのイラストは浮いて見えることが絵の一部なので、ダークでも影を残す
+ */
+const liftShadow = (offsetY: number, radius: number) =>
+	({
+		shadowColor: "$illustrationShadowColor",
+		shadowOffset: { width: 0, height: offsetY },
+		shadowOpacity: 1,
+		shadowRadius: radius,
+	}) as const;
+
+/**
  * イラストの背後に敷く光
  *
  * CSS の `radial-gradient(circle, accentSoft 0%, transparent 70%)` 相当。
@@ -203,6 +217,7 @@ export const ScaleIllustration = () => {
 			borderRadius={48}
 			alignItems="center"
 			justifyContent="center"
+			{...liftShadow(18, 40)}
 		>
 			<XStack
 				width={136}
@@ -251,13 +266,16 @@ export const ScaleIllustration = () => {
 				paddingRight={14}
 			>
 				<Clock size={17} color={theme.accent.val} strokeWidth={2.2} />
-				{/* 「毎朝」は日本語なので NumberText（Barlow Condensed）には載せない */}
-				<Text fontSize={14} fontWeight="700" color="$accent">
-					毎朝
-				</Text>
-				<NumberText fontSize={19} color="$accent">
-					8:00
-				</NumberText>
+				{/* 「毎朝」は日本語なので NumberText（Barlow Condensed）には載せない。
+				    大きさはデザインどおり 8:00 と揃え、間隔は半角スペース相当に詰める */}
+				<XStack alignItems="baseline" gap={5}>
+					<Text fontSize={19} fontWeight="700" color="$accent">
+						毎朝
+					</Text>
+					<NumberText fontSize={19} color="$accent">
+						8:00
+					</NumberText>
+				</XStack>
 			</SurfaceCard>
 		</SurfaceCard>
 	);
@@ -272,6 +290,7 @@ const NotificationCard = (props: YStackProps) => (
 		borderRadius={26}
 		paddingVertical={14}
 		paddingHorizontal={16}
+		{...liftShadow(14, 34)}
 		{...props}
 	/>
 );
@@ -374,6 +393,7 @@ export const GraphIllustration = ({ width }: IllustrationProps) => {
 		<SurfaceCard
 			width={cardWidth}
 			borderRadius={28}
+			{...liftShadow(18, 40)}
 			paddingTop={GRAPH_CARD_PADDING}
 			paddingHorizontal={GRAPH_CARD_PADDING}
 			paddingBottom={14}
@@ -445,12 +465,13 @@ export const GraphIllustration = ({ width }: IllustrationProps) => {
 						fill={theme.accent.val}
 						fillOpacity={0.22}
 					/>
+					{/* 縁取りは「載っている面の色」。このグラフはカードの中なので画面の地ではない */}
 					<Circle
 						cx={GRAPH_HEAD.x}
 						cy={GRAPH_HEAD.y}
 						r={7}
 						fill={theme.accent.val}
-						stroke={theme.screenBackground.val}
+						stroke={theme.cardBackground.val}
 						strokeWidth={2.5}
 					/>
 				</Svg>

@@ -80,6 +80,8 @@ export type ColorTokens = {
 	onHeroGold: string;
 	/** ヒーローカードの影 */
 	heroShadowColor: string;
+	/** オンボーディングのイラストのカードを浮かせる影（ライト・ダーク共通） */
+	illustrationShadowColor: string;
 };
 
 /**
@@ -95,6 +97,17 @@ const heroOnColors = {
 	onHeroChip: "rgba(255,255,255,0.20)",
 	onHeroGold: "#FFD979",
 	heroShadowColor: "rgba(6,60,120,0.30)",
+} as const;
+
+/**
+ * オンボーディングのイラストのカードの影（#80）
+ *
+ * 通常のカード（`$cardShadowColor`）はダークで透明にして境界線に任せているが、
+ * オンボーディングのイラストは「作りもののアプリ画面が浮いている」ことが絵の一部なので、
+ * ダークでも影を残す。そのためライト・ダークで同じ値を持たせる
+ */
+const illustrationShadow = {
+	illustrationShadowColor: "rgba(0,60,120,0.12)",
 } as const;
 
 export const lightColorTokens: ColorTokens = {
@@ -127,6 +140,7 @@ export const lightColorTokens: ColorTokens = {
 	sheetOverlay: "rgba(16,24,40,0.42)",
 	sheetHandle: "#E2E5EC",
 	...heroOnColors,
+	...illustrationShadow,
 };
 
 export const darkColorTokens: ColorTokens = {
@@ -161,6 +175,7 @@ export const darkColorTokens: ColorTokens = {
 	sheetOverlay: "rgba(16,24,40,0.42)",
 	sheetHandle: "#262E3A",
 	...heroOnColors,
+	...illustrationShadow,
 };
 
 /**

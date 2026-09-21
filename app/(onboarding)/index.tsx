@@ -35,16 +35,22 @@ import { layout } from "@/theme/designTokens";
 const ONBOARDING = {
 	/** スキップの行の上端。セーフエリアの方が大きければそちらに寄せる */
 	skipTop: 58,
+	/** スキップの行の見た目の高さ。タップ領域は別に 44px 取る */
 	skipHeight: 36,
 	/** スキップの行とイラスト領域の間 */
 	illustrationTop: 10,
 	illustrationHeight: 340,
+	/** デザインの画面高。イラスト領域の高さをこの比率で縮める */
+	designHeight: 844,
 	/** イラスト領域と見出しの間 */
 	textTop: 34,
 	textPaddingHorizontal: 24,
 	/** ページインジケーターと主要ボタンの間 */
 	indicatorBottom: 26,
+	/** 主要ボタン。共通の 52px ではなくデザインどおりの 56px */
 	buttonHeight: 56,
+	/** ボタンの文字とシェブロンの間 */
+	buttonGap: 6,
 	/** 画面の下端。ホームインジケーターのある端末ではセーフエリアがちょうどこの値になる */
 	bottomPadding: 34,
 } as const;
@@ -83,6 +89,12 @@ type PageContentProps = {
 	page: OnboardingPage;
 	/** 1 ページの横幅（＝画面の横幅） */
 	width: number;
+	/** イラスト領域の高さ。小さい端末では縮める */
+	illustrationHeight: number;
+	/** 内容の上の余白。スキップの行の高さに合わせて画面側で決める */
+	paddingTop: number;
+	/** 表示中のページかどうか。画面外のページは読み上げの対象から外す */
+	isActive: boolean;
 };
 
 /**
@@ -91,24 +103,38 @@ type PageContentProps = {
  * 小さい端末で見出しや本文が切れないよう、ページごとに縦スクロールできるようにしている（#41）。
  * 背が高い端末では上端から積んだ位置がそのままデザイン通りになる
  */
-const PageContent = ({ page, width }: PageContentProps) => {
+const PageContent = ({
+	page,
+	width,
+	illustrationHeight,
+	paddingTop,
+	isActive,
+}: PageContentProps) => {
 	const illustrationWidth = width - layout.screenPaddingHorizontal * 2;
 
 	return (
-		<YStack width={width}>
+		<YStack
+			width={width}
+			// 4 ページとも常にマウントしているので、画面外のページを読み上げの対象から外す
+			accessibilityElementsHidden={!isActive}
+			importantForAccessibility={isActive ? "auto" : "no-hide-descendants"}
+		>
 			<ScrollView
 				showsVerticalScrollIndicator={false}
 				contentContainerStyle={{
 					flexGrow: 1,
-					paddingTop: ONBOARDING.illustrationTop,
+					paddingTop,
 					paddingBottom: layout.gap,
 				}}
 			>
 				<YStack
-					height={ONBOARDING.illustrationHeight}
+					height={illustrationHeight}
 					alignItems="center"
 					justifyContent="center"
-					overflow="hidden"
+					// イラストは実データではない作りものの見本で、見出しと本文が同じことを説明しているので、
+					// 中の数値（80.89 kg など）を実測値として読み上げさせない
+					accessibilityElementsHidden
+					importantForAccessibility="no-hide-descendants"
 				>
 					<IllustrationGlow />
 					{page.renderIllustration(illustrationWidth)}
@@ -146,7 +172,20 @@ export default function Index() {
 	const theme = useTheme();
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
-	const { width } = useWindowDimensions();
+	const { width, height } = useWindowDimensions();
+
+	// スキップの行は見た目 36px だが、タップ領域は 44px 確保する（HIG）。
+	// 上下に 4px ずつはみ出させ、その分を行の上端とイラストの上余白から引いて、
+	// デザインの「イラストは画面の上から 104px」を保つ
+	const skipOverhang = (layout.touchTargetHeight - ONBOARDING.skipHeight) / 2;
+	const skipTop = Math.max(ONBOARDING.skipTop, insets.top + 8) - skipOverhang;
+
+	// 背の低い端末ではイラストを縮めて、見出しと本文が初期表示に入るようにする（#41）。
+	// デザインと同じ比率（844 のうち 340）まで、ただしデザイン値は超えない
+	const illustrationHeight = Math.min(
+		ONBOARDING.illustrationHeight,
+		(height * ONBOARDING.illustrationHeight) / ONBOARDING.designHeight,
+	);
 
 	const pagerRef = useRef<ScrollView>(null);
 	const [pageIndex, setPageIndex] = useState(0);
@@ -194,8 +233,13 @@ export default function Index() {
 		setPageIndex(nextIndex);
 	}, [goToHome, isLastPage, pageIndex, width]);
 
-	/** スワイプで動かしたときに、インジケーターとボタンの表示を合わせる */
-	const handleMomentumScrollEnd = useCallback(
+	/**
+	 * スワイプで動かしたときに、インジケーターとボタンの表示を合わせる
+	 *
+	 * 境界まで運んで静止したまま指を離すと慣性が働かず `onMomentumScrollEnd` が来ないので、
+	 * `onScrollEndDrag` にも同じものを渡す。両方来ても結果は同じ
+	 */
+	const handleScrollSettled = useCallback(
 		(event: NativeSyntheticEvent<NativeScrollEvent>) => {
 			setPageIndex(Math.round(event.nativeEvent.contentOffset.x / width));
 		},
@@ -215,26 +259,25 @@ export default function Index() {
 	return (
 		<Screen>
 			<XStack
-				marginTop={Math.max(ONBOARDING.skipTop, insets.top + 8)}
-				height={ONBOARDING.skipHeight}
+				marginTop={skipTop}
+				height={layout.touchTargetHeight}
 				paddingHorizontal={20}
 				justifyContent="flex-end"
 			>
 				{/* 4 ページ目にはスキップを出さない。行そのものは残して、ページ間で位置がずれないようにする */}
 				{isLastPage ? null : (
-					<Text
+					<XStack
 						accessibilityRole="button"
+						accessibilityLabel="スキップ"
 						onPress={goToHome}
-						height={ONBOARDING.skipHeight}
-						lineHeight={ONBOARDING.skipHeight}
+						alignItems="center"
 						paddingHorizontal={8}
-						fontSize={15}
-						fontWeight="500"
-						color="$textMuted"
 						pressStyle={{ opacity: 0.6 }}
 					>
-						スキップ
-					</Text>
+						<Text fontSize={15} fontWeight="500" color="$textMuted">
+							スキップ
+						</Text>
+					</XStack>
 				)}
 			</XStack>
 
@@ -243,11 +286,19 @@ export default function Index() {
 				horizontal
 				pagingEnabled
 				showsHorizontalScrollIndicator={false}
-				onMomentumScrollEnd={handleMomentumScrollEnd}
+				onMomentumScrollEnd={handleScrollSettled}
+				onScrollEndDrag={handleScrollSettled}
 				style={{ flex: 1 }}
 			>
-				{PAGES.map((page) => (
-					<PageContent key={page.title} page={page} width={width} />
+				{PAGES.map((page, index) => (
+					<PageContent
+						key={page.title}
+						page={page}
+						width={width}
+						illustrationHeight={illustrationHeight}
+						paddingTop={ONBOARDING.illustrationTop - skipOverhang}
+						isActive={index === pageIndex}
+					/>
 				))}
 			</ScrollView>
 
@@ -278,6 +329,7 @@ export default function Index() {
 					height={ONBOARDING.buttonHeight}
 					borderRadius={ONBOARDING.buttonHeight / 2}
 					fontSize={17}
+					gap={ONBOARDING.buttonGap}
 					onPress={goToNextPage}
 					iconAfter={
 						isLastPage ? undefined : (
