@@ -1,67 +1,68 @@
 import type { ReactNode } from "react";
-import { Modal, Pressable, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { YStack } from "tamagui";
+import { Sheet, YStack } from "tamagui";
 import { layout, radius } from "@/theme/designTokens";
 
 export type BottomSheetProps = {
 	open: boolean;
 	onClose: () => void;
 	children: ReactNode;
-	/** オーバーレイを読み上げたときのラベル */
-	closeLabel?: string;
 };
 
 /**
  * 画面の下から出るシート（#77）
  *
- * 上端の角を丸め、中央にグラブハンドルを置く。
- * 背後のオーバーレイを押すと閉じる
+ * Tamagui の `Sheet` に薄く被せて、デザインの見た目（角丸 28 の上端、
+ * 中に置くグラブハンドル、指定のオーバーレイ）だけを固定する。
+ * 下スワイプで閉じる・オーバーレイのタップで閉じるは `Sheet` 側の機能
  */
-export const BottomSheet = ({
-	open,
-	onClose,
-	children,
-	closeLabel = "閉じる",
-}: BottomSheetProps) => {
+export const BottomSheet = ({ open, onClose, children }: BottomSheetProps) => {
 	const insets = useSafeAreaInsets();
 
 	return (
-		<Modal
-			visible={open}
-			transparent
-			animationType="slide"
-			onRequestClose={onClose}
-			statusBarTranslucent
+		<Sheet
+			open={open}
+			onOpenChange={(next: boolean) => {
+				if (!next) {
+					onClose();
+				}
+			}}
+			// 中身の高さに合わせる。出す内容が決まっているので段階的な高さは要らない
+			snapPointsMode="fit"
+			dismissOnSnapToBottom
+			modal
 		>
-			<YStack flex={1} justifyContent="flex-end">
-				<Pressable
-					style={StyleSheet.absoluteFill}
-					onPress={onClose}
-					accessibilityRole="button"
-					accessibilityLabel={closeLabel}
-				>
-					<YStack flex={1} backgroundColor="$sheetOverlay" />
-				</Pressable>
+			{/*
+			 * NOTE: `animation` prop は渡さない。
+			 * このプロジェクトの Tamagui では `animation` が型に出ておらず（#77 の変更前から）、
+			 * シートの出入りは設定済みのアニメーションドライバに任せる
+			 */}
+			<Sheet.Overlay backgroundColor="$sheetOverlay" />
+			<Sheet.Frame
+				backgroundColor="$cardBackground"
+				borderTopLeftRadius={radius.sheet}
+				borderTopRightRadius={radius.sheet}
+				paddingTop={8}
+				paddingHorizontal={layout.screenPaddingHorizontal}
+				// Sheet は上のセーフエリアしか見ないので、ホームバーの分は自分で持つ
+				paddingBottom={insets.bottom + layout.screenPaddingHorizontal}
+				gap={layout.gap}
+			>
+				{/*
+				 * グラブハンドル
+				 *
+				 * `Sheet.Handle` はフレームの外（上）に浮くが、
+				 * デザインはフレームの中に置く形なので自分で描く
+				 */}
 				<YStack
-					backgroundColor="$cardBackground"
-					borderTopLeftRadius={radius.sheet}
-					borderTopRightRadius={radius.sheet}
-					paddingTop={8}
-					paddingHorizontal={layout.screenPaddingHorizontal}
-					paddingBottom={insets.bottom + layout.screenPaddingHorizontal}
-					gap={layout.gap}
-				>
-					<YStack
-						alignSelf="center"
-						width={layout.sheetHandleWidth}
-						height={layout.sheetHandleHeight}
-						borderRadius={layout.sheetHandleHeight / 2}
-						backgroundColor="$sheetHandle"
-					/>
-					{children}
-				</YStack>
-			</YStack>
-		</Modal>
+					alignSelf="center"
+					width={layout.sheetHandleWidth}
+					height={layout.sheetHandleHeight}
+					borderRadius={layout.sheetHandleHeight / 2}
+					backgroundColor="$sheetHandle"
+				/>
+				{children}
+			</Sheet.Frame>
+		</Sheet>
 	);
 };

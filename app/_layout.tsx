@@ -3,6 +3,7 @@ import {
 	BarlowCondensed_700Bold,
 } from "@expo-google-fonts/barlow-condensed";
 import { TamaguiProvider } from "@tamagui/core";
+import { setupGestureHandler } from "@tamagui/native/setup-gesture-handler";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
@@ -12,6 +13,12 @@ import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import tamaguiConfig from "@/tamagui.config";
 import { darkColorTokens, lightColorTokens } from "@/theme/designTokens";
+
+// Sheet の下スワイプを react-native-gesture-handler に任せる（`components/ui/bottomSheet.tsx`）。
+// 入れなくても PanResponder で動くが、ジェスチャがネイティブ側で処理される方が滑らか。
+// pressEvents は既定の true だと全 Tamagui コンポーネントのタップ処理が差し替わるので、
+// 影響範囲を Sheet に閉じるため明示的に切っている
+setupGestureHandler({ pressEvents: false, sheet: true });
 
 const queryClient = new QueryClient();
 
