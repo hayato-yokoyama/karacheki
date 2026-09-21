@@ -1,6 +1,7 @@
 import {
 	addMonths,
 	format,
+	getYear,
 	startOfDay,
 	startOfMonth,
 	subMonths,
@@ -255,11 +256,16 @@ export const getXTickValues = (
 /**
  * 表示中の期間のラベル
  *
- * 見出しの上に置く 13px の 1 行なので、終わりの年は省いて短くする（#79）。
- * 始まりに年が入っているので、1年スケールでも「いつからいつまで」は読み取れる
+ * 見出しの上に置く 13px の 1 行なので、同じ年のあいだは終わりの年を省いて短くする（#79）。
+ *
+ * 年をまたぐときは省かない。1年スケールだと「2025/9/21 – 9/21」と
+ * 同じ日付が並んで、いつまでの話なのか読み取れなくなるため
  */
-export const formatWindowLabel = ({ startMs, endMs }: GraphWindow): string =>
-	`${format(startMs, "yyyy/M/d")} – ${format(endMs, "M/d")}`;
+export const formatWindowLabel = ({ startMs, endMs }: GraphWindow): string => {
+	const isSameYear = getYear(startMs) === getYear(endMs);
+
+	return `${format(startMs, "yyyy/M/d")} – ${format(endMs, isSameYear ? "M/d" : "yyyy/M/d")}`;
+};
 
 /** 最新（今日）を表示しているか */
 export const isShowingLatest = (endMs: number, nowMs: number): boolean =>

@@ -93,19 +93,28 @@ const CARD_HEIGHT = 436;
 const CARD_PADDING = 12;
 
 /**
- * プロット領域の上に空ける高さ
+ * プロット領域の外に取る余白
  *
- * 値のピルと Y軸の単位（kg）をここに置く。
- * 線の一番上に重ならないよう、グラフ側の領域として確保しておく
+ * 上は値のピルと Y軸の単位（kg）の置き場。
+ * 右は最新点の二重丸のぶん。プロット領域の右端に点が来るため、
+ * 逃げが無いとキャンバスからはみ出して丸が半分に切れる。
+ *
+ * victory-native はプロット領域の中身を chartBounds でクリップするので、
+ * ここで空けた外側に描くものは renderOutside に渡す
  */
-const CHART_TOP_PADDING = 34;
+const CHART_PADDING = {
+	top: 34,
+	right: 8,
+	bottom: 0,
+	left: 0,
+} as const;
 
 /** タップした値を出すピル */
 const PILL_WIDTH = 92;
 const PILL_HEIGHT = 26;
 
 /** 最新点から下ろす破線の上端。ピルの高さの中ほどに合わせる */
-const LATEST_LINE_TOP = 14;
+const LATEST_LINE_TOP = PILL_HEIGHT / 2 + 1;
 
 /** 傾向線の太さ。スケールを変えても主役の見え方を変えない */
 const TREND_LINE_WIDTH = 3.6;
@@ -113,13 +122,16 @@ const TREND_LINE_WIDTH = 3.6;
 /** 実測線の太さ。長い期間は点が詰まるので細くする */
 const ACTUAL_LINE_WIDTH = { short: 1.8, long: 1.2 } as const;
 
-/** 最新点の二重丸 */
+/** 最新点の二重丸。淡い外円 → カード色の縁 → 実点の順に重ねて、幅 2 の縁を作る */
 const LATEST_HALO_RADIUS = 9;
 const LATEST_RING_RADIUS = 6;
-const LATEST_DOT_RADIUS = 5;
+const LATEST_DOT_RADIUS = 4;
 
 /** 指が動いたらパンに譲るしきい値(px) */
 const TAP_MAX_DISTANCE = 10;
+
+/** 主役の増減の字。ヒーローカードの主数値（`heroNumberSize`）に並ぶ大きさ */
+const TREND_NUMBER_SIZE = { fontSize: 68, lineHeight: 70 } as const;
 
 export default function Graph() {
 	// 全期間のデータを取得する（過去へ遡れるようにするため期間を絞らない）
@@ -135,6 +147,16 @@ export default function Graph() {
 
 	// 画面フォーカス時やフォアグラウンド復帰時に体重を再取得する
 	useWeightRefetchOnActive(refetch);
+
+	/**
+	 * 表示期間幅（月）と表示窓の終端時刻
+	 *
+	 * 再取得が一度こけて「データなし」に落ちても、戻ってきたときに
+	 * 見ていた期間と位置のままにしたいので、出し分けより上で持つ。
+	 * 終端時刻はまだ一度も動かしていない間は null にして、データから決めた初期位置を使う
+	 */
+	const [months, setMonths] = useState<number>(DEFAULT_MONTHS);
+	const [endMs, setEndMs] = useState<number | null>(null);
 
 	/** グラフ用の体重データ（日時・実測データ・傾向データ） */
 	// パン中の再レンダーごとに全期間ぶんを計算し直さないようメモ化する
@@ -161,33 +183,41 @@ export default function Graph() {
 		return <GraphEmpty />;
 	}
 
-	return <GraphContent data={weightForGraph} />;
+	return (
+		<GraphContent
+			data={weightForGraph}
+			months={months}
+			onChangeMonths={setMonths}
+			endMs={endMs}
+			onChangeEndMs={setEndMs}
+		/>
+	);
 }
-
-/** 数値の軸ラベル用のフォント。Skia は Tamagui のフォント設定を見ないので直接読む */
-const useAxisFonts = () => ({
-	xAxisFont: useFont(BarlowCondensed_600SemiBold, 12),
-	yAxisFont: useFont(BarlowCondensed_600SemiBold, 11),
-});
 
 /**
  * データがあるときのグラフ画面
  *
- * 表示窓（期間幅と終端時刻）をここで持ち、見出し・傾向のサマリー・グラフの3つに配る。
+ * 渡された表示窓（期間幅と終端時刻）から、見出し・傾向のサマリー・グラフの3つを導く。
  * 「この期間の傾向」を主役にするため、窓から導いた値は上から下へ一方向に流す
  */
-const GraphContent = ({ data }: { data: GraphPoint[] }) => {
+const GraphContent = ({
+	data,
+	months,
+	onChangeMonths,
+	endMs,
+	onChangeEndMs,
+}: {
+	data: GraphPoint[];
+	months: number;
+	onChangeMonths: (months: number) => void;
+	endMs: number | null;
+	onChangeEndMs: (endMs: number) => void;
+}) => {
 	const theme = useTheme();
-	const { xAxisFont, yAxisFont } = useAxisFonts();
-
-	/** 表示期間幅（月） */
-	const [months, setMonths] = useState<number>(DEFAULT_MONTHS);
-	/**
-	 * 表示窓の終端時刻。スケールを切り替えても引き継ぐ
-	 *
-	 * まだ一度も動かしていない間は null にして、データから決めた初期位置を使う
-	 */
-	const [endMs, setEndMs] = useState<number | null>(null);
+	// 軸ラベルの書体。Skia は Tamagui のフォント設定を見ないので直接読む。
+	// 読み終わるまでは null で、そのあいだ軸ラベルは描かれない
+	const xAxisFont = useFont(BarlowCondensed_600SemiBold, 12);
+	const yAxisFont = useFont(BarlowCondensed_600SemiBold, 11);
 
 	// 最後に記録したのが表示幅より前でも、開いた時点でデータが見えるようにする
 	const initialEndMs = useMemo(
@@ -234,6 +264,15 @@ const GraphContent = ({ data }: { data: GraphPoint[] }) => {
 		[visibleWindow, months],
 	);
 
+	// victory-native はこの2つを主要な useMemo の依存に入れているので、参照を固定する
+	const domain = useMemo(
+		() => ({
+			x: [visibleWindow.startMs, visibleWindow.endMs] as [number, number],
+			y: yRange,
+		}),
+		[visibleWindow, yRange],
+	);
+
 	/** 見出しの下に出す、表示中の期間の増減 */
 	const trendSummary = useMemo(
 		() => getTrendSummary(visibleData, visibleWindow),
@@ -255,7 +294,8 @@ const GraphContent = ({ data }: { data: GraphPoint[] }) => {
 		[visibleData, visibleWindow],
 	);
 
-	// 窓の中でいちばん新しい傾向データ。二重丸と破線でここを指す
+	// 二重丸と破線で指す点。「今」ではなく「表示中の期間でいちばん新しい傾向データ」なので、
+	// 過去へスライドすると窓の右端の点に付く（どこまでの話を見ているかが分かる）
 	const latestTrendMs = useMemo(() => {
 		for (let i = selectablePoints.length - 1; i >= 0; i--) {
 			if (selectablePoints[i].trendWeight !== null) {
@@ -346,7 +386,7 @@ const GraphContent = ({ data }: { data: GraphPoint[] }) => {
 				const next = clampToEdges(fromEndMs + (toEndMs - fromEndMs) * eased);
 				// 次のレンダーを待たずに現在位置を更新する
 				panRef.current.endMs = next;
-				setEndMs(next);
+				onChangeEndMs(next);
 
 				if (progress < 1) {
 					animationRef.current = requestAnimationFrame(step);
@@ -357,7 +397,7 @@ const GraphContent = ({ data }: { data: GraphPoint[] }) => {
 
 			animationRef.current = requestAnimationFrame(step);
 		},
-		[clampToEdges, stopAnimation],
+		[clampToEdges, onChangeEndMs, stopAnimation],
 	);
 
 	// 画面から離れるときにアニメーションを止める
@@ -386,7 +426,7 @@ const GraphContent = ({ data }: { data: GraphPoint[] }) => {
 					// 1フレームに複数イベントが届いても移動量を取りこぼさないよう、
 					// レンダーを待たずに現在位置を進めておく
 					panRef.current.endMs = next;
-					setEndMs(next);
+					onChangeEndMs(next);
 				})
 				.onEnd((event, success) => {
 					// 途中でキャンセルされたときは滑らせない
@@ -407,7 +447,7 @@ const GraphContent = ({ data }: { data: GraphPoint[] }) => {
 						FLING_DURATION_MS,
 					);
 				}),
-		[animateToEndMs, clampToEdges, stopAnimation],
+		[animateToEndMs, clampToEdges, onChangeEndMs, stopAnimation],
 	);
 
 	const tapGesture = useMemo(
@@ -506,19 +546,70 @@ const GraphContent = ({ data }: { data: GraphPoint[] }) => {
 									data={visibleData}
 									xKey="date"
 									yKeys={["actualWeight", "trendWeight"]}
-									// 値のピルと単位を置くぶんだけ、プロット領域を下げる
-									padding={{
-										top: CHART_TOP_PADDING,
-										bottom: 0,
-										left: 0,
-										right: 0,
-									}}
+									padding={CHART_PADDING}
 									// 表示窓をそのまま定義域にする。窓の外のデータはクリップされる
-									domain={{
-										x: [visibleWindow.startMs, visibleWindow.endMs],
-										y: yRange,
-									}}
+									domain={domain}
 									onChartBoundsChange={handleChartBoundsChange}
+									/*
+									 * 最新点の目印
+									 *
+									 * children はプロット領域でクリップされるため、
+									 * 上へ伸ばす破線も、右端の点からはみ出す二重丸も切られてしまう。
+									 * クリップの外で最前面に描かれる renderOutside に出す
+									 * （デザインでも折れ線より上に重ねている）
+									 */
+									renderOutside={({ points, chartBounds: bounds }) => {
+										const latest =
+											latestTrendMs === null
+												? null
+												: (points.trendWeight.find(
+														(point) => point.xValue === latestTrendMs,
+													) ?? null);
+
+										if (latest === null) {
+											return null;
+										}
+
+										// 傾向が求まらない日は線に高さが無いので、破線だけ引いて丸は置かない
+										const latestY = latest.y ?? null;
+
+										return (
+											<>
+												<SkiaLine
+													p1={vec(latest.x, LATEST_LINE_TOP)}
+													p2={vec(latest.x, bounds.bottom)}
+													color={theme.accent.val}
+													strokeWidth={1}
+													opacity={0.6}
+												>
+													<DashPathEffect intervals={[3, 3]} />
+												</SkiaLine>
+												{latestY === null ? null : (
+													<>
+														<Circle
+															cx={latest.x}
+															cy={latestY}
+															r={LATEST_HALO_RADIUS}
+															color={theme.accent.val}
+															opacity={0.22}
+														/>
+														<Circle
+															cx={latest.x}
+															cy={latestY}
+															r={LATEST_RING_RADIUS}
+															color={theme.cardBackground.val}
+														/>
+														<Circle
+															cx={latest.x}
+															cy={latestY}
+															r={LATEST_DOT_RADIUS}
+															color={theme.accent.val}
+														/>
+													</>
+												)}
+											</>
+										);
+									}}
 									xAxis={{
 										font: xAxisFont,
 										tickCount: X_TICK_COUNT,
@@ -567,36 +658,16 @@ const GraphContent = ({ data }: { data: GraphPoint[] }) => {
 														(point) => point.xValue === selectedPoint.date,
 													)?.y ?? null);
 
-										const latest =
-											latestTrendMs === null
-												? null
-												: (points.trendWeight.find(
-														(point) => point.xValue === latestTrendMs,
-													) ?? null);
-										const latestY = latest?.y ?? null;
-
 										return (
 											<>
-												{/* ガイド線はデータ線を隠さないよう下に敷く。上はピルの高さまで伸ばして、値とその点をつなぐ */}
+												{/* ガイド線はデータ線を隠さないよう下に敷く */}
 												{selectedX === null ? null : (
 													<SkiaLine
-														p1={vec(selectedX, LATEST_LINE_TOP)}
+														p1={vec(selectedX, bounds.top)}
 														p2={vec(selectedX, bounds.bottom)}
 														color={theme.graphActualLine.val}
 														strokeWidth={1}
 													/>
-												)}
-												{/* 最新点から下ろす破線。どこが「今」かを常に示す */}
-												{latest === null ? null : (
-													<SkiaLine
-														p1={vec(latest.x, LATEST_LINE_TOP)}
-														p2={vec(latest.x, bounds.bottom)}
-														color={theme.accent.val}
-														strokeWidth={1}
-														opacity={0.6}
-													>
-														<DashPathEffect intervals={[3, 3]} />
-													</SkiaLine>
 												)}
 												<Line
 													points={points.actualWeight}
@@ -625,30 +696,6 @@ const GraphContent = ({ data }: { data: GraphPoint[] }) => {
 														color={theme.accent.val}
 														radius={3}
 													/>
-												) : null}
-												{/* 最新点の二重丸。淡い外円のうえにカード色の縁を敷いて実点を抜く */}
-												{latest !== null && latestY !== null ? (
-													<>
-														<Circle
-															cx={latest.x}
-															cy={latestY}
-															r={LATEST_HALO_RADIUS}
-															color={theme.accent.val}
-															opacity={0.22}
-														/>
-														<Circle
-															cx={latest.x}
-															cy={latestY}
-															r={LATEST_RING_RADIUS}
-															color={theme.cardBackground.val}
-														/>
-														<Circle
-															cx={latest.x}
-															cy={latestY}
-															r={LATEST_DOT_RADIUS}
-															color={theme.accent.val}
-														/>
-													</>
 												) : null}
 												{/* 選択した点のハイライトは最前面に置く */}
 												{selectedX !== null && selectedActualY !== null ? (
@@ -706,7 +753,7 @@ const GraphContent = ({ data }: { data: GraphPoint[] }) => {
 					<SegmentedControl
 						options={MONTH_SEGMENTS}
 						value={String(months)}
-						onChange={(value) => setMonths(Number(value))}
+						onChange={(value) => onChangeMonths(Number(value))}
 					/>
 				</YStack>
 			</BottomActionBar>
@@ -729,6 +776,9 @@ const ScrollToLatestButton = ({ onPress }: { onPress: () => void }) => (
 		alignItems="center"
 		pressStyle={{ opacity: 0.85 }}
 		onPress={onPress}
+		// Tamagui は tabIndex が 0 のときしか accessible を補わないので自分で付ける。
+		// 付けないと VoiceOver がボタンとして拾わず、ラベルも読まれない
+		accessible
 		accessibilityRole="button"
 		accessibilityLabel="今日へ戻る"
 	>
@@ -803,7 +853,11 @@ const WindowTrendSummary = ({ summary }: { summary: TrendSummary | null }) => {
 				この期間の傾向
 			</SizableText>
 			<XStack alignItems="baseline" gap={4}>
-				<NumberText fontSize={68} lineHeight={70} color={numberColor}>
+				<NumberText
+					fontSize={TREND_NUMBER_SIZE.fontSize}
+					lineHeight={TREND_NUMBER_SIZE.lineHeight}
+					color={numberColor}
+				>
 					{diffLabel}
 				</NumberText>
 				<SizableText fontSize={20} fontWeight="500" color={unitColor}>
@@ -842,7 +896,10 @@ const WindowTrendSummary = ({ summary }: { summary: TrendSummary | null }) => {
  * タップで選んだ1点の値を出すピル
  *
  * 出すのは実測値。傾向は上の見出しと折れ線で読めるので、
- * ここでは「その日に何kgだったか」という、他では見られない値を返す
+ * ここでは「その日に何kgだったか」という、他では見られない値を返す。
+ *
+ * デザインは日本語書体で描いているが、中身は日付と体重だけなので
+ * 「数値はすべて Barlow Condensed」の決め（#77）に寄せる
  */
 const SelectedPointPill = ({
 	point,

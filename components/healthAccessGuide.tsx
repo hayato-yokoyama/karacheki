@@ -36,6 +36,8 @@ export const HealthAccessRow = ({ onPress }: { onPress: () => void }) => {
 			borderColor="$cardBorder"
 			pressStyle={{ opacity: 0.85 }}
 			onPress={onPress}
+			// Tamagui は tabIndex が 0 のときしか accessible を補わない
+			accessible
 			accessibilityRole="button"
 			accessibilityLabel="ヘルスケアと連携する。許可設定の手順を見る"
 		>
