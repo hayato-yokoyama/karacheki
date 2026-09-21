@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@dev-plugins/react-query": "^0.4.0",
+    "@expo-google-fonts/barlow-condensed": "^0.4.1",
     "@expo/vector-icons": "^15.0.2",
     "@kingstinct/react-native-healthkit": "^15.1.0",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -45,6 +46,7 @@
     "@tamagui/cli": "^2.7.7",
     "@tamagui/config": "^2.7.7",
     "@tamagui/core": "^2.7.7",
+    "@tamagui/linear-gradient": "^2.7.7",
     "@tanstack/react-query": "^5.102.8",
     "date-fns": "^4.4.0",
     "expo": "~57.0.22",
@@ -57,6 +59,7 @@
     "expo-haptics": "~57.0.3",
     "expo-image-manipulator": "~57.0.19",
     "expo-image-picker": "~57.0.17",
+    "expo-linear-gradient": "~57.0.2",
     "expo-linking": "~57.0.10",
     "expo-notifications": "~57.0.18",
     "expo-router": "~57.0.21",
