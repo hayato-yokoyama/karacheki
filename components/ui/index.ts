@@ -6,6 +6,7 @@ export {
 	BottomActionBar,
 	type BottomActionBarProps,
 	PrimaryButton,
+	SecondaryButton,
 } from "./primaryButton";
 export {
 	Screen,

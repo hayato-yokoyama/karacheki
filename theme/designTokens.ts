@@ -272,6 +272,8 @@ export const typography = {
 	backLink: { fontSize: 16, lineHeight: 22, fontWeight: "600" },
 	/** 下部固定ボタン */
 	primaryButton: { fontSize: 16, lineHeight: 22, fontWeight: "700" },
+	/** 下部固定ボタンの隣に置く控えめなボタン。主要ボタンより 1px 小さい */
+	secondaryButton: { fontSize: 15, lineHeight: 21, fontWeight: "700" },
 	/** セグメント */
 	segment: { fontSize: 14, lineHeight: 20 },
 	/** タブバーのラベル */
