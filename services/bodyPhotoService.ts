@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { format } from "date-fns";
 // SDK 54 で File / Directory ベースの新 API に置き換わった。
 // 関数ベースの従来 API は legacy として残っているため、まずはそのまま使う
 import * as FileSystem from "expo-file-system/legacy";
@@ -358,4 +359,83 @@ export const cropBodyPhoto = async (uri: string, rect: CropRect) => {
 		compress: SAVE_COMPRESS,
 		format: SaveFormat.JPEG,
 	});
+};
+
+/** 一覧を撮影月で区切った1かたまり（#82） */
+export type BodyPhotoMonth = {
+	/** 月を一意に表すキー（"2026-09"）。セクションの key に使う */
+	key: string;
+	/** 見出しの文言（"2026年9月"） */
+	label: string;
+	photos: BodyPhoto[];
+};
+
+/**
+ * 写真を撮影月ごとに区切る
+ *
+ * 渡された並び順をそのまま保つ。`listBodyPhotos` は撮影日の降順なので、
+ * 月も月内の写真も新しい順に並ぶ
+ */
+export const groupBodyPhotosByMonth = (
+	photos: readonly BodyPhoto[],
+): BodyPhotoMonth[] => {
+	const months: BodyPhotoMonth[] = [];
+
+	for (const photo of photos) {
+		const takenAt = new Date(photo.takenAt);
+		const key = format(takenAt, "yyyy-MM");
+		const last = months.at(-1);
+
+		// 並び順を保つので、同じ月は必ず隣り合う。直前のかたまりだけ見れば足りる
+		if (last?.key === key) {
+			last.photos.push(photo);
+			continue;
+		}
+
+		months.push({ key, label: format(takenAt, "yyyy年M月"), photos: [photo] });
+	}
+
+	return months;
+};
+
+/** 比較する2枚。`before` の方が撮影日が古い */
+export type ComparedPhotos = {
+	before: BodyPhoto;
+	after: BodyPhoto;
+};
+
+/**
+ * 比較する2枚のうち1枚を選び直す（#82）
+ *
+ * どちらを入れ替えるかは撮影日で決める。
+ * 選んだ1枚が両方より新しければ After、両方より古ければ Before に入り、
+ * 間なら撮影日が近い方と入れ替わる。こうすると Before → After の前後が崩れない
+ */
+export const replaceComparedPhoto = (
+	compared: ComparedPhotos,
+	picked: BodyPhoto,
+): ComparedPhotos => {
+	const { before, after } = compared;
+
+	// すでに選ばれている1枚を選び直しても、比較する2枚は変わらない
+	if (picked.id === before.id || picked.id === after.id) {
+		return compared;
+	}
+
+	const pickedAt = new Date(picked.takenAt).getTime();
+	const beforeAt = new Date(before.takenAt).getTime();
+	const afterAt = new Date(after.takenAt).getTime();
+
+	if (pickedAt <= beforeAt) {
+		return { before: picked, after };
+	}
+
+	if (pickedAt >= afterAt) {
+		return { before, after: picked };
+	}
+
+	// 2枚の間の撮影日なら、期間をなるべく残すために近い方と入れ替える
+	return pickedAt - beforeAt <= afterAt - pickedAt
+		? { before: picked, after }
+		: { before, after: picked };
 };
