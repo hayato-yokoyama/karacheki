@@ -1,4 +1,4 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "@tamagui/linear-gradient";
 import type { ReactNode } from "react";
 import { YStack, type YStackProps } from "tamagui";
 import {
@@ -17,7 +17,10 @@ export type HeroCardProps = Omit<YStackProps, "children"> & {
  * その画面の主役の数値を載せる、濃い青のグラデーションのカード（#77）
  *
  * 中に置く文字は地が固定なのでテーマで色が変わらない。
- * `$onHero` / `$onHeroMuted` / `$onHeroSubtle` を使う
+ * `$onHero` / `$onHeroMuted` / `$onHeroSubtle` を使う。
+ *
+ * 影を外側の YStack に持たせているのは、`LinearGradient` が `overflow: hidden` を
+ * 既定で持っていて、iOS だと自分の影まで切られてしまうため
  */
 export const HeroCard = ({ children, ...props }: HeroCardProps) => (
 	<YStack
@@ -33,13 +36,11 @@ export const HeroCard = ({ children, ...props }: HeroCardProps) => (
 			locations={HERO_GRADIENT_LOCATIONS}
 			start={HERO_GRADIENT_START}
 			end={HERO_GRADIENT_END}
-			style={{
-				borderRadius: radius.hero,
-				paddingTop: 18,
-				paddingHorizontal: 20,
-				paddingBottom: 16,
-				gap: 6,
-			}}
+			borderRadius={radius.hero}
+			paddingTop={18}
+			paddingHorizontal={20}
+			paddingBottom={16}
+			gap={6}
 		>
 			{children}
 		</LinearGradient>

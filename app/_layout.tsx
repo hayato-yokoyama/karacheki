@@ -4,6 +4,10 @@ import {
 } from "@expo-google-fonts/barlow-condensed";
 import { TamaguiProvider } from "@tamagui/core";
 import { setupGestureHandler } from "@tamagui/native/setup-gesture-handler";
+// Tamagui の LinearGradient に expo-linear-gradient を登録する。
+// これが無いと native でグラデーションが描かれず警告だけ出る
+// （`components/ui/heroCard.tsx` / `components/ui/primaryButton.tsx`）
+import "@tamagui/native/setup-expo-linear-gradient";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";

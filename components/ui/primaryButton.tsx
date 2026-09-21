@@ -1,7 +1,7 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "@tamagui/linear-gradient";
 import type { ReactNode } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button, type ButtonProps, useTheme, XStack } from "tamagui";
+import { Button, type ButtonProps, XStack } from "tamagui";
 import { layout, typography } from "@/theme/designTokens";
 
 /**
@@ -48,7 +48,6 @@ export const BottomActionBar = ({
 	children,
 	withTabBar = true,
 }: BottomActionBarProps) => {
-	const theme = useTheme();
 	const insets = useSafeAreaInsets();
 
 	// タブバーはナビゲータが画面の下に積むので、画面の下端がそのままボタンの基準になる
@@ -57,19 +56,14 @@ export const BottomActionBar = ({
 	return (
 		<>
 			<LinearGradient
-				colors={[
-					theme.screenBackgroundTransparent.val,
-					theme.screenBackground.val,
-				]}
+				colors={["$screenBackgroundTransparent", "$screenBackground"]}
 				locations={[0, 0.62]}
 				pointerEvents="none"
-				style={{
-					position: "absolute",
-					left: 0,
-					right: 0,
-					bottom: safeBottom,
-					height: layout.bottomFadeHeight,
-				}}
+				position="absolute"
+				left={0}
+				right={0}
+				bottom={safeBottom}
+				height={layout.bottomFadeHeight}
 			/>
 			<XStack
 				position="absolute"

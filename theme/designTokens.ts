@@ -178,10 +178,11 @@ export const withDesignTokens = <TThemes extends Record<string, object>>(
 /**
  * ヒーローカードのグラデーション
  *
- * ライト・ダーク共通。`expo-linear-gradient` の colors / locations にそのまま渡す
+ * ライト・ダーク共通。`@tamagui/linear-gradient` の colors / locations にそのまま渡す
+ * （`colors` / `locations` の型が可変配列なので `as const` を付けない）
  */
-export const HERO_GRADIENT_COLORS = ["#1670CF", "#0A56A6", "#063C78"] as const;
-export const HERO_GRADIENT_LOCATIONS = [0, 0.55, 1] as const;
+export const HERO_GRADIENT_COLORS: string[] = ["#1670CF", "#0A56A6", "#063C78"];
+export const HERO_GRADIENT_LOCATIONS: number[] = [0, 0.55, 1];
 /** CSS の linear-gradient(155deg, ...) に相当する向き */
 export const HERO_GRADIENT_START = { x: 0, y: 0 } as const;
 export const HERO_GRADIENT_END = { x: 0.42, y: 1 } as const;
