@@ -78,6 +78,9 @@ Notifications.setNotificationHandler({
 /** 数値が無いときに出すプレースホルダ */
 const NO_VALUE = "--.--";
 
+/** 見出しの右に置くボタンの高さ */
+const HEADER_PILL_HEIGHT = 36;
+
 /** 週平均の表示。小数第2位まで出す */
 const formatAverage = (average: number | null) =>
 	average === null ? NO_VALUE : average.toFixed(2);
@@ -167,15 +170,19 @@ export default function Index() {
 					/>
 					<HealthPermissionGuide />
 				</ScreenScrollView>
-				<AddWeightButton label="体重を入力する" />
+				<AddWeightButton />
 			</Screen>
 		);
 	}
 
 	return (
 		<Screen>
-			<ScreenScrollView withBottomAction>
-				<ScreenHeader label={todayLabel} title="今週の体重" />
+			<ScreenScrollView>
+				<ScreenHeader
+					label={todayLabel}
+					title="今週の体重"
+					right={<AddWeightPill />}
+				/>
 				<CurrentWeekHero summary={summary} />
 				<XStack gap={layout.gap}>
 					<PrevWeekCard summary={summary} />
@@ -184,13 +191,49 @@ export default function Index() {
 				<LiftSummaryCard />
 				<NotificationSettingsCard />
 			</ScreenScrollView>
-			<AddWeightButton label="体重を入力" />
 		</Screen>
 	);
 }
 
-/** 下部に固定する体重の入力ボタン */
-const AddWeightButton = ({ label }: { label: string }) => {
+/**
+ * 体重の入力へ向かうヘッダーのボタン（#78）
+ *
+ * データがあるときは画面の主役が数値なので、下部を占有せずヘッダーに小さく置く
+ */
+const AddWeightPill = () => {
+	const theme = useTheme();
+
+	return (
+		<Link href="/(tabs)/home/add" asChild>
+			<Button
+				height={HEADER_PILL_HEIGHT}
+				borderRadius={HEADER_PILL_HEIGHT / 2}
+				borderWidth={0}
+				paddingLeft={10}
+				paddingRight={14}
+				gap={4}
+				marginBottom={4}
+				backgroundColor="$accentSoft"
+				color="$accent"
+				fontSize={13}
+				fontWeight="700"
+				// 36px はタップ領域の下限に届かないので、上下に広げて 44px 相当にする
+				hitSlop={{ top: 4, bottom: 4, left: 0, right: 0 }}
+				pressStyle={{ backgroundColor: "$accentSoft", opacity: 0.85 }}
+				icon={<Plus color={theme.accent.val} size={16} strokeWidth={2.4} />}
+			>
+				体重を入力
+			</Button>
+		</Link>
+	);
+};
+
+/**
+ * 下部に固定する体重の入力ボタン
+ *
+ * データが無いときは入力が唯一の出口なので、こちらは大きいまま残す
+ */
+const AddWeightButton = () => {
 	const theme = useTheme();
 
 	return (
@@ -201,7 +244,7 @@ const AddWeightButton = ({ label }: { label: string }) => {
 						<Plus color={theme.onAccentFill.val} size={20} strokeWidth={2.2} />
 					}
 				>
-					{label}
+					体重を入力する
 				</PrimaryButton>
 			</Link>
 		</BottomActionBar>
