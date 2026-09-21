@@ -26,6 +26,10 @@ export type ColorTokens = {
 	textMuted: string;
 	/** 未入力のプレースホルダ数値 */
 	textPlaceholder: string;
+	/** グラフの目盛り線 */
+	chartGrid: string;
+	/** グラフの実測データ（点と細い線）。傾向線はアクセント色で描く */
+	chartActual: string;
 	/** アクセント。文字・アイコン・リンクに使う */
 	accent: string;
 	/** 塗りつぶしのアクセント。主要ボタンと選択中のセグメントの地 */
@@ -102,6 +106,8 @@ export const lightColorTokens: ColorTokens = {
 	textPrimary: "#12151C",
 	textMuted: "#5B6272",
 	textPlaceholder: "#C3CAD8",
+	chartGrid: "#E6E9EF",
+	chartActual: "#9CA6BB",
 	accent: "#0057A8",
 	accentFill: "#0057A8",
 	onAccentFill: "#FFFFFF",
@@ -133,6 +139,8 @@ export const darkColorTokens: ColorTokens = {
 	textPrimary: "#EEF1F6",
 	textMuted: "#98A2B3",
 	textPlaceholder: "#98A2B3",
+	chartGrid: "#232B37",
+	chartActual: "#617089",
 	accent: "#4DA8FF",
 	// ダークの #4DA8FF は白文字とのコントラストが足りないので、塗りだけ一段濃くする
 	accentFill: "#1670CF",
