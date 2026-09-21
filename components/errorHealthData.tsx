@@ -1,6 +1,7 @@
 import { Link } from "expo-router";
 import { Settings } from "lucide-react-native";
 import { Button, H2, ListItem, Paragraph, YGroup, YStack } from "tamagui";
+import { HEALTH_ACCESS_STEPS } from "@/components/healthAccessGuide";
 
 export const ErrorHealthData = () => {
 	return (
@@ -25,39 +26,13 @@ export const ErrorHealthData = () => {
 						</ListItem.Text>
 					</ListItem>
 				</YGroup.Item>
-				<YGroup.Item>
-					<ListItem>
-						<ListItem.Text fontSize="$3">
-							1. iPhoneの「設定」アプリを開く
-						</ListItem.Text>
-					</ListItem>
-				</YGroup.Item>
-				<YGroup.Item>
-					<ListItem>
-						<ListItem.Text fontSize="$3">
-							2.「アプリ」→「ヘルスケア」を選択
-						</ListItem.Text>
-					</ListItem>
-				</YGroup.Item>
-				<YGroup.Item>
-					<ListItem>
-						<ListItem.Text fontSize="$3">
-							3.「データアクセスとデバイス」を選択
-						</ListItem.Text>
-					</ListItem>
-				</YGroup.Item>
-				<YGroup.Item>
-					<ListItem>
-						<ListItem.Text fontSize="$3">4.「からチェキ」を選択</ListItem.Text>
-					</ListItem>
-				</YGroup.Item>
-				<YGroup.Item>
-					<ListItem>
-						<ListItem.Text fontSize="$3">
-							5.「すべてオンにする」を選択
-						</ListItem.Text>
-					</ListItem>
-				</YGroup.Item>
+				{HEALTH_ACCESS_STEPS.map((step, index) => (
+					<YGroup.Item key={step}>
+						<ListItem>
+							<ListItem.Text fontSize="$3">{`${index + 1}. ${step}`}</ListItem.Text>
+						</ListItem>
+					</YGroup.Item>
+				))}
 			</YGroup>
 		</YStack>
 	);
