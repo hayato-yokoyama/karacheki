@@ -163,14 +163,14 @@ export default function Graph() {
 		<Screen>
 			<ScreenScrollView>
 				<ScreenHeader label="体重の推移" title="グラフ" />
-				{/* グラフの凡例 */}
+				{/* グラフの凡例。色見本は折れ線に実際に使っている色と揃える */}
 				<XStack alignItems="center" justifyContent="center" gap="$4">
 					<XStack alignItems="center" gap="$2">
-						<View width="$1" height="$0.5" backgroundColor="$textMuted" />
+						<View width="$1" height="$0.5" backgroundColor="$color7" />
 						<Text color="$textMuted">実測データ</Text>
 					</XStack>
 					<XStack alignItems="center" gap="$2">
-						<View width="$1" height="$0.5" backgroundColor="$accent" />
+						<View width="$1" height="$0.5" backgroundColor="$accentColor" />
 						<Text color="$textMuted">傾向データ</Text>
 					</XStack>
 				</XStack>
