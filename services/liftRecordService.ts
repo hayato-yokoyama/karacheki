@@ -27,6 +27,14 @@ const writeLiftRecords = async (records: LiftRecord[]) => {
 	await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(records));
 };
 
+/**
+ * 挙上重量を扱う桁に丸める
+ *
+ * `LiftRecord.weight` は小数第1位までという約束なので、
+ * 画面の入力を弾かずにここで揃える
+ */
+const roundWeight = (weight: number) => Math.round(weight * 10) / 10;
+
 /** 実施日の降順（同じ実施日なら保存日時の降順）に並べる */
 const sortByPerformedAtDesc = (records: readonly LiftRecord[]) =>
 	[...records].sort((a, b) => {
@@ -56,7 +64,7 @@ export const addLiftRecord = async ({
 	const record: LiftRecord = {
 		id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
 		exercise,
-		weight,
+		weight: roundWeight(weight),
 		reps,
 		// UTC に寄せると深夜・早朝の記録が前後の日にズレるため、端末のローカル日付で持つ
 		performedAt: format(performedAt, "yyyy-MM-dd"),
@@ -104,7 +112,7 @@ export const updateLiftRecord = async ({
 
 	const updated: LiftRecord = {
 		...stored,
-		weight,
+		weight: roundWeight(weight),
 		reps,
 		performedAt: format(performedAt, "yyyy-MM-dd"),
 	};

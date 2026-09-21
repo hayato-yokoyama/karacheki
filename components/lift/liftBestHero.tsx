@@ -124,7 +124,7 @@ const HeroValue = ({
 	const Icon = badge === "actual" ? Trophy : Table;
 
 	return (
-		<HeroCard>
+		<HeroCard gap={10}>
 			<XStack alignItems="center" justifyContent="space-between">
 				<XStack
 					alignItems="center"

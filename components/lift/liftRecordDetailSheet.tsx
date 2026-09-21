@@ -1,5 +1,5 @@
 import { Pencil, Trash2, X } from "lucide-react-native";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { Button, SizableText, useTheme, XStack, YStack } from "tamagui";
 import { BottomSheet, NumberText, PrimaryButton } from "@/components/ui";
 import {
@@ -7,11 +7,7 @@ import {
 	formatFullDate,
 	formatWeight,
 } from "@/services/liftFormat";
-import {
-	LIFT_EXERCISE_LABEL,
-	type LiftRecord,
-	RM_FORMULA_LABEL,
-} from "@/services/oneRepMax";
+import { LIFT_EXERCISE_LABEL, type LiftRecord } from "@/services/oneRepMax";
 import { layout } from "@/theme/designTokens";
 
 /** 閉じるボタンの大きさ */
@@ -43,9 +39,23 @@ export const LiftRecordDetailSheet = ({
 }) => {
 	const theme = useTheme();
 
+	/**
+	 * 閉じるアニメーションの間だけ、直前の記録を持ち続ける
+	 *
+	 * シートの高さは中身の実測に合わせて決まるので、
+	 * 閉じ始めと同時に中身を消すと、ハンドルだけの高さに縮んでから滑り落ちてしまう
+	 */
+	const lastRecord = useRef<LiftRecord>(undefined);
+
+	if (record !== undefined) {
+		lastRecord.current = record;
+	}
+
+	const shown = record ?? lastRecord.current;
+
 	return (
 		<BottomSheet open={record !== undefined} onClose={onClose}>
-			{record !== undefined && (
+			{shown !== undefined && (
 				<>
 					<XStack
 						alignItems="center"
@@ -83,36 +93,27 @@ export const LiftRecordDetailSheet = ({
 					>
 						<DetailRow label="種目">
 							<SizableText fontSize={15} fontWeight="600" color="$textPrimary">
-								{LIFT_EXERCISE_LABEL[record.exercise]}
+								{LIFT_EXERCISE_LABEL[shown.exercise]}
 							</SizableText>
 						</DetailRow>
 						<DetailRow label="日付">
 							<NumberText weight="600" fontSize={20}>
-								{formatFullDate(record.performedAt)}
+								{formatFullDate(shown.performedAt)}
 							</NumberText>
 						</DetailRow>
 						<DetailRow label="重量">
-							<DetailValue unit="kg">{formatWeight(record.weight)}</DetailValue>
+							<DetailValue unit="kg">{formatWeight(shown.weight)}</DetailValue>
 						</DetailRow>
 						<DetailRow label="レップ数">
-							<DetailValue unit="回">{String(record.reps)}</DetailValue>
+							<DetailValue unit="回">{String(shown.reps)}</DetailValue>
 						</DetailRow>
 						{/* 推定 1RM だけアクセント色にして、記録した値と換算した値を見分けられるようにする */}
 						<DetailRow label="推定1RM" isLast>
 							<DetailValue unit="kg" color="$accent">
-								{formatEstimated(record)}
+								{formatEstimated(shown)}
 							</DetailValue>
 						</DetailRow>
 					</YStack>
-
-					<SizableText
-						fontSize={12}
-						lineHeight={17}
-						color="$textMuted"
-						textAlign="center"
-					>
-						推定1RM ＝ {RM_FORMULA_LABEL[record.exercise]}
-					</SizableText>
 
 					<YStack gap={8}>
 						<PrimaryButton
@@ -125,7 +126,7 @@ export const LiftRecordDetailSheet = ({
 									strokeWidth={2.1}
 								/>
 							}
-							onPress={() => onPressEdit(record)}
+							onPress={() => onPressEdit(shown)}
 						>
 							この記録を編集
 						</PrimaryButton>
@@ -141,7 +142,7 @@ export const LiftRecordDetailSheet = ({
 								<Trash2 size={20} color={theme.danger.val} strokeWidth={2.1} />
 							}
 							pressStyle={{ backgroundColor: "$dangerSoft", opacity: 0.85 }}
-							onPress={() => onPressDelete(record)}
+							onPress={() => onPressDelete(shown)}
 						>
 							この記録を削除
 						</Button>

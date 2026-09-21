@@ -86,7 +86,11 @@ export default function Add() {
 	const exercise = isLiftExercise(exerciseParam) ? exerciseParam : "benchPress";
 
 	// 編集のときだけ、書き換える記録を読みに行く
-	const { data: records, isLoading } = useQuery({
+	const {
+		data: records,
+		isLoading,
+		error,
+	} = useQuery({
 		queryKey: ["liftRecords"],
 		queryFn: listLiftRecords,
 		enabled: id !== undefined,
@@ -106,8 +110,8 @@ export default function Add() {
 
 	const record = records?.find((stored) => stored.id === id);
 
-	// 別の端末で消えた記録を開いた場合など
-	if (!record) {
+	// 読み込めなかっただけなのに「記録が無い」と見せないよう、失敗は分けて出す
+	if (error || !record) {
 		return (
 			<Screen>
 				<ScreenScrollView flex={1} withTabBar={false}>
@@ -117,7 +121,9 @@ export default function Add() {
 						right={<CloseButton />}
 					/>
 					<Paragraph color="$textPrimary">
-						編集する記録が見つかりませんでした。
+						{error
+							? "記録を読み込めませんでした。"
+							: "編集する記録が見つかりませんでした。"}
 					</Paragraph>
 				</ScreenScrollView>
 			</Screen>
@@ -153,21 +159,19 @@ const LiftRecordForm = ({
 	// 記録を消す以外に直す手段がない値なので、あり得ない値は保存させない
 	const canSave =
 		weight !== "" && Number.isFinite(weightNumber) && weightNumber > 0;
-	// 入力を弾かず、扱う桁に合わせて丸める
-	const roundedWeight = Math.round(weightNumber * 10) / 10;
 
 	const { mutate: saveRecord, isPending } = useMutation({
 		mutationFn: () =>
 			record
 				? updateLiftRecord({
 						id: record.id,
-						weight: roundedWeight,
+						weight: weightNumber,
 						reps,
 						performedAt,
 					})
 				: addLiftRecord({
 						exercise,
-						weight: roundedWeight,
+						weight: weightNumber,
 						reps,
 						performedAt,
 					}),
@@ -179,6 +183,10 @@ const LiftRecordForm = ({
 			Alert.alert("エラー", "記録の保存に失敗しました");
 		},
 	});
+
+	// 押せないときは地が `$segmentTrack` に変わるので、アイコンも文字と同じ色にする
+	const isDisabled = !canSave || isPending;
+	const iconColor = isDisabled ? theme.textMuted.val : theme.onAccentFill.val;
 
 	// v9 で date が必須になったため、存在チェックは不要
 	const handleDateChange = (_event: DateTimePickerChangeEvent, date: Date) => {
@@ -192,7 +200,15 @@ const LiftRecordForm = ({
 
 	return (
 		<Screen>
-			<ScreenScrollView flex={1} withTabBar={false} withBottomAction>
+			<ScreenScrollView
+				flex={1}
+				withTabBar={false}
+				withBottomAction
+				// 重量は decimal-pad で確定キーが無い。下部固定ボタンがキーボードに
+				// 隠れたままにならないよう、スクロールで閉じられるようにする
+				keyboardDismissMode="on-drag"
+				keyboardShouldPersistTaps="handled"
+			>
 				<ScreenHeader
 					label={LIFT_EXERCISE_LABEL[exercise]}
 					title={record ? "記録を編集" : "記録を追加"}
@@ -203,7 +219,8 @@ const LiftRecordForm = ({
 					<XStack alignItems="baseline" gap={8}>
 						<Input
 							flex={1}
-							height={80}
+							// 76px の数字が上下で切れないだけの行高を持たせる
+							height={92}
 							padding={0}
 							borderWidth={0}
 							backgroundColor="transparent"
@@ -284,7 +301,7 @@ const LiftRecordForm = ({
 							pressStyle={{ opacity: 0.7 }}
 							onPress={() => setIsDatePickerOpen(!isDatePickerOpen)}
 							accessibilityRole="button"
-							accessibilityLabel="実施日を選ぶ"
+							accessibilityLabel={`実施日 ${formatFullDate(performedAt)} を選ぶ`}
 						>
 							<Calendar
 								size={18}
@@ -330,20 +347,12 @@ const LiftRecordForm = ({
 					height={SAVE_BUTTON_HEIGHT}
 					borderRadius={SAVE_BUTTON_HEIGHT / 2}
 					fontSize={17}
-					disabled={!canSave || isPending}
+					disabled={isDisabled}
 					icon={
 						record ? (
-							<Check
-								size={20}
-								color={canSave ? theme.onAccentFill.val : theme.textMuted.val}
-								strokeWidth={2.4}
-							/>
+							<Check size={20} color={iconColor} strokeWidth={2.4} />
 						) : (
-							<Plus
-								size={20}
-								color={canSave ? theme.onAccentFill.val : theme.textMuted.val}
-								strokeWidth={2.2}
-							/>
+							<Plus size={20} color={iconColor} strokeWidth={2.2} />
 						)
 					}
 					onPress={() => {
@@ -439,13 +448,11 @@ const EstimatedPreview = ({
 			paddingVertical={14}
 			paddingHorizontal={16}
 			borderRadius={radius.card}
-			{...(hasWeight
-				? { backgroundColor: "$accentSoft" }
-				: {
-						borderWidth: 1.5,
-						borderColor: "$textPlaceholder",
-						borderStyle: "dashed" as const,
-					})}
+			// 枠線は常に持たせて色だけ変える。幅を出し入れすると入力の 1 文字目でカードが跳ねる
+			borderWidth={1.5}
+			borderStyle="dashed"
+			borderColor={hasWeight ? "transparent" : "$textPlaceholder"}
+			backgroundColor={hasWeight ? "$accentSoft" : "transparent"}
 		>
 			<YStack gap={2}>
 				<XStack alignItems="center" gap={6}>

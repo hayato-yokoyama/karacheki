@@ -61,16 +61,19 @@ export const LiftRecordRow = ({
 		<ReanimatedSwipeable
 			friction={2}
 			rightThreshold={DELETE_ACTION_WIDTH / 2}
-			// 行より大きくスワイプされても地が見えないよう、削除の色で塗っておく
+			// 行より大きくスワイプされても地が見えないよう、削除の色で塗っておく。
+			// `overflow: hidden` は使わない。行カードの影まで切られてしまうので、
+			// 角丸は削除ボタン側にも持たせて枠に収める
 			containerStyle={{
 				borderRadius: radius.cardSmall,
-				overflow: "hidden",
 				backgroundColor: theme.danger.val,
 			}}
 			renderRightActions={(_progress, _translation, swipeable) => (
 				<YStack
 					width={DELETE_ACTION_WIDTH}
 					height="100%"
+					borderTopRightRadius={radius.cardSmall}
+					borderBottomRightRadius={radius.cardSmall}
 					alignItems="center"
 					justifyContent="center"
 					gap={4}

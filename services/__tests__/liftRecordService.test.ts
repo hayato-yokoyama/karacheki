@@ -30,6 +30,17 @@ describe("addLiftRecord", () => {
 		expect(record.performedAt).toBe("2026-09-20");
 		expect(await listLiftRecords()).toEqual([record]);
 	});
+
+	it("重量を小数第1位に丸めて保存する", async () => {
+		const record = await addLiftRecord({
+			exercise: "benchPress",
+			weight: 87.55,
+			reps: 4,
+			performedAt: at("2026-09-20"),
+		});
+
+		expect(record.weight).toBe(87.6);
+	});
 });
 
 describe("listLiftRecords", () => {
@@ -124,6 +135,55 @@ describe("updateLiftRecord", () => {
 
 		expect(records).toHaveLength(2);
 		expect(records.at(-1)).toEqual(kept);
+	});
+
+	it("重量を小数第1位に丸めて保存する", async () => {
+		const record = await addLiftRecord({
+			exercise: "benchPress",
+			weight: 85,
+			reps: 4,
+			performedAt: at("2026-09-20"),
+		});
+
+		const updated = await updateLiftRecord({
+			id: record.id,
+			weight: 87.55,
+			reps: 4,
+			performedAt: at("2026-09-20"),
+		});
+
+		expect(updated.weight).toBe(87.6);
+	});
+
+	it("他の種目の記録が混ざっていても対象だけ書き換える", async () => {
+		const squat = await addLiftRecord({
+			exercise: "squat",
+			weight: 120,
+			reps: 5,
+			performedAt: at("2026-09-20"),
+		});
+		const bench = await addLiftRecord({
+			exercise: "benchPress",
+			weight: 85,
+			reps: 4,
+			performedAt: at("2026-09-20"),
+		});
+
+		await updateLiftRecord({
+			id: bench.id,
+			weight: 90,
+			reps: 3,
+			performedAt: at("2026-09-20"),
+		});
+
+		const records = await listLiftRecords();
+
+		expect(records.find((record) => record.id === squat.id)).toEqual(squat);
+		expect(records.find((record) => record.id === bench.id)).toMatchObject({
+			exercise: "benchPress",
+			weight: 90,
+			reps: 3,
+		});
 	});
 
 	it("見つからない記録は保存せずに失敗する", async () => {

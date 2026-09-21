@@ -290,6 +290,30 @@ describe("getLiftBest", () => {
 	});
 });
 
+describe("getLiftBest の同値", () => {
+	it("実測と推定が同じ値でも別の記録なら differ になる", () => {
+		// 80kg × 5 の推定は 90kg ちょうどで、1 レップの 90kg と同値。
+		// 同値のときは先に到達した方を採るので、推定の自己ベストは古いセットのままになる
+		const set = record({
+			id: "1",
+			weight: 80,
+			reps: 5,
+			performedAt: "2026-09-10",
+		});
+		const single = record({
+			id: "2",
+			weight: 90,
+			reps: 1,
+			performedAt: "2026-09-20",
+		});
+
+		const best = getLiftBest([set, single], "benchPress");
+
+		// 同じ数字のヒーローが 2 枚並ぶが、実測に到達したのは後なので区別する意味がある
+		expect(best).toEqual({ kind: "differ", estimated: set, actual: single });
+	});
+});
+
 describe("getLiftPrKind", () => {
 	const single = record({
 		id: "1",
@@ -324,6 +348,10 @@ describe("getLiftPrKind", () => {
 
 		expect(getLiftPrKind(single, pr)).toBe("actual");
 		expect(getLiftPrKind(set, pr)).toBe("estimated");
+	});
+
+	it("自己ベストが 1 つも無ければ undefined", () => {
+		expect(getLiftPrKind(single, {})).toBeUndefined();
 	});
 
 	it("どちらの自己ベストでもなければ undefined", () => {

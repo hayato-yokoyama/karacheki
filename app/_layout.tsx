@@ -2,8 +2,12 @@ import {
 	BarlowCondensed_600SemiBold,
 	BarlowCondensed_700Bold,
 } from "@expo-google-fonts/barlow-condensed";
-import { TamaguiProvider } from "@tamagui/core";
 import { setupGestureHandler } from "@tamagui/native/setup-gesture-handler";
+// `@tamagui/core` ではなく `tamagui` の Provider を使う。
+// こちらは中で `PortalProvider` を張っており、これが無いと
+// `Sheet modal`（`components/ui/bottomSheet.tsx`）が
+// 「'PortalDispatchContext' cannot be null」で落ちる
+import { TamaguiProvider } from "tamagui";
 // Tamagui の LinearGradient に expo-linear-gradient を登録する。
 // これが無いと native でグラデーションが描かれず警告だけ出る
 // （`components/ui/heroCard.tsx` / `components/ui/primaryButton.tsx`）

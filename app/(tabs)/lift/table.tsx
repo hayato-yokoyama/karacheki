@@ -114,7 +114,8 @@ const RmTable = ({ exercise }: { exercise: LiftExercise }) => {
 	return (
 		// 角丸で中身を切るとカードの影まで切られてしまうので、影は外側、切り抜きは内側で持つ
 		<SurfaceCard flex={1} padding={0}>
-			<YStack flex={1} borderRadius={radius.card} overflow="hidden">
+			{/* 内側は境界線 1px のぶんだけ小さく丸めないと、角で外にはみ出す */}
+			<YStack flex={1} borderRadius={radius.card - 1} overflow="hidden">
 				<XStack height={ROW_HEIGHT} backgroundColor="$segmentTrack">
 					<XStack
 						width={WEIGHT_COLUMN_WIDTH}

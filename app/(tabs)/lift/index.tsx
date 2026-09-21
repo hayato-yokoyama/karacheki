@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Plus, Table } from "lucide-react-native";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Alert, FlatList } from "react-native";
 import type { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 import {
@@ -94,12 +94,26 @@ export default function Lift() {
 		(record) => record.id === selectedId,
 	);
 
+	/**
+	 * スワイプで開いている行
+	 *
+	 * 削除を取り消したときだけでなく、確認を枠外で閉じたときや削除に失敗したときも
+	 * 開きっぱなしにしないよう、開いた行を覚えておいて閉じにいく
+	 */
+	const openedSwipeable = useRef<SwipeableMethods>(undefined);
+
+	const closeOpenedSwipeable = useCallback(() => {
+		openedSwipeable.current?.close();
+		openedSwipeable.current = undefined;
+	}, []);
+
 	const { mutate: removeRecord } = useMutation({
 		mutationFn: (id: string) => deleteLiftRecord(id),
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ["liftRecords"] });
 		},
 		onError: () => {
+			closeOpenedSwipeable();
 			Alert.alert("エラー", "記録の削除に失敗しました");
 		},
 	});
@@ -111,7 +125,7 @@ export default function Lift() {
 	 * スワイプが意図せず最後まで進んだときに、確認なしで消えるのは割に合わない
 	 */
 	const confirmDelete = useCallback(
-		(record: LiftRecord, onCancel?: () => void) => {
+		(record: LiftRecord) => {
 			Alert.alert(
 				"記録を削除しますか？",
 				`${formatFullDate(record.performedAt)}  ${formatSet(record)}\n削除した記録は元に戻せません。`,
@@ -119,7 +133,8 @@ export default function Lift() {
 					{
 						text: "キャンセル",
 						style: "cancel",
-						onPress: onCancel,
+						// 開いたままだと次の操作の邪魔になる
+						onPress: closeOpenedSwipeable,
 					},
 					{
 						text: "削除",
@@ -127,15 +142,17 @@ export default function Lift() {
 						onPress: () => removeRecord(record.id),
 					},
 				],
+				// Android は枠外タップや戻るで閉じられ、どのボタンも押されないことがある
+				{ cancelable: true, onDismiss: closeOpenedSwipeable },
 			);
 		},
-		[removeRecord],
+		[removeRecord, closeOpenedSwipeable],
 	);
 
 	const handleSwipeDelete = useCallback(
 		(record: LiftRecord, swipeable: SwipeableMethods) => {
-			// 開いたままだと次の操作の邪魔になる
-			confirmDelete(record, () => swipeable.close());
+			openedSwipeable.current = swipeable;
+			confirmDelete(record);
 		},
 		[confirmDelete],
 	);
