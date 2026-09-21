@@ -41,18 +41,22 @@ export default function RootLayout() {
 	const isDark = colorScheme === "dark";
 
 	// フォントのロード。日本語は OS 標準に任せるので、同梱するのは数値用の Barlow Condensed だけ
-	const [loaded] = useFonts({
+	const [loaded, fontError] = useFonts({
 		BarlowCondensed_600SemiBold,
 		BarlowCondensed_700Bold,
 	});
 
+	// 読み込みに失敗しても先へ進める。数値が OS 標準の書体になるだけで、
+	// スプラッシュから戻れなくなる方が困る
+	const canRender = loaded || fontError !== null;
+
 	useEffect(() => {
-		if (loaded) {
+		if (canRender) {
 			SplashScreen.hideAsync();
 		}
-	}, [loaded]);
+	}, [canRender]);
 
-	if (!loaded) {
+	if (!canRender) {
 		return null;
 	}
 
