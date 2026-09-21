@@ -100,7 +100,8 @@ export default function Graph() {
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: ["graphWeights", "all"],
+		// ホームと同じキャッシュを見る。同じ全期間のデータを二重に取りに行かない
+		queryKey: ["weights", "all"],
 		queryFn: fetchAllWeights,
 	});
 

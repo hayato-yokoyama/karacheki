@@ -14,6 +14,18 @@ export const LIFT_EXERCISE_LABEL: Record<LiftExercise, string> = {
 	deadlift: "デッドリフト",
 };
 
+/**
+ * 並べて出すときの短い表記
+ *
+ * ホームの BIG3 サマリーのように 3 種目を横に並べる場所で使う。
+ * 「ベンチプレス」は列の幅に収まらず折り返してしまう
+ */
+export const LIFT_EXERCISE_SHORT_LABEL: Record<LiftExercise, string> = {
+	benchPress: "ベンチ",
+	squat: "スクワット",
+	deadlift: "デッドリフト",
+};
+
 /** 画面間で受け渡した値が BIG3 の種目かどうかを確かめる */
 export const isLiftExercise = (value: unknown): value is LiftExercise =>
 	typeof value === "string" &&
