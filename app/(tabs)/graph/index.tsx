@@ -7,14 +7,12 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import * as Haptics from "expo-haptics";
-import { Stack } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type LayoutChangeEvent, Platform } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import {
 	Button,
 	type ColorTokens,
-	ScrollView,
 	Spinner,
 	Text,
 	useTheme,
@@ -29,6 +27,7 @@ import {
 	SegmentedControl,
 	type SegmentOption,
 } from "@/components/segmentedControl";
+import { Screen, ScreenHeader, ScreenScrollView } from "@/components/ui";
 import {
 	clampCardLeft,
 	clampWindowEnd,
@@ -94,8 +93,6 @@ const GRAPH_HEIGHT = 470 + CARD_AREA_HEIGHT;
 const TAP_MAX_DISTANCE = 10;
 
 export default function Graph() {
-	const theme = useTheme();
-
 	// 全期間のデータを取得する（過去へ遡れるようにするため期間を絞らない）
 	const {
 		data: fetchedWeights,
@@ -139,84 +136,66 @@ export default function Graph() {
 
 	if (isLoading) {
 		return (
-			<>
-				<Stack.Screen
-					options={{
-						title: "グラフ",
-						headerStyle: { backgroundColor: theme.background0.val },
-					}}
-				/>
-				<YStack
-					padding="$8"
-					height={400}
-					alignItems="center"
-					justifyContent="center"
-				>
-					<Spinner size="small" />
-				</YStack>
-			</>
+			<Screen>
+				<ScreenScrollView>
+					<ScreenHeader title="グラフ" />
+					<YStack height={400} alignItems="center" justifyContent="center">
+						<Spinner size="small" />
+					</YStack>
+				</ScreenScrollView>
+			</Screen>
 		);
 	}
 
 	// 体重未入力・パーミッションエラー
 	if (error || fetchedWeights === undefined || fetchedWeights.length === 0) {
 		return (
-			<>
-				<Stack.Screen
-					options={{
-						title: "グラフ",
-						headerStyle: { backgroundColor: theme.background0.val },
-					}}
-				/>
-				<ErrorHealthData />
-			</>
+			<Screen>
+				<ScreenScrollView>
+					<ScreenHeader title="グラフ" />
+					<ErrorHealthData />
+				</ScreenScrollView>
+			</Screen>
 		);
 	}
 
 	return (
-		<>
-			<Stack.Screen
-				options={{
-					title: "グラフ",
-					headerStyle: { backgroundColor: theme.background0.val },
-				}}
-			/>
-			<ScrollView>
-				<YStack paddingVertical="$8" paddingHorizontal="$4">
-					{/* グラフの見出し */}
-					<XStack alignItems="center" justifyContent="center" gap="$4">
-						<XStack alignItems="center" gap="$2">
-							<View width="$1" height="$0.5" backgroundColor="$color7" />
-							<Text>実測データ</Text>
-						</XStack>
-						<XStack alignItems="center" gap="$2">
-							<View width="$1" height="$0.5" backgroundColor="$accentColor" />
-							<Text>傾向データ</Text>
-						</XStack>
+		<Screen>
+			<ScreenScrollView>
+				<ScreenHeader label="体重の推移" title="グラフ" />
+				{/* グラフの凡例 */}
+				<XStack alignItems="center" justifyContent="center" gap="$4">
+					<XStack alignItems="center" gap="$2">
+						<View width="$1" height="$0.5" backgroundColor="$textMuted" />
+						<Text color="$textMuted">実測データ</Text>
 					</XStack>
-					{/* グラフ */}
-					<YStack
-						width="100%"
-						height={GRAPH_HEIGHT + 70}
-						overflow="hidden"
-						gap="$4"
-					>
-						<GraphContent
-							months={months}
-							endMs={endMs ?? initialEndMs}
-							onChangeEndMs={setEndMs}
-							data={weightForGraph}
-						/>
-						{/* 表示期間幅の切り替え */}
-						<SegmentedControl
-							options={MONTH_SEGMENTS}
-							value={String(months)}
-							onChange={(value) => setMonths(Number(value))}
-						/>
-					</YStack>
+					<XStack alignItems="center" gap="$2">
+						<View width="$1" height="$0.5" backgroundColor="$accent" />
+						<Text color="$textMuted">傾向データ</Text>
+					</XStack>
+				</XStack>
+				{/* グラフ */}
+				<YStack
+					width="100%"
+					height={GRAPH_HEIGHT + 70}
+					overflow="hidden"
+					gap="$4"
+				>
+					<GraphContent
+						months={months}
+						endMs={endMs ?? initialEndMs}
+						onChangeEndMs={setEndMs}
+						data={weightForGraph}
+					/>
+					{/* 表示期間幅の切り替え */}
+					<SegmentedControl
+						options={MONTH_SEGMENTS}
+						value={String(months)}
+						onChange={(value) => setMonths(Number(value))}
+					/>
 				</YStack>
-			</ScrollView>
-		</>
+			</ScreenScrollView>
+		</Screen>
 	);
 }
 

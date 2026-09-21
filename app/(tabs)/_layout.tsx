@@ -1,38 +1,44 @@
 import { Tabs } from "expo-router";
 
 import { ChartLine, Dumbbell, House, Images } from "lucide-react-native";
-import { useTheme } from "tamagui";
+import { AppTabBar } from "@/components/ui";
+import { layout } from "@/theme/designTokens";
 
-/** タブバーのアイコンサイズ。Tamagui の size="$1" と同じ値 */
-const TAB_ICON_SIZE = 20;
+/** 非アクティブなタブのアイコンは線を細くして、アクティブとの差を付ける */
+const strokeWidthOf = (focused: boolean) => (focused ? 2 : 1.8);
 
 export default function TabLayout() {
-	const theme = useTheme();
-
 	return (
 		<Tabs
-			screenOptions={{
-				tabBarStyle: { backgroundColor: theme.background0.val },
-				tabBarActiveTintColor: theme.accentColor.val,
-			}}
+			// OS 標準のタブバーではアクティブなタブの背後にピルを敷けないので差し替える（#77）
+			tabBar={(props) => <AppTabBar {...props} />}
+			// ヘッダーはコンテンツの中の見出しに置き換える（#77）
+			screenOptions={{ headerShown: false }}
 			initialRouteName="home"
 		>
 			<Tabs.Screen
 				name="home"
 				options={{
 					title: "ホーム",
-					tabBarIcon: ({ color }) => (
-						<House color={color} size={TAB_ICON_SIZE} />
+					tabBarIcon: ({ color, focused }) => (
+						<House
+							color={color}
+							size={layout.tabIconSize}
+							strokeWidth={strokeWidthOf(focused)}
+						/>
 					),
-					headerShown: false,
 				}}
 			/>
 			<Tabs.Screen
 				name="graph/index"
 				options={{
 					title: "グラフ",
-					tabBarIcon: ({ color }) => (
-						<ChartLine color={color} size={TAB_ICON_SIZE} />
+					tabBarIcon: ({ color, focused }) => (
+						<ChartLine
+							color={color}
+							size={layout.tabIconSize}
+							strokeWidth={strokeWidthOf(focused)}
+						/>
 					),
 				}}
 			/>
@@ -40,20 +46,26 @@ export default function TabLayout() {
 				name="lift"
 				options={{
 					title: "BIG3",
-					tabBarIcon: ({ color }) => (
-						<Dumbbell color={color} size={TAB_ICON_SIZE} />
+					tabBarIcon: ({ color, focused }) => (
+						<Dumbbell
+							color={color}
+							size={layout.tabIconSize}
+							strokeWidth={strokeWidthOf(focused)}
+						/>
 					),
-					headerShown: false,
 				}}
 			/>
 			<Tabs.Screen
 				name="photo"
 				options={{
 					title: "Before/After",
-					tabBarIcon: ({ color }) => (
-						<Images color={color} size={TAB_ICON_SIZE} />
+					tabBarIcon: ({ color, focused }) => (
+						<Images
+							color={color}
+							size={layout.tabIconSize}
+							strokeWidth={strokeWidthOf(focused)}
+						/>
 					),
-					headerShown: false,
 				}}
 			/>
 		</Tabs>
