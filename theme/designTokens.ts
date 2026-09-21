@@ -212,8 +212,6 @@ export const layout = {
 	screenPaddingTop: 60,
 	/** 要素間 */
 	gap: 12,
-	/** タブバーの中身の高さ。実際の高さはこれ＋ホームバーのセーフエリア */
-	tabBarContentHeight: 57,
 	/** タブバーのアクティブなピル */
 	tabPillWidth: 60,
 	tabPillHeight: 32,

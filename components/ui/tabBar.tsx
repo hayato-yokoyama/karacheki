@@ -15,30 +15,28 @@ type AppTabBarProps = Parameters<
 	NonNullable<ComponentProps<typeof Tabs>["tabBar"]>
 >[0];
 
-/**
- * タブバーがホームバーに寄りすぎないよう最低限あける余白
- *
- * ホームバーのセーフエリア（iPhone で 34px）をそのまま下余白にすると
- * デザインの 83px より高くなるので、その分を差し引く
- */
-const SAFE_AREA_TRIM = 8;
-
 /** タップ領域を横いっぱいに広げて、4 タブを等幅に並べる */
 const FILL = { flex: 1 } as const;
 
 /**
- * タブバーの高さ
+ * ホームバーが無い端末（iPhone SE など）で下に取る余白
  *
- * 中身（上余白 8 ＋ ピル 32 ＋ 間 3 ＋ ラベル 14）＝ 57 に、
- * ホームバーのセーフエリアを足した高さ。iPhone ではデザイン通りの 83px になる
+ * セーフエリアが 0 のときにラベルが画面の縁に貼り付くのを防ぐ
  */
-const useTabBarHeight = () => {
+const MIN_PADDING_BOTTOM = 8;
+
+/**
+ * タブバーの下余白
+ *
+ * ホームバーのセーフエリアをそのまま取る。
+ * デザインキャンバスのタブバーは 83px（中身 57 ＋ 下 26）でセーフエリアに 8px 食い込んでいるが、
+ * ホームバーとラベルを重ねたくないので、こちらはセーフエリアを削らない。
+ * 高さはそのぶんデザインより 8px 高い 91px になる
+ */
+const useTabBarPaddingBottom = () => {
 	const insets = useSafeAreaInsets();
 
-	return (
-		layout.tabBarContentHeight +
-		Math.max(insets.bottom - SAFE_AREA_TRIM, SAFE_AREA_TRIM)
-	);
+	return Math.max(insets.bottom, MIN_PADDING_BOTTOM);
 };
 
 /**
@@ -53,12 +51,12 @@ export const AppTabBar = ({
 	navigation,
 }: AppTabBarProps) => {
 	const theme = useTheme();
-	const height = useTabBarHeight();
+	const paddingBottom = useTabBarPaddingBottom();
 
 	return (
 		<XStack
-			height={height}
 			paddingTop={8}
+			paddingBottom={paddingBottom}
 			paddingHorizontal={8}
 			backgroundColor="$tabBarBackground"
 			borderTopWidth={1}
