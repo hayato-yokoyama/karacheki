@@ -2,15 +2,10 @@ import { Stack } from "expo-router";
 
 export default function Layout() {
 	return (
-		<Stack>
+		// ヘッダーはコンテンツの中の見出しに置き換える（#77）
+		<Stack screenOptions={{ headerShown: false }}>
 			<Stack.Screen name="index" />
-			<Stack.Screen
-				name="add"
-				options={{
-					presentation: "modal",
-					title: "体重の入力",
-				}}
-			/>
+			<Stack.Screen name="add" options={{ presentation: "modal" }} />
 		</Stack>
 	);
 }
