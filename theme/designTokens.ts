@@ -16,6 +16,8 @@ export type ColorTokens = {
 	screenBackgroundTransparent: string;
 	/** カード面 */
 	cardBackground: string;
+	/** cardBackground と同じ色の透明版。カードの中の横スクロールを示すフェードに使う */
+	cardBackgroundTransparent: string;
 	/** 境界線・淡い面 */
 	cardBorder: string;
 	/** カードの影の色。不透明度込みで持たせて shadowOpacity は 1 で使う（ダークは影なし＝透明） */
@@ -97,6 +99,7 @@ export const lightColorTokens: ColorTokens = {
 	screenBackground: "#F3F4F7",
 	screenBackgroundTransparent: "rgba(243,244,247,0)",
 	cardBackground: "#FFFFFF",
+	cardBackgroundTransparent: "rgba(255,255,255,0)",
 	cardBorder: "#E2E5EC",
 	cardShadowColor: "rgba(16,24,40,0.10)",
 	textPrimary: "#12151C",
@@ -127,6 +130,7 @@ export const darkColorTokens: ColorTokens = {
 	screenBackground: "#0B0E13",
 	screenBackgroundTransparent: "rgba(11,14,19,0)",
 	cardBackground: "#151A22",
+	cardBackgroundTransparent: "rgba(21,26,34,0)",
 	cardBorder: "#262E3A",
 	// ダークは影ではなく境界線で面を分けるので、影は透明にして無効化する
 	cardShadowColor: "rgba(0,0,0,0)",

@@ -1,7 +1,9 @@
 import {
 	buildRmTableRow,
 	estimateOneRepMax,
+	getLiftBest,
 	getLiftPr,
+	getLiftPrKind,
 	type LiftExercise,
 	type LiftRecord,
 	RM_TABLE_REPS,
@@ -210,5 +212,125 @@ describe("換算表", () => {
 		// 先頭が 2 レップなので、5 レップは 4 列目
 		expect(buildRmTableRow("squat", 85).at(3)).toBe(98);
 		expect(buildRmTableRow("benchPress", 85).at(3)).toBe(96);
+	});
+});
+
+describe("getLiftBest", () => {
+	it("記録がなければ none", () => {
+		expect(getLiftBest([], "benchPress")).toEqual({ kind: "none" });
+	});
+
+	it("他の種目の記録しかなければ none", () => {
+		const squat = record({
+			id: "1",
+			exercise: "squat",
+			weight: 120,
+			reps: 5,
+			performedAt: "2026-09-18",
+		});
+
+		expect(getLiftBest([squat], "benchPress")).toEqual({ kind: "none" });
+	});
+
+	it("1 レップの記録がなければ estimatedOnly", () => {
+		const set = record({
+			id: "1",
+			weight: 90,
+			reps: 5,
+			performedAt: "2026-09-18",
+		});
+
+		expect(getLiftBest([set], "benchPress")).toEqual({
+			kind: "estimatedOnly",
+			estimated: set,
+		});
+	});
+
+	it("実測が最も高ければ same", () => {
+		// 95kg × 1 の推定は 95kg、85kg × 4 の推定は 93.5kg
+		const single = record({
+			id: "1",
+			weight: 95,
+			reps: 1,
+			performedAt: "2026-09-20",
+		});
+		const set = record({
+			id: "2",
+			weight: 85,
+			reps: 4,
+			performedAt: "2026-09-20",
+		});
+
+		expect(getLiftBest([single, set], "benchPress")).toEqual({
+			kind: "same",
+			record: single,
+		});
+	});
+
+	it("推定が実測を上回れば differ", () => {
+		const single = record({
+			id: "1",
+			weight: 95,
+			reps: 1,
+			performedAt: "2026-09-20",
+		});
+		// 90kg × 5 の推定は 101.25kg
+		const set = record({
+			id: "2",
+			weight: 90,
+			reps: 5,
+			performedAt: "2026-09-18",
+		});
+
+		expect(getLiftBest([single, set], "benchPress")).toEqual({
+			kind: "differ",
+			estimated: set,
+			actual: single,
+		});
+	});
+});
+
+describe("getLiftPrKind", () => {
+	const single = record({
+		id: "1",
+		weight: 95,
+		reps: 1,
+		performedAt: "2026-09-20",
+	});
+	const set = record({
+		id: "2",
+		weight: 90,
+		reps: 5,
+		performedAt: "2026-09-18",
+	});
+	const other = record({
+		id: "3",
+		weight: 85,
+		reps: 4,
+		performedAt: "2026-09-20",
+	});
+
+	it("実測と推定が同じ記録なら both", () => {
+		const records = [single, other];
+
+		expect(getLiftPrKind(single, getLiftPr(records, "benchPress"))).toBe(
+			"both",
+		);
+	});
+
+	it("実測だけの自己ベストは actual、推定だけは estimated", () => {
+		const records = [single, set, other];
+		const pr = getLiftPr(records, "benchPress");
+
+		expect(getLiftPrKind(single, pr)).toBe("actual");
+		expect(getLiftPrKind(set, pr)).toBe("estimated");
+	});
+
+	it("どちらの自己ベストでもなければ undefined", () => {
+		const records = [single, set, other];
+
+		expect(
+			getLiftPrKind(other, getLiftPr(records, "benchPress")),
+		).toBeUndefined();
 	});
 });

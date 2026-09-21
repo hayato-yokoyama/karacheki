@@ -86,12 +86,19 @@ export const RM_TABLE_REPS = Array.from(
 	(_, index) => index + 2,
 );
 
-/** 画面に出す換算式。推定値の出どころを見せるためのもの */
+/**
+ * 画面に出す換算式。推定値の出どころを見せるためのもの
+ *
+ * 演算子を全角にしているのは、日本語の文中で半角だと前後の余白が詰まって読みにくいため
+ */
 export const RM_FORMULA_LABEL: Record<LiftExercise, string> = {
-	benchPress: "重量 × レップ ÷ 40 + 重量",
-	squat: "重量 × レップ ÷ 33.3 + 重量",
-	deadlift: "重量 × レップ ÷ 33.3 + 重量",
+	benchPress: "重量 × レップ ÷ 40 ＋ 重量",
+	squat: "重量 × レップ ÷ 33.3 ＋ 重量",
+	deadlift: "重量 × レップ ÷ 33.3 ＋ 重量",
 };
+
+/** 1RM そのものの説明。ヒーローの下に添える */
+export const ONE_REP_MAX_DESCRIPTION = "1RM ＝ 1回しか挙げられない最大重量";
 
 /**
  * 推定 1RM を返す
@@ -180,4 +187,69 @@ export const getLiftPr = (
 		),
 		estimated: pickBest(targets, estimateOneRepMax),
 	};
+};
+
+/**
+ * 自己ベストの見せ方（#81）
+ *
+ * 一覧のヒーローは「実測と推定が一致するか」で枚数も文言も変わる。
+ * 画面側で `actual` / `estimated` の有無を毎回場合分けすると条件が散らばるので、
+ * 表示の分岐と同じ 4 つの状態にしてから渡す
+ */
+export type LiftBest =
+	/** まだ記録がない */
+	| { kind: "none" }
+	/** 実測 1RM が推定 1RM でもある（同じ記録） */
+	| { kind: "same"; record: LiftRecord }
+	/** 1 レップの記録がまだない */
+	| { kind: "estimatedOnly"; estimated: LiftRecord }
+	/** 実測 1RM と推定 1RM が別の記録 */
+	| { kind: "differ"; estimated: LiftRecord; actual: LiftRecord };
+
+/** 指定した種目の自己ベストを、表示の 4 状態に分けて返す */
+export const getLiftBest = (
+	records: readonly LiftRecord[],
+	exercise: LiftExercise,
+): LiftBest => {
+	const { actual, estimated } = getLiftPr(records, exercise);
+
+	// 実測は記録の一部なので、実測があって推定がないことは起こらない
+	if (!estimated) {
+		return { kind: "none" };
+	}
+
+	if (!actual) {
+		return { kind: "estimatedOnly", estimated };
+	}
+
+	return actual.id === estimated.id
+		? { kind: "same", record: actual }
+		: { kind: "differ", estimated, actual };
+};
+
+/** 記録の行に出すバッジの種類 */
+export type LiftPrKind = "both" | "actual" | "estimated";
+
+/**
+ * その記録が自己ベストなら、どちらの自己ベストかを返す
+ *
+ * 実測と推定が同じ記録のときにバッジを 2 つ並べても同じ事実の繰り返しにしかならないので、
+ * `both` にまとめて 1 つだけ出す
+ */
+export const getLiftPrKind = (
+	record: LiftRecord,
+	pr: LiftPr,
+): LiftPrKind | undefined => {
+	const isActual = pr.actual?.id === record.id;
+	const isEstimated = pr.estimated?.id === record.id;
+
+	if (isActual && isEstimated) {
+		return "both";
+	}
+
+	if (isActual) {
+		return "actual";
+	}
+
+	return isEstimated ? "estimated" : undefined;
 };
