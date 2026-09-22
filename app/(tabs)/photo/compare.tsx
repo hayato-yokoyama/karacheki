@@ -36,9 +36,9 @@ const PHOTO_SCRIM_COLORS: string[] = ["rgba(0,0,0,0)", "rgba(0,0,0,0.6)"];
 /** BEFORE の札。写真の上なので、地はテーマによらず黒の半透明 */
 const BEFORE_BADGE_BACKGROUND = "rgba(0,0,0,0.55)";
 
-/** 2枚の境目に置く「◯日後」のピル */
-const ELAPSED_PILL_WIDTH = 92;
-const ELAPSED_PILL_HEIGHT = 32;
+/** 2枚の下に置く「◯日後」のピル。左右に区切り線を伸ばす */
+const ELAPSED_PILL_HEIGHT = 28;
+const ELAPSED_ROW_GAP = 10;
 
 /** 選び直すためのサムネ */
 const THUMBNAIL_WIDTH = 64;
@@ -182,24 +182,32 @@ export default function Compare() {
 					title="比較"
 				/>
 
-				<XStack gap={8} marginBottom={16}>
+				<XStack gap={8}>
 					<ComparedPhoto label="BEFORE" photo={compared.before} />
 					<ComparedPhoto label="AFTER" photo={compared.after} />
-					<SurfaceCard
-						position="absolute"
-						left="50%"
-						bottom={-ELAPSED_PILL_HEIGHT / 2}
-						marginLeft={-ELAPSED_PILL_WIDTH / 2}
-						width={ELAPSED_PILL_WIDTH}
+				</XStack>
+
+				{/* 2枚に重ねず、区切り線の間に置く。写真の端が隠れない */}
+				<XStack
+					marginTop={2}
+					marginBottom={4}
+					gap={ELAPSED_ROW_GAP}
+					alignItems="center"
+				>
+					<View flex={1} height={1} backgroundColor="$cardBorder" />
+					<SizableText
 						height={ELAPSED_PILL_HEIGHT}
+						lineHeight={ELAPSED_PILL_HEIGHT}
+						paddingHorizontal={14}
 						borderRadius={ELAPSED_PILL_HEIGHT / 2}
-						alignItems="center"
-						justifyContent="center"
+						backgroundColor="$accentSoft"
+						fontSize={13}
+						fontWeight="800"
+						color="$accent"
 					>
-						<SizableText fontSize={14} fontWeight="800" color="$accent">
-							{formatElapsedLabel(beforeTakenAt, afterTakenAt)}
-						</SizableText>
-					</SurfaceCard>
+						{formatElapsedLabel(beforeTakenAt, afterTakenAt)}
+					</SizableText>
+					<View flex={1} height={1} backgroundColor="$cardBorder" />
 				</XStack>
 
 				<SurfaceCard paddingTop={14} paddingBottom={12}>
