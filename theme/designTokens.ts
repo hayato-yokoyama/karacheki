@@ -26,6 +26,10 @@ export type ColorTokens = {
 	textMuted: string;
 	/** 未入力のプレースホルダ数値 */
 	textPlaceholder: string;
+	/** グラフの目盛り線 */
+	chartGrid: string;
+	/** グラフの実測データ（点と細い線）。傾向線はアクセント色で描く */
+	chartActual: string;
 	/** アクセント。文字・アイコン・リンクに使う */
 	accent: string;
 	/** 塗りつぶしのアクセント。主要ボタンと選択中のセグメントの地 */
@@ -86,6 +90,8 @@ export type ColorTokens = {
 	onHeroGold: string;
 	/** ヒーローカードの影 */
 	heroShadowColor: string;
+	/** オンボーディングのイラストのカードを浮かせる影（ライト・ダーク共通） */
+	illustrationShadowColor: string;
 };
 
 /**
@@ -103,6 +109,17 @@ const heroOnColors = {
 	heroShadowColor: "rgba(6,60,120,0.30)",
 } as const;
 
+/**
+ * オンボーディングのイラストのカードの影（#80）
+ *
+ * 通常のカード（`$cardShadowColor`）はダークで透明にして境界線に任せているが、
+ * オンボーディングのイラストは「作りもののアプリ画面が浮いている」ことが絵の一部なので、
+ * ダークでも影を残す。そのためライト・ダークで同じ値を持たせる
+ */
+const illustrationShadow = {
+	illustrationShadowColor: "rgba(0,60,120,0.12)",
+} as const;
+
 export const lightColorTokens: ColorTokens = {
 	screenBackground: "#F3F4F7",
 	screenBackgroundTransparent: "rgba(243,244,247,0)",
@@ -112,6 +129,8 @@ export const lightColorTokens: ColorTokens = {
 	textPrimary: "#12151C",
 	textMuted: "#5B6272",
 	textPlaceholder: "#C3CAD8",
+	chartGrid: "#E6E9EF",
+	chartActual: "#9CA6BB",
 	accent: "#0057A8",
 	accentFill: "#0057A8",
 	onAccentFill: "#FFFFFF",
@@ -136,6 +155,7 @@ export const lightColorTokens: ColorTokens = {
 	graphTooltipBackground: "#12151C",
 	graphTooltipText: "#FFFFFF",
 	...heroOnColors,
+	...illustrationShadow,
 };
 
 export const darkColorTokens: ColorTokens = {
@@ -148,6 +168,8 @@ export const darkColorTokens: ColorTokens = {
 	textPrimary: "#EEF1F6",
 	textMuted: "#98A2B3",
 	textPlaceholder: "#98A2B3",
+	chartGrid: "#232B37",
+	chartActual: "#617089",
 	accent: "#4DA8FF",
 	// ダークの #4DA8FF は白文字とのコントラストが足りないので、塗りだけ一段濃くする
 	accentFill: "#1670CF",
@@ -175,6 +197,7 @@ export const darkColorTokens: ColorTokens = {
 	graphTooltipBackground: "#EEF1F6",
 	graphTooltipText: "#0B0E13",
 	...heroOnColors,
+	...illustrationShadow,
 };
 
 /**
