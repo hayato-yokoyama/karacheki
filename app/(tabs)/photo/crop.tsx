@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ChevronRight } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import type { LayoutChangeEvent } from "react-native";
 import { Alert, StyleSheet, View } from "react-native";
@@ -9,7 +10,8 @@ import Animated, {
 	useSharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button, Paragraph, Spinner, XStack, YStack } from "tamagui";
+import { Button, SizableText, Spinner, XStack, YStack } from "tamagui";
+import { useScreenPaddingTop } from "@/components/ui";
 import { cropBodyPhoto } from "@/services/bodyPhotoService";
 import {
 	CROP_ASPECT_RATIO,
@@ -19,14 +21,47 @@ import {
 	type Size,
 } from "@/services/cropRect";
 
-/** 下のバーの高さ */
-const BOTTOM_BAR_HEIGHT = 56;
+/**
+ * 画面の上下に置く文言とボタンの色（#82）
+ *
+ * この画面だけは地が黒で固定なので、テーマで色を変えない。
+ * 「次へ」の地もライトのアクセント（#0057A8）では黒に沈むため、ダーク側の明るい方を使う
+ */
+const CHROME_TEXT_COLOR = "#FFFFFF";
+const CHROME_HINT_COLOR = "rgba(255,255,255,0.72)";
+const CHROME_ACCENT_COLOR = "#1670CF";
+
+/** 画面の左右余白。他の画面（`layout.screenPaddingHorizontal`）と揃える */
+const SCREEN_PADDING_HORIZONTAL = 16;
+
+/** 上に重ねる見出しの高さ */
+const TITLE_HEIGHT = 24;
+/** 下に重ねる文言の高さ */
+const HINT_HEIGHT = 20;
+
+/** 下に置くボタンの高さ。他の画面の主要ボタンと揃える */
+const BOTTOM_BUTTON_HEIGHT = 52;
+/**
+ * 画面の下端からボタンまでの最小の余白
+ *
+ * ホームバーのある端末ではそのセーフエリア（34px）がそのまま余白になる。
+ * 無い端末でボタンが画面の縁に貼り付かないよう、下限だけ決めておく
+ */
+const BOTTOM_BUTTON_GAP = 12;
+
 /** 拡大の上限。上げすぎても保存するときに粗くなるだけなので抑える */
 const MAX_SCALE = 4;
 /** 枠の外を覆う暗幕の濃さ */
 const MASK_COLOR = "rgba(0, 0, 0, 0.6)";
-/** 枠の縁とグリッドの色 */
-const FRAME_LINE_COLOR = "rgba(255, 255, 255, 0.8)";
+/** 枠の縁の色 */
+const FRAME_BORDER_COLOR = "rgba(255, 255, 255, 0.9)";
+/**
+ * 三分割のグリッド線の色
+ *
+ * 枠の縁より薄くする。同じ濃さだと線が写真より目立って、
+ * 何を切り抜こうとしているのか見えなくなる
+ */
+const GRID_LINE_COLOR = "rgba(255, 255, 255, 0.35)";
 /** 四隅のかぎ括弧の大きさと太さ */
 const CORNER_SIZE = 22;
 const CORNER_WIDTH = 3;
@@ -69,6 +104,7 @@ const CORNERS = [
 export default function Crop() {
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
+	const paddingTop = useScreenPaddingTop();
 	const { uri, takenAt, width, height } = useLocalSearchParams<{
 		uri: string;
 		takenAt: string;
@@ -103,6 +139,20 @@ export default function Crop() {
 	}, []);
 
 	/**
+	 * 見出しと操作が占める、枠を置けない上下の帯の高さ
+	 *
+	 * 見出しと文言は写真の上に重ねるので、枠がここまで伸びると白い文字が
+	 * 明るい写真に重なって読めなくなる。小さい端末ではボタンが枠にかぶって
+	 * その帯だけ写真を動かせなくなるため、枠を置ける領域から先に除いておく
+	 */
+	const chromeTop = paddingTop + TITLE_HEIGHT;
+	const chromeBottom =
+		Math.max(insets.bottom, BOTTOM_BUTTON_GAP) +
+		HINT_HEIGHT +
+		BOTTOM_BUTTON_GAP +
+		BOTTOM_BUTTON_HEIGHT;
+
+	/**
 	 * 枠と、等倍（scale = 1）で表示する画像の位置
 	 *
 	 * 3:4 の枠を領域に収まる最大の大きさで中央に置き、画像はその枠を
@@ -118,9 +168,15 @@ export default function Crop() {
 			return null;
 		}
 
+		const availableHeight = canvas.height - chromeTop - chromeBottom;
+
+		if (availableHeight <= 0) {
+			return null;
+		}
+
 		const frameWidth = Math.min(
 			canvas.width,
-			canvas.height * CROP_ASPECT_RATIO,
+			availableHeight * CROP_ASPECT_RATIO,
 		);
 		const frame = {
 			width: frameWidth,
@@ -133,16 +189,21 @@ export default function Crop() {
 			height: image.height * minimumScale,
 		};
 
+		/** 枠の左上の位置。暗幕とグリッドもここを基準に置く */
+		const frameLeft = (canvas.width - frame.width) / 2;
+		const frameTop = chromeTop + (availableHeight - frame.height) / 2;
+
 		return {
 			frame,
 			baseSize,
-			/** 枠の左上の位置。暗幕とグリッドもここを基準に置く */
-			frameLeft: (canvas.width - frame.width) / 2,
-			frameTop: (canvas.height - frame.height) / 2,
-			imageLeft: (canvas.width - baseSize.width) / 2,
-			imageTop: (canvas.height - baseSize.height) / 2,
+			frameLeft,
+			frameTop,
+			// 画像は枠の中心に置く。枠は上下の帯を除いた領域の中心なので、
+			// キャンバスの中心とは一致しない
+			imageLeft: frameLeft + (frame.width - baseSize.width) / 2,
+			imageTop: frameTop + (frame.height - baseSize.height) / 2,
 		};
-	}, [canvas, hasValidImage, image]);
+	}, [canvas, chromeBottom, chromeTop, hasValidImage, image]);
 
 	const scale = useSharedValue(1);
 	const savedScale = useSharedValue(1);
@@ -256,11 +317,18 @@ export default function Crop() {
 		return (
 			<YStack
 				flex={1}
-				paddingVertical="$8"
-				paddingHorizontal="$4"
+				paddingTop={paddingTop}
+				paddingHorizontal={SCREEN_PADDING_HORIZONTAL}
 				backgroundColor="black"
 			>
-				<Paragraph color="white">写真を読み込めませんでした。</Paragraph>
+				<SizableText
+					fontSize={14}
+					lineHeight={23}
+					color={CHROME_HINT_COLOR}
+					textAlign="center"
+				>
+					写真を読み込めませんでした。
+				</SizableText>
 			</YStack>
 		);
 	}
@@ -300,10 +368,10 @@ export default function Crop() {
 								<View
 									style={{
 										position: "absolute",
-										bottom: 0,
+										top: layout.frameTop + layout.frame.height,
 										left: 0,
 										right: 0,
-										height: layout.frameTop,
+										bottom: 0,
 										backgroundColor: MASK_COLOR,
 									}}
 								/>
@@ -336,7 +404,7 @@ export default function Crop() {
 										width: layout.frame.width,
 										height: layout.frame.height,
 										borderWidth: StyleSheet.hairlineWidth,
-										borderColor: FRAME_LINE_COLOR,
+										borderColor: FRAME_BORDER_COLOR,
 									}}
 								>
 									{GRID_RATIOS.map((ratio) => (
@@ -348,7 +416,7 @@ export default function Crop() {
 												bottom: 0,
 												left: layout.frame.width * ratio,
 												width: StyleSheet.hairlineWidth,
-												backgroundColor: FRAME_LINE_COLOR,
+												backgroundColor: GRID_LINE_COLOR,
 											}}
 										/>
 									))}
@@ -361,7 +429,7 @@ export default function Crop() {
 												right: 0,
 												top: layout.frame.height * ratio,
 												height: StyleSheet.hairlineWidth,
-												backgroundColor: FRAME_LINE_COLOR,
+												backgroundColor: GRID_LINE_COLOR,
 											}}
 										/>
 									))}
@@ -384,34 +452,91 @@ export default function Crop() {
 				</View>
 			</GestureDetector>
 
-			<XStack
-				height={BOTTOM_BAR_HEIGHT + insets.bottom}
-				paddingBottom={insets.bottom}
-				paddingHorizontal="$2"
-				alignItems="center"
-				justifyContent="space-between"
-				backgroundColor="black"
+			{/* 見出しと操作は切り抜く写真の上に重ねる。
+			    枠を画面いっぱいに取れるので、3:4 の中身をいちばん大きく確かめられる */}
+			<SizableText
+				position="absolute"
+				left={0}
+				right={0}
+				top={paddingTop}
+				fontSize={17}
+				fontWeight="800"
+				color={CHROME_TEXT_COLOR}
+				textAlign="center"
+				pointerEvents="none"
 			>
-				<Button
-					chromeless
-					color="white"
-					onPress={() => router.back()}
-					disabled={isPending}
+				写真を切り抜き
+			</SizableText>
+
+			<YStack
+				position="absolute"
+				left={0}
+				right={0}
+				bottom={Math.max(insets.bottom, BOTTOM_BUTTON_GAP)}
+				gap={BOTTOM_BUTTON_GAP}
+			>
+				<SizableText
+					fontSize={13}
+					lineHeight={20}
+					color={CHROME_HINT_COLOR}
+					textAlign="center"
+					pointerEvents="none"
 				>
-					キャンセル
-				</Button>
-				<Button
-					chromeless
-					color="white"
-					fontWeight="bold"
-					onPress={() => cropPhoto()}
-					disabled={isPending || layout === null}
-					opacity={layout === null ? 0.5 : 1}
-					icon={isPending ? <Spinner size="small" color="white" /> : undefined}
+					同じ位置・同じ大きさで切り抜くと、比べやすくなります
+				</SizableText>
+				<XStack
+					paddingHorizontal={SCREEN_PADDING_HORIZONTAL}
+					alignItems="center"
+					justifyContent="space-between"
 				>
-					{isPending ? "切り抜き中..." : "次へ"}
-				</Button>
-			</XStack>
+					<Button
+						chromeless
+						height={BOTTOM_BUTTON_HEIGHT}
+						paddingHorizontal={16}
+						fontSize={17}
+						fontWeight="500"
+						color={CHROME_TEXT_COLOR}
+						pressStyle={{ backgroundColor: "transparent", opacity: 0.7 }}
+						onPress={() => router.back()}
+						disabled={isPending}
+					>
+						キャンセル
+					</Button>
+					<Button
+						height={BOTTOM_BUTTON_HEIGHT}
+						borderRadius={BOTTOM_BUTTON_HEIGHT / 2}
+						borderWidth={0}
+						paddingHorizontal={28}
+						backgroundColor={CHROME_ACCENT_COLOR}
+						color={CHROME_TEXT_COLOR}
+						fontSize={17}
+						fontWeight="700"
+						pressStyle={{
+							backgroundColor: CHROME_ACCENT_COLOR,
+							opacity: 0.85,
+						}}
+						onPress={() => cropPhoto()}
+						disabled={isPending || layout === null}
+						opacity={layout === null ? 0.5 : 1}
+						icon={
+							isPending ? (
+								<Spinner size="small" color={CHROME_TEXT_COLOR} />
+							) : undefined
+						}
+						iconAfter={
+							isPending ? undefined : (
+								<ChevronRight
+									color={CHROME_TEXT_COLOR}
+									size={18}
+									strokeWidth={2.4}
+								/>
+							)
+						}
+					>
+						{isPending ? "切り抜き中..." : "次へ"}
+					</Button>
+				</XStack>
+			</YStack>
 		</YStack>
 	);
 }

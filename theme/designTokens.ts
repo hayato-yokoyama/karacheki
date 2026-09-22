@@ -72,7 +72,11 @@ export type ColorTokens = {
 	graphGrid: string;
 	/** グラフの実測データの線（#79） */
 	graphActualLine: string;
-	/** グラフのデータなし表示（破線の枠・プレースホルダの数値）（#79） */
+	/**
+	 * データなし表示（破線の枠・プレースホルダの数値）（#79）
+	 *
+	 * グラフで決めた色だが、Before/After の写真が無いときの破線の枠にも使う（#82）
+	 */
 	graphPlaceholder: string;
 	/** タップした値を出すピルの地（#79） */
 	graphTooltipBackground: string;
@@ -299,6 +303,8 @@ export const typography = {
 	backLink: { fontSize: 16, lineHeight: 22, fontWeight: "600" },
 	/** 下部固定ボタン */
 	primaryButton: { fontSize: 16, lineHeight: 22, fontWeight: "700" },
+	/** 下部固定ボタンの隣に置く控えめなボタン。主要ボタンより 1px 小さい */
+	secondaryButton: { fontSize: 15, lineHeight: 21, fontWeight: "700" },
 	/** セグメント */
 	segment: { fontSize: 14, lineHeight: 20 },
 	/** タブバーのラベル */

@@ -34,6 +34,31 @@ export const PrimaryButton = ({ disabled, ...props }: ButtonProps) => (
 	/>
 );
 
+/**
+ * 主要ボタンの隣に置く、控えめなボタン（#82）
+ *
+ * カードと同じ白地＋境界線で、主要ボタンより一段引いて見せる。
+ * 文字色は用途で変える（「比較」のようにアクセント、「キャンセル」のように本文色）
+ */
+export const SecondaryButton = (props: ButtonProps) => (
+	<Button
+		height={layout.primaryButtonHeight}
+		borderRadius={layout.primaryButtonHeight / 2}
+		borderWidth={1}
+		borderColor="$cardBorder"
+		backgroundColor="$cardBackground"
+		color="$textPrimary"
+		fontSize={typography.secondaryButton.fontSize}
+		fontWeight={typography.secondaryButton.fontWeight}
+		shadowColor="$cardShadowColor"
+		shadowOffset={{ width: 0, height: 6 }}
+		shadowOpacity={1}
+		shadowRadius={18}
+		pressStyle={{ backgroundColor: "$cardBackground", opacity: 0.85 }}
+		{...props}
+	/>
+);
+
 export type BottomActionBarProps = {
 	children: ReactNode;
 	/** タブバーのある画面かどうか。モーダルで開く画面では false にして、下のセーフエリアを自分で持つ */
