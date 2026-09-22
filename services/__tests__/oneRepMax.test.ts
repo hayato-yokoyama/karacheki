@@ -4,6 +4,7 @@ import {
 	getLiftBest,
 	getLiftPr,
 	getLiftPrKind,
+	getRmTableRows,
 	type LiftExercise,
 	type LiftRecord,
 	RM_TABLE_REPS,
@@ -206,6 +207,19 @@ describe("換算表", () => {
 		expect(buildRmTableRow("benchPress", 85)).toEqual([
 			89, 91, 94, 96, 98, 100, 102, 104, 106, 108, 111,
 		]);
+	});
+
+	it("全行を種目ごとに作り置きする", () => {
+		const rows = getRmTableRows("benchPress");
+
+		expect(rows).toHaveLength(RM_TABLE_WEIGHTS.length);
+		expect(rows[0]).toEqual({
+			weight: 60,
+			values: buildRmTableRow("benchPress", 60),
+		});
+		// 種目を切り替えるたびに計算し直さないよう、同じ配列を返す
+		expect(getRmTableRows("benchPress")).toBe(rows);
+		expect(getRmTableRows("squat")).not.toBe(rows);
 	});
 
 	it("種目で式が変わる", () => {

@@ -133,6 +133,42 @@ export const buildRmTableRow = (exercise: LiftExercise, weight: number) =>
 		roundOneRepMax(estimateOneRepMax({ exercise, weight, reps })),
 	);
 
+/** 換算表の 1 行。重量と、2〜12 レップの推定 1RM */
+export type RmTableRow = {
+	weight: number;
+	values: number[];
+};
+
+/**
+ * 種目ごとに作った換算表を使い回すための置き場
+ *
+ * 中身は重量とレップ数だけで決まり、記録に関係なく変わらない
+ */
+const rmTableRowsCache = new Map<LiftExercise, RmTableRow[]>();
+
+/**
+ * 換算表の全行を返す
+ *
+ * 97 行 × 11 列を種目を切り替えるたびに計算し直すと、その引っかかりが
+ * 切り替えの遅さになる。値は変わらないので一度作ったら取っておく
+ */
+export const getRmTableRows = (exercise: LiftExercise): RmTableRow[] => {
+	const cached = rmTableRowsCache.get(exercise);
+
+	if (cached) {
+		return cached;
+	}
+
+	const rows = RM_TABLE_WEIGHTS.map((weight) => ({
+		weight,
+		values: buildRmTableRow(exercise, weight),
+	}));
+
+	rmTableRowsCache.set(exercise, rows);
+
+	return rows;
+};
+
 /**
  * 先に到達したのはどちらかを判定する
  *
