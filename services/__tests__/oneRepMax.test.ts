@@ -4,12 +4,14 @@ import {
 	getLiftBest,
 	getLiftPr,
 	getLiftPrKind,
+	getRmTableFormula,
 	getRmTableRows,
 	type LiftExercise,
 	type LiftRecord,
 	RM_TABLE_REPS,
 	RM_TABLE_WEIGHTS,
 	roundOneRepMax,
+	toRmTableGroup,
 } from "@/services/oneRepMax";
 
 const record = ({
@@ -209,7 +211,7 @@ describe("換算表", () => {
 		]);
 	});
 
-	it("全行を種目ごとに作り置きする", () => {
+	it("全行をまとまりごとに作り置きする", () => {
 		const rows = getRmTableRows("benchPress");
 
 		expect(rows).toHaveLength(RM_TABLE_WEIGHTS.length);
@@ -217,9 +219,29 @@ describe("換算表", () => {
 			weight: 60,
 			values: buildRmTableRow("benchPress", 60),
 		});
-		// 種目を切り替えるたびに計算し直さないよう、同じ配列を返す
+		// 切り替えるたびに計算し直さないよう、同じ配列を返す
 		expect(getRmTableRows("benchPress")).toBe(rows);
-		expect(getRmTableRows("squat")).not.toBe(rows);
+		expect(getRmTableRows("squatDeadlift")).not.toBe(rows);
+	});
+
+	it("スクワットとデッドリフトは同じ表になる", () => {
+		// 除数が同じなので表の中身も一字一句同じ。まとめて 1 つの表として見せる
+		expect(toRmTableGroup("squat")).toBe("squatDeadlift");
+		expect(toRmTableGroup("deadlift")).toBe("squatDeadlift");
+		expect(toRmTableGroup("benchPress")).toBe("benchPress");
+		expect(buildRmTableRow("squat", 100)).toEqual(
+			buildRmTableRow("deadlift", 100),
+		);
+		expect(getRmTableRows("squatDeadlift")[0].values).toEqual(
+			buildRmTableRow("deadlift", 60),
+		);
+	});
+
+	it("まとまりごとに換算式を出し分ける", () => {
+		expect(getRmTableFormula("benchPress")).toBe("重量 × レップ ÷ 40 ＋ 重量");
+		expect(getRmTableFormula("squatDeadlift")).toBe(
+			"重量 × レップ ÷ 33.3 ＋ 重量",
+		);
 	});
 
 	it("種目で式が変わる", () => {

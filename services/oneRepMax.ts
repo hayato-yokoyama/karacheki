@@ -133,6 +133,45 @@ export const buildRmTableRow = (exercise: LiftExercise, weight: number) =>
 		roundOneRepMax(estimateOneRepMax({ exercise, weight, reps })),
 	);
 
+/**
+ * 換算表のまとまり
+ *
+ * スクワットとデッドリフトは換算の除数が同じなので、表の中身も一字一句同じになる。
+ * 別々に並べても選ぶ意味がないため、1 つにまとめて見せる
+ */
+export type RmTableGroup = "benchPress" | "squatDeadlift";
+
+/** 画面に出す順番 */
+export const RM_TABLE_GROUPS = [
+	"benchPress",
+	"squatDeadlift",
+] as const satisfies readonly RmTableGroup[];
+
+export const RM_TABLE_GROUP_LABEL: Record<RmTableGroup, string> = {
+	benchPress: "ベンチプレス",
+	squatDeadlift: "スクワット・デッドリフト",
+};
+
+/** そのまとまりを代表する種目。換算式と表の値はこれで決まる */
+const RM_TABLE_GROUP_EXERCISE: Record<RmTableGroup, LiftExercise> = {
+	benchPress: "benchPress",
+	squatDeadlift: "squat",
+};
+
+const EXERCISE_RM_TABLE_GROUP: Record<LiftExercise, RmTableGroup> = {
+	benchPress: "benchPress",
+	squat: "squatDeadlift",
+	deadlift: "squatDeadlift",
+};
+
+/** 一覧で選んでいる種目から、開く表のまとまりを決める */
+export const toRmTableGroup = (exercise: LiftExercise) =>
+	EXERCISE_RM_TABLE_GROUP[exercise];
+
+/** まとまりごとの換算式 */
+export const getRmTableFormula = (group: RmTableGroup) =>
+	RM_FORMULA_LABEL[RM_TABLE_GROUP_EXERCISE[group]];
+
 /** 換算表の 1 行。重量と、2〜12 レップの推定 1RM */
 export type RmTableRow = {
 	weight: number;
@@ -140,31 +179,32 @@ export type RmTableRow = {
 };
 
 /**
- * 種目ごとに作った換算表を使い回すための置き場
+ * まとまりごとに作った換算表を使い回すための置き場
  *
  * 中身は重量とレップ数だけで決まり、記録に関係なく変わらない
  */
-const rmTableRowsCache = new Map<LiftExercise, RmTableRow[]>();
+const rmTableRowsCache = new Map<RmTableGroup, RmTableRow[]>();
 
 /**
  * 換算表の全行を返す
  *
- * 97 行 × 11 列を種目を切り替えるたびに計算し直すと、その引っかかりが
+ * 97 行 × 11 列を切り替えるたびに計算し直すと、その引っかかりが
  * 切り替えの遅さになる。値は変わらないので一度作ったら取っておく
  */
-export const getRmTableRows = (exercise: LiftExercise): RmTableRow[] => {
-	const cached = rmTableRowsCache.get(exercise);
+export const getRmTableRows = (group: RmTableGroup): RmTableRow[] => {
+	const cached = rmTableRowsCache.get(group);
 
 	if (cached) {
 		return cached;
 	}
 
+	const exercise = RM_TABLE_GROUP_EXERCISE[group];
 	const rows = RM_TABLE_WEIGHTS.map((weight) => ({
 		weight,
 		values: buildRmTableRow(exercise, weight),
 	}));
 
-	rmTableRowsCache.set(exercise, rows);
+	rmTableRowsCache.set(group, rows);
 
 	return rows;
 };

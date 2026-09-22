@@ -10,8 +10,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SizableText, useTheme, XStack, YStack } from "tamagui";
-import { LIFT_EXERCISE_SEGMENTS } from "@/components/lift";
-import { SegmentedControl } from "@/components/segmentedControl";
 import {
 	BackLink,
 	NumberText,
@@ -21,12 +19,15 @@ import {
 	useScreenPaddingTop,
 } from "@/components/ui";
 import {
+	getRmTableFormula,
 	getRmTableRows,
 	isLiftExercise,
-	type LiftExercise,
-	RM_FORMULA_LABEL,
+	RM_TABLE_GROUP_LABEL,
+	RM_TABLE_GROUPS,
 	RM_TABLE_REPS,
+	type RmTableGroup,
 	type RmTableRow,
+	toRmTableGroup,
 } from "@/services/oneRepMax";
 import { layout, radius } from "@/theme/designTokens";
 
@@ -45,6 +46,9 @@ const CONTENT_WIDTH =
 
 /** 横に続きがあることを示す、右端のフェードの幅 */
 const FADE_WIDTH = 36;
+
+/** まとまりを選ぶピルの高さ */
+const PILL_HEIGHT = 44;
 
 /** 最初に描く行数。1 画面に収まるぶんだけ描いて、残りはスクロールに合わせて足す */
 const INITIAL_ROWS = 14;
@@ -68,13 +72,15 @@ export default function Table() {
 	}>();
 
 	/**
-	 * 表示中の種目
+	 * 表示中のまとまり
 	 *
-	 * 一覧で選んでいた種目から始めて、ここでも切り替えられるようにする。
-	 * 種目で換算式が変わるので、開き直さずに見比べられる方がよい
+	 * 一覧で選んでいた種目のものから始めて、ここでも切り替えられるようにする。
+	 * 除数が違うと表がまるごと変わるので、開き直さずに見比べられる方がよい
 	 */
-	const [exercise, setExercise] = useState<LiftExercise>(
-		isLiftExercise(exerciseParam) ? exerciseParam : "benchPress",
+	const [group, setGroup] = useState<RmTableGroup>(
+		toRmTableGroup(
+			isLiftExercise(exerciseParam) ? exerciseParam : "benchPress",
+		),
 	);
 
 	return (
@@ -86,18 +92,66 @@ export default function Table() {
 		>
 			<BackLink>BIG3</BackLink>
 			<ScreenHeader
-				label={`推定1RM ＝ ${RM_FORMULA_LABEL[exercise]}`}
+				label={`推定1RM ＝ ${getRmTableFormula(group)}`}
 				title="1RM換算表"
 			/>
-			<SegmentedControl
-				options={LIFT_EXERCISE_SEGMENTS}
-				value={exercise}
-				onChange={setExercise}
-			/>
-			<RmTable exercise={exercise} />
+			<GroupPills value={group} onChange={setGroup} />
+			<RmTable group={group} />
 		</Screen>
 	);
 }
+
+/**
+ * 表のまとまりを選ぶピル（#81）
+ *
+ * 選択肢が 2 つしかなく、片方は文字数が多いので、
+ * 幅を等分するセグメントではなく文字に合わせて並べたボタンにする
+ */
+const GroupPills = ({
+	value,
+	onChange,
+}: {
+	value: RmTableGroup;
+	onChange: (group: RmTableGroup) => void;
+}) => (
+	<XStack gap={8} accessibilityRole="tablist">
+		{RM_TABLE_GROUPS.map((group) => {
+			const isSelected = group === value;
+
+			return (
+				<XStack
+					key={group}
+					height={PILL_HEIGHT}
+					paddingHorizontal={18}
+					borderRadius={PILL_HEIGHT / 2}
+					alignItems="center"
+					justifyContent="center"
+					backgroundColor={isSelected ? "$accentFill" : "$cardBackground"}
+					// 幅が選択で変わらないよう、枠線は常に持たせて色だけ消す
+					borderWidth={1}
+					borderColor={isSelected ? "transparent" : "$cardBorder"}
+					shadowColor={isSelected ? "transparent" : "$cardShadowColor"}
+					shadowOffset={{ width: 0, height: 6 }}
+					shadowOpacity={1}
+					shadowRadius={18}
+					pressStyle={{ opacity: 0.85 }}
+					onPress={() => onChange(group)}
+					accessibilityRole="tab"
+					accessibilityState={{ selected: isSelected }}
+				>
+					<SizableText
+						fontSize={14}
+						fontWeight="700"
+						color={isSelected ? "$onAccentFill" : "$textPrimary"}
+						numberOfLines={1}
+					>
+						{RM_TABLE_GROUP_LABEL[group]}
+					</SizableText>
+				</XStack>
+			);
+		})}
+	</XStack>
+);
 
 /**
  * 換算表そのもの
@@ -106,7 +160,7 @@ export default function Table() {
  * 見えているぶんだけ描く。横は表全体を 1 つのスクロールで動かし、
  * 重量の列と見出しのセルだけスクロール量を打ち消して左端に留める
  */
-const RmTable = ({ exercise }: { exercise: LiftExercise }) => {
+const RmTable = ({ group }: { group: RmTableGroup }) => {
 	const theme = useTheme();
 
 	/** 表の横スクロール量。重量の列を左端に留めるために使う */
@@ -159,7 +213,7 @@ const RmTable = ({ exercise }: { exercise: LiftExercise }) => {
 						<YStack width={CONTENT_WIDTH} height={bodyHeight}>
 							<TableHeader scrollX={scrollX} />
 							<FlatList
-								data={getRmTableRows(exercise)}
+								data={getRmTableRows(group)}
 								keyExtractor={(row) => String(row.weight)}
 								renderItem={renderItem}
 								// 行の高さが揃っているので、飛ばし読みの位置を計算で出せる
