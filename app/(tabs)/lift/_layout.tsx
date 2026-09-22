@@ -2,22 +2,12 @@ import { Stack } from "expo-router";
 
 export default function Layout() {
 	return (
-		<Stack>
-			<Stack.Screen name="index" options={{ title: "BIG3" }} />
-			<Stack.Screen
-				name="add"
-				options={{
-					presentation: "modal",
-					title: "記録の追加",
-				}}
-			/>
-			<Stack.Screen
-				name="table"
-				options={{
-					presentation: "modal",
-					title: "換算表",
-				}}
-			/>
+		// ヘッダーはコンテンツの中の見出しに置き換える（#77）
+		<Stack screenOptions={{ headerShown: false }}>
+			<Stack.Screen name="index" />
+			{/* 記録の追加・編集と換算表は、タブバーを隠して入力と表に集中させる */}
+			<Stack.Screen name="add" options={{ presentation: "modal" }} />
+			<Stack.Screen name="table" options={{ presentation: "modal" }} />
 		</Stack>
 	);
 }

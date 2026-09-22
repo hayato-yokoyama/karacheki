@@ -27,6 +27,14 @@ const writeLiftRecords = async (records: LiftRecord[]) => {
 	await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(records));
 };
 
+/**
+ * 挙上重量を扱う桁に丸める
+ *
+ * `LiftRecord.weight` は小数第1位までという約束なので、
+ * 画面の入力を弾かずにここで揃える
+ */
+const roundWeight = (weight: number) => Math.round(weight * 10) / 10;
+
 /** 実施日の降順（同じ実施日なら保存日時の降順）に並べる */
 const sortByPerformedAtDesc = (records: readonly LiftRecord[]) =>
 	[...records].sort((a, b) => {
@@ -56,7 +64,7 @@ export const addLiftRecord = async ({
 	const record: LiftRecord = {
 		id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
 		exercise,
-		weight,
+		weight: roundWeight(weight),
 		reps,
 		// UTC に寄せると深夜・早朝の記録が前後の日にズレるため、端末のローカル日付で持つ
 		performedAt: format(performedAt, "yyyy-MM-dd"),
@@ -73,4 +81,45 @@ export const addLiftRecord = async ({
 export const deleteLiftRecord = async (id: string) => {
 	const storedRecords = await readLiftRecords();
 	await writeLiftRecords(storedRecords.filter((record) => record.id !== id));
+};
+
+/**
+ * 記録を 1 件更新する（#81）
+ *
+ * 種目は変えない。ベンチプレスの記録を開いてスクワットに付け替えられると、
+ * 一覧の自己ベストが黙って 2 種目ぶん動いてしまう。
+ * `createdAt` も据え置く。自己ベストが同値で並んだときの「先に到達した方」の
+ * 判定に使っているので、値を直しただけで順番が入れ替わるのは意図と違う
+ */
+export const updateLiftRecord = async ({
+	id,
+	weight,
+	reps,
+	performedAt,
+}: {
+	id: string;
+	weight: number;
+	reps: number;
+	performedAt: Date;
+}) => {
+	const storedRecords = await readLiftRecords();
+	const stored = storedRecords.find((record) => record.id === id);
+
+	// 別の端末で消えた記録を開いたまま保存した場合など。黙って新規作成はしない
+	if (!stored) {
+		throw new Error(`更新する記録が見つかりません: ${id}`);
+	}
+
+	const updated: LiftRecord = {
+		...stored,
+		weight: roundWeight(weight),
+		reps,
+		performedAt: format(performedAt, "yyyy-MM-dd"),
+	};
+
+	await writeLiftRecords(
+		storedRecords.map((record) => (record.id === id ? updated : record)),
+	);
+
+	return updated;
 };

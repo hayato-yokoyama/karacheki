@@ -11,6 +11,8 @@ import {
 
 export type HeroCardProps = Omit<YStackProps, "children"> & {
 	children: ReactNode;
+	/** カードの中の行間。ホームは 6、BIG3 の自己ベストは 10（デザイン準拠） */
+	gap?: number;
 };
 
 /**
@@ -22,7 +24,7 @@ export type HeroCardProps = Omit<YStackProps, "children"> & {
  * 影を外側の YStack に持たせているのは、`LinearGradient` が `overflow: hidden` を
  * 既定で持っていて、iOS だと自分の影まで切られてしまうため
  */
-export const HeroCard = ({ children, ...props }: HeroCardProps) => (
+export const HeroCard = ({ children, gap = 6, ...props }: HeroCardProps) => (
 	<YStack
 		borderRadius={radius.hero}
 		shadowColor="$heroShadowColor"
@@ -40,7 +42,7 @@ export const HeroCard = ({ children, ...props }: HeroCardProps) => (
 			paddingTop={18}
 			paddingHorizontal={20}
 			paddingBottom={16}
-			gap={6}
+			gap={gap}
 		>
 			{children}
 		</LinearGradient>

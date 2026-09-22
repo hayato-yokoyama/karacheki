@@ -98,12 +98,19 @@ export const RM_TABLE_REPS = Array.from(
 	(_, index) => index + 2,
 );
 
-/** 画面に出す換算式。推定値の出どころを見せるためのもの */
+/**
+ * 画面に出す換算式。推定値の出どころを見せるためのもの
+ *
+ * 演算子を全角にしているのは、日本語の文中で半角だと前後の余白が詰まって読みにくいため
+ */
 export const RM_FORMULA_LABEL: Record<LiftExercise, string> = {
-	benchPress: "重量 × レップ ÷ 40 + 重量",
-	squat: "重量 × レップ ÷ 33.3 + 重量",
-	deadlift: "重量 × レップ ÷ 33.3 + 重量",
+	benchPress: "重量 × レップ ÷ 40 ＋ 重量",
+	squat: "重量 × レップ ÷ 33.3 ＋ 重量",
+	deadlift: "重量 × レップ ÷ 33.3 ＋ 重量",
 };
+
+/** 1RM そのものの説明。ヒーローの下に添える */
+export const ONE_REP_MAX_DESCRIPTION = "1RM ＝ 1回しか挙げられない最大重量";
 
 /**
  * 推定 1RM を返す
@@ -137,6 +144,82 @@ export const buildRmTableRow = (exercise: LiftExercise, weight: number) =>
 	RM_TABLE_REPS.map((reps) =>
 		roundOneRepMax(estimateOneRepMax({ exercise, weight, reps })),
 	);
+
+/**
+ * 換算表のまとまり
+ *
+ * スクワットとデッドリフトは換算の除数が同じなので、表の中身も一字一句同じになる。
+ * 別々に並べても選ぶ意味がないため、1 つにまとめて見せる
+ */
+export type RmTableGroup = "benchPress" | "squatDeadlift";
+
+/** 画面に出す順番 */
+export const RM_TABLE_GROUPS = [
+	"benchPress",
+	"squatDeadlift",
+] as const satisfies readonly RmTableGroup[];
+
+export const RM_TABLE_GROUP_LABEL: Record<RmTableGroup, string> = {
+	benchPress: "ベンチプレス",
+	squatDeadlift: "スクワット・デッドリフト",
+};
+
+/** そのまとまりを代表する種目。換算式と表の値はこれで決まる */
+const RM_TABLE_GROUP_EXERCISE: Record<RmTableGroup, LiftExercise> = {
+	benchPress: "benchPress",
+	squatDeadlift: "squat",
+};
+
+const EXERCISE_RM_TABLE_GROUP: Record<LiftExercise, RmTableGroup> = {
+	benchPress: "benchPress",
+	squat: "squatDeadlift",
+	deadlift: "squatDeadlift",
+};
+
+/** 一覧で選んでいる種目から、開く表のまとまりを決める */
+export const toRmTableGroup = (exercise: LiftExercise) =>
+	EXERCISE_RM_TABLE_GROUP[exercise];
+
+/** まとまりごとの換算式 */
+export const getRmTableFormula = (group: RmTableGroup) =>
+	RM_FORMULA_LABEL[RM_TABLE_GROUP_EXERCISE[group]];
+
+/** 換算表の 1 行。重量と、2〜12 レップの推定 1RM */
+export type RmTableRow = {
+	weight: number;
+	values: number[];
+};
+
+/**
+ * まとまりごとに作った換算表を使い回すための置き場
+ *
+ * 中身は重量とレップ数だけで決まり、記録に関係なく変わらない
+ */
+const rmTableRowsCache = new Map<RmTableGroup, RmTableRow[]>();
+
+/**
+ * 換算表の全行を返す
+ *
+ * 97 行 × 11 列を切り替えるたびに計算し直すと、その引っかかりが
+ * 切り替えの遅さになる。値は変わらないので一度作ったら取っておく
+ */
+export const getRmTableRows = (group: RmTableGroup): RmTableRow[] => {
+	const cached = rmTableRowsCache.get(group);
+
+	if (cached) {
+		return cached;
+	}
+
+	const exercise = RM_TABLE_GROUP_EXERCISE[group];
+	const rows = RM_TABLE_WEIGHTS.map((weight) => ({
+		weight,
+		values: buildRmTableRow(exercise, weight),
+	}));
+
+	rmTableRowsCache.set(group, rows);
+
+	return rows;
+};
 
 /**
  * 先に到達したのはどちらかを判定する
@@ -192,4 +275,69 @@ export const getLiftPr = (
 		),
 		estimated: pickBest(targets, estimateOneRepMax),
 	};
+};
+
+/**
+ * 自己ベストの見せ方（#81）
+ *
+ * 一覧のヒーローは「実測と推定が一致するか」で枚数も文言も変わる。
+ * 画面側で `actual` / `estimated` の有無を毎回場合分けすると条件が散らばるので、
+ * 表示の分岐と同じ 4 つの状態にしてから渡す
+ */
+export type LiftBest =
+	/** まだ記録がない */
+	| { kind: "none" }
+	/** 実測 1RM が推定 1RM でもある（同じ記録） */
+	| { kind: "same"; record: LiftRecord }
+	/** 1 レップの記録がまだない */
+	| { kind: "estimatedOnly"; estimated: LiftRecord }
+	/** 実測 1RM と推定 1RM が別の記録 */
+	| { kind: "differ"; estimated: LiftRecord; actual: LiftRecord };
+
+/** 指定した種目の自己ベストを、表示の 4 状態に分けて返す */
+export const getLiftBest = (
+	records: readonly LiftRecord[],
+	exercise: LiftExercise,
+): LiftBest => {
+	const { actual, estimated } = getLiftPr(records, exercise);
+
+	// 実測は記録の一部なので、実測があって推定がないことは起こらない
+	if (!estimated) {
+		return { kind: "none" };
+	}
+
+	if (!actual) {
+		return { kind: "estimatedOnly", estimated };
+	}
+
+	return actual.id === estimated.id
+		? { kind: "same", record: actual }
+		: { kind: "differ", estimated, actual };
+};
+
+/** 記録の行に出すバッジの種類 */
+export type LiftPrKind = "both" | "actual" | "estimated";
+
+/**
+ * その記録が自己ベストなら、どちらの自己ベストかを返す
+ *
+ * 実測と推定が同じ記録のときにバッジを 2 つ並べても同じ事実の繰り返しにしかならないので、
+ * `both` にまとめて 1 つだけ出す
+ */
+export const getLiftPrKind = (
+	record: LiftRecord,
+	pr: LiftPr,
+): LiftPrKind | undefined => {
+	const isActual = pr.actual?.id === record.id;
+	const isEstimated = pr.estimated?.id === record.id;
+
+	if (isActual && isEstimated) {
+		return "both";
+	}
+
+	if (isActual) {
+		return "actual";
+	}
+
+	return isEstimated ? "estimated" : undefined;
 };

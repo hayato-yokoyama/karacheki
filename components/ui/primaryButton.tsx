@@ -28,6 +28,8 @@ export const PrimaryButton = ({ disabled, ...props }: ButtonProps) => (
 			opacity: 0.85,
 		}}
 		disabled={disabled}
+		// Tamagui の Button は disabled を読み上げに流さないので自分で渡す
+		accessibilityState={{ disabled: disabled === true }}
 		{...props}
 	/>
 );
