@@ -327,6 +327,9 @@ const Thumbnail = ({
 			width={THUMBNAIL_WIDTH}
 			gap={6}
 			alignItems="center"
+			// Tamagui は tabIndex が 0 のときしか accessible を補わないので自分で付ける。
+			// 付けないと VoiceOver がボタンとして拾わず、ラベルも読まれない
+			accessible
 			accessibilityRole="button"
 			accessibilityLabel={`${format(new Date(photo.takenAt), "yyyy年M月d日")}の写真を比較に使う`}
 			accessibilityState={{ selected: role !== null }}

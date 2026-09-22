@@ -317,7 +317,8 @@ export default function Photos() {
 		return (
 			<Screen>
 				<ScreenScrollView>
-					<ScreenHeader label={label} title={title} />
+					{/* 枚数が確定していないので、一瞬だけ「0枚の記録」と出さないようラベルは伏せる */}
+					<ScreenHeader title={title} />
 					<YStack height={400} alignItems="center" justifyContent="center">
 						<Spinner size="small" />
 					</YStack>
@@ -533,9 +534,16 @@ const PhotoCell = ({
 				// 画像が読み込まれるまでの下地。写真で覆われるので単色で足りる
 				backgroundColor="$photoPlaceholderStart"
 				opacity={isDisabled ? 0.5 : 1}
+				// Tamagui は tabIndex が 0 のときしか accessible を補わないので自分で付ける。
+				// 付けないと VoiceOver がボタンとして拾わず、ラベルも読まれない
+				accessible
 				accessibilityRole="button"
 				accessibilityLabel={`${format(takenAt, "yyyy年M月d日")}の写真`}
-				accessibilityState={isSelecting ? { selected: isSelected } : undefined}
+				accessibilityState={
+					isSelecting
+						? { selected: isSelected, disabled: isDisabled }
+						: undefined
+				}
 				pressStyle={{ opacity: isDisabled ? 0.5 : 0.85 }}
 				onPress={isDisabled ? undefined : onPress}
 			>

@@ -34,6 +34,11 @@ const CHROME_ACCENT_COLOR = "#1670CF";
 /** 画面の左右余白。他の画面（`layout.screenPaddingHorizontal`）と揃える */
 const SCREEN_PADDING_HORIZONTAL = 16;
 
+/** 上に重ねる見出しの高さ */
+const TITLE_HEIGHT = 24;
+/** 下に重ねる文言の高さ */
+const HINT_HEIGHT = 20;
+
 /** 下に置くボタンの高さ。他の画面の主要ボタンと揃える */
 const BOTTOM_BUTTON_HEIGHT = 52;
 /**
@@ -127,6 +132,20 @@ export default function Crop() {
 	}, []);
 
 	/**
+	 * 見出しと操作が占める、枠を置けない上下の帯の高さ
+	 *
+	 * 見出しと文言は写真の上に重ねるので、枠がここまで伸びると白い文字が
+	 * 明るい写真に重なって読めなくなる。小さい端末ではボタンが枠にかぶって
+	 * その帯だけ写真を動かせなくなるため、枠を置ける領域から先に除いておく
+	 */
+	const chromeTop = paddingTop + TITLE_HEIGHT;
+	const chromeBottom =
+		Math.max(insets.bottom, BOTTOM_BUTTON_GAP) +
+		HINT_HEIGHT +
+		BOTTOM_BUTTON_GAP +
+		BOTTOM_BUTTON_HEIGHT;
+
+	/**
 	 * 枠と、等倍（scale = 1）で表示する画像の位置
 	 *
 	 * 3:4 の枠を領域に収まる最大の大きさで中央に置き、画像はその枠を
@@ -142,9 +161,15 @@ export default function Crop() {
 			return null;
 		}
 
+		const availableHeight = canvas.height - chromeTop - chromeBottom;
+
+		if (availableHeight <= 0) {
+			return null;
+		}
+
 		const frameWidth = Math.min(
 			canvas.width,
-			canvas.height * CROP_ASPECT_RATIO,
+			availableHeight * CROP_ASPECT_RATIO,
 		);
 		const frame = {
 			width: frameWidth,
@@ -157,16 +182,21 @@ export default function Crop() {
 			height: image.height * minimumScale,
 		};
 
+		/** 枠の左上の位置。暗幕とグリッドもここを基準に置く */
+		const frameLeft = (canvas.width - frame.width) / 2;
+		const frameTop = chromeTop + (availableHeight - frame.height) / 2;
+
 		return {
 			frame,
 			baseSize,
-			/** 枠の左上の位置。暗幕とグリッドもここを基準に置く */
-			frameLeft: (canvas.width - frame.width) / 2,
-			frameTop: (canvas.height - frame.height) / 2,
-			imageLeft: (canvas.width - baseSize.width) / 2,
-			imageTop: (canvas.height - baseSize.height) / 2,
+			frameLeft,
+			frameTop,
+			// 画像は枠の中心に置く。枠は上下の帯を除いた領域の中心なので、
+			// キャンバスの中心とは一致しない
+			imageLeft: frameLeft + (frame.width - baseSize.width) / 2,
+			imageTop: frameTop + (frame.height - baseSize.height) / 2,
 		};
-	}, [canvas, hasValidImage, image]);
+	}, [canvas, chromeBottom, chromeTop, hasValidImage, image]);
 
 	const scale = useSharedValue(1);
 	const savedScale = useSharedValue(1);
@@ -331,10 +361,10 @@ export default function Crop() {
 								<View
 									style={{
 										position: "absolute",
-										bottom: 0,
+										top: layout.frameTop + layout.frame.height,
 										left: 0,
 										right: 0,
-										height: layout.frameTop,
+										bottom: 0,
 										backgroundColor: MASK_COLOR,
 									}}
 								/>
