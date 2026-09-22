@@ -449,9 +449,6 @@ App Store 版には入らない。衝突していたのは `myapp://` だけ。
 切り分けは iPhone の Safari で `http://<MacのIP>:8081/status` を開く。
 `packager-status:running` が返る（= ダウンロードを聞かれる）ならネットワークは正常で、原因はこの権限。
 
-> `:8081` のトップページを開くと Metro が Web 版をバンドルしようとして
-> `@lottiefiles/dotlottie-react` が無いというエラーを出すが、これは Web 専用の経路なので iOS には影響しない。
-
 ### 通知が登録されない
 
 `services/notificationService.ts` は権限が無いと早期 return するため、スケジュール自体が登録されない。
