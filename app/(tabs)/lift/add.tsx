@@ -63,8 +63,13 @@ const CLOSE_BUTTON_SIZE = layout.touchTargetHeight;
 /** レップ数の増減ボタンの大きさ */
 const STEPPER_BUTTON_SIZE = 56;
 
-/** レップ数の行高。64px の数字が上で切れないだけの高さを持たせる */
-const REPS_LINE_HEIGHT = 72;
+/**
+ * レップ数の行高
+ *
+ * 64px の数字が上下どちらでも切れないよう、書体の自然な行高（約 1.25 倍）を確保する。
+ * デザインは 56px だが、React Native は行高より大きい文字を切ってしまうので広げる
+ */
+const REPS_LINE_HEIGHT = 80;
 
 /** 下部固定ボタン。一覧のものより一回り大きくして、入力の締めくくりにする */
 const SAVE_BUTTON_HEIGHT = 56;
@@ -246,7 +251,6 @@ const LiftRecordForm = ({
 
 				<InputCard label="レップ数" hint="1〜12">
 					<XStack
-						height={STEPPER_BUTTON_SIZE}
 						alignItems="center"
 						justifyContent="space-between"
 						paddingHorizontal={8}
@@ -262,11 +266,7 @@ const LiftRecordForm = ({
 								strokeWidth={2.2}
 							/>
 						</StepperButton>
-						{/*
-						 * 行高は文字より小さくできない（数字の上が切れる）。
-						 * デザインの詰まった見た目は、行の高さをボタンに合わせて
-						 * 文字の箱だけ上下にはみ出させることで保つ
-						 */}
+						{/* 行の高さはこの数字が決める。増減ボタンはその中で上下中央に並ぶ */}
 						<NumberText fontSize={64} lineHeight={REPS_LINE_HEIGHT}>
 							{String(reps)}
 						</NumberText>
