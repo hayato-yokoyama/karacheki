@@ -53,8 +53,15 @@ const BOTTOM_BUTTON_GAP = 12;
 const MAX_SCALE = 4;
 /** 枠の外を覆う暗幕の濃さ */
 const MASK_COLOR = "rgba(0, 0, 0, 0.6)";
-/** 枠の縁とグリッドの色 */
-const FRAME_LINE_COLOR = "rgba(255, 255, 255, 0.8)";
+/** 枠の縁の色 */
+const FRAME_BORDER_COLOR = "rgba(255, 255, 255, 0.9)";
+/**
+ * 三分割のグリッド線の色
+ *
+ * 枠の縁より薄くする。同じ濃さだと線が写真より目立って、
+ * 何を切り抜こうとしているのか見えなくなる
+ */
+const GRID_LINE_COLOR = "rgba(255, 255, 255, 0.35)";
 /** 四隅のかぎ括弧の大きさと太さ */
 const CORNER_SIZE = 22;
 const CORNER_WIDTH = 3;
@@ -397,7 +404,7 @@ export default function Crop() {
 										width: layout.frame.width,
 										height: layout.frame.height,
 										borderWidth: StyleSheet.hairlineWidth,
-										borderColor: FRAME_LINE_COLOR,
+										borderColor: FRAME_BORDER_COLOR,
 									}}
 								>
 									{GRID_RATIOS.map((ratio) => (
@@ -409,7 +416,7 @@ export default function Crop() {
 												bottom: 0,
 												left: layout.frame.width * ratio,
 												width: StyleSheet.hairlineWidth,
-												backgroundColor: FRAME_LINE_COLOR,
+												backgroundColor: GRID_LINE_COLOR,
 											}}
 										/>
 									))}
@@ -422,7 +429,7 @@ export default function Crop() {
 												right: 0,
 												top: layout.frame.height * ratio,
 												height: StyleSheet.hairlineWidth,
-												backgroundColor: FRAME_LINE_COLOR,
+												backgroundColor: GRID_LINE_COLOR,
 											}}
 										/>
 									))}

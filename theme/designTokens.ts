@@ -66,7 +66,11 @@ export type ColorTokens = {
 	graphGrid: string;
 	/** グラフの実測データの線（#79） */
 	graphActualLine: string;
-	/** グラフのデータなし表示（破線の枠・プレースホルダの数値）（#79） */
+	/**
+	 * データなし表示（破線の枠・プレースホルダの数値）（#79）
+	 *
+	 * グラフで決めた色だが、Before/After の写真が無いときの破線の枠にも使う（#82）
+	 */
 	graphPlaceholder: string;
 	/** タップした値を出すピルの地（#79） */
 	graphTooltipBackground: string;

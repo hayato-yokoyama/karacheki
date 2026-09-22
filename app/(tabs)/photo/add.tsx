@@ -76,6 +76,8 @@ export default function Add() {
 	return (
 		<Screen>
 			<ScreenScrollView withTabBar={false} withBottomAction>
+				{/* デザインはヘッダー右端の × で閉じる形だが、この画面は切り抜きの上に
+				    積まれていて戻り先が一覧ではない。何に戻るのかを言葉で示せる戻るリンクにする */}
 				<BackLink>写真を切り抜き</BackLink>
 				<ScreenHeader label="Before/After" title="写真を追加" />
 
@@ -120,6 +122,8 @@ export default function Add() {
 					</Button>
 				</View>
 
+				{/* デザインは日付をピル状のボタンで見せているが、日付の選び方は OS に委ねる。
+				    ホームの体重入力（`home/add.tsx`）と同じく `RNDateTimePicker` をそのまま置く */}
 				<SurfaceCard paddingVertical={12} paddingHorizontal={16}>
 					<XStack
 						height={36}

@@ -51,7 +51,12 @@ const CELL_SCRIM_COLORS: string[] = ["rgba(0,0,0,0)", "rgba(0,0,0,0.55)"];
 
 /** 選択済みを示す丸チェック */
 const CHECK_BADGE_SIZE = 26;
-/** 選択済みのセルの外側に出すリングの太さ */
+/**
+ * 選択済みのセルの外側に出すリング
+ *
+ * 色は丸チェックの地（`$accentFill`）ではなく `$accent`。
+ * ダークでは `$accent` の方が明るく、写真の上でも線として見える
+ */
 const SELECTED_RING_WIDTH = 3;
 
 /** 「比較」「キャンセル」など、主要ボタンの隣に置く控えめなボタンの幅 */
@@ -603,7 +608,7 @@ const PhotoCell = ({
 					right={-SELECTED_RING_WIDTH}
 					bottom={-SELECTED_RING_WIDTH}
 					borderWidth={SELECTED_RING_WIDTH}
-					borderColor="$accentFill"
+					borderColor="$accent"
 					borderRadius={radius.tile + SELECTED_RING_WIDTH}
 				/>
 			)}

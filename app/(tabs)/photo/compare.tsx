@@ -320,7 +320,10 @@ const Thumbnail = ({
 	role: "before" | "after" | null;
 	onPress: () => void;
 }) => {
-	const ringColor = role === "after" ? "$accentFill" : "$textMuted";
+	// A（After）は枠と バッジで色が違う。ダークでは枠の方が明るく、
+	// 写真の上でも線として見える。B（Before）は枠も バッジも補助色
+	const ringColor = role === "after" ? "$accent" : "$textMuted";
+	const badgeColor = role === "after" ? "$accentFill" : "$textMuted";
 
 	return (
 		<YStack
@@ -374,7 +377,7 @@ const Thumbnail = ({
 							width={THUMBNAIL_BADGE_WIDTH}
 							height={THUMBNAIL_BADGE_HEIGHT}
 							borderRadius={THUMBNAIL_BADGE_HEIGHT / 2}
-							backgroundColor={ringColor}
+							backgroundColor={badgeColor}
 							alignItems="center"
 							justifyContent="center"
 						>
