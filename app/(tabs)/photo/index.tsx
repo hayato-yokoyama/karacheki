@@ -1,12 +1,16 @@
 import { LinearGradient } from "@tamagui/linear-gradient";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import * as Linking from "expo-linking";
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { Check, ChevronRight, Columns2, ImagePlus } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import { Alert, Image, SectionList, useWindowDimensions } from "react-native";
 import { SizableText, Spinner, useTheme, View, XStack, YStack } from "tamagui";
+import {
+	SAVED_TO_CAMERA_ROLL_MESSAGE,
+	useSavePhotoToDevice,
+} from "@/components/photo/useSavePhotoToDevice";
 import {
 	BottomActionBar,
 	PrimaryButton,
@@ -15,10 +19,12 @@ import {
 	ScreenScrollView,
 	SecondaryButton,
 	useScreenPaddingTop,
+	useToast,
 } from "@/components/ui";
 import type { BodyPhoto, PickedPhoto } from "@/services/bodyPhotoService";
 import {
 	CameraPermissionDeniedError,
+	deleteBodyPhoto,
 	getBodyPhotoUri,
 	groupBodyPhotosByMonth,
 	listBodyPhotos,
@@ -97,6 +103,7 @@ export default function Photos() {
 	const router = useRouter();
 	const { width } = useWindowDimensions();
 	const paddingTop = useScreenPaddingTop();
+	const queryClient = useQueryClient();
 
 	/** 比較する2枚を選んでいる最中かどうか */
 	const [isSelecting, setIsSelecting] = useState(false);
@@ -137,6 +144,38 @@ export default function Photos() {
 				data: toRows(month.photos),
 			})),
 		[photos],
+	);
+
+	const { showToast, toast } = useToast();
+
+	// 長押しメニューの「端末に保存」（#66）
+	const { savePhotoToDevice } = useSavePhotoToDevice({
+		onSaved: () => showToast(SAVED_TO_CAMERA_ROLL_MESSAGE),
+	});
+
+	// 長押しメニューの「削除」（#66）
+	const { mutate: removePhoto } = useMutation({
+		mutationFn: (id: string) => deleteBodyPhoto(id),
+		onSuccess: () =>
+			queryClient.invalidateQueries({ queryKey: ["bodyPhotos"] }),
+		onError: () => {
+			Alert.alert("エラー", "写真の削除に失敗しました");
+		},
+	});
+
+	/** 詳細画面の削除と同じく、元に戻せないので確かめてから消す */
+	const handleDeletePhoto = useCallback(
+		(id: string) => {
+			Alert.alert("写真を削除しますか？", "削除した写真は元に戻せません。", [
+				{ text: "キャンセル", style: "cancel" },
+				{
+					text: "削除",
+					style: "destructive",
+					onPress: () => removePhoto(id),
+				},
+			]);
+		},
+		[removePhoto],
 	);
 
 	/** 選んだ・撮った写真をトリミング画面へ渡す */
@@ -298,6 +337,8 @@ export default function Photos() {
 							isSelected={isSelected}
 							isDisabled={isSelectionFull && !isSelected}
 							onPress={() => handlePressCell(photo.id)}
+							onSaveToDevice={() => savePhotoToDevice(photo)}
+							onDelete={() => handleDeletePhoto(photo.id)}
 						/>
 					);
 				})}
@@ -306,9 +347,11 @@ export default function Photos() {
 		[
 			cellHeight,
 			cellWidth,
+			handleDeletePhoto,
 			handlePressCell,
 			isSelecting,
 			isSelectionFull,
+			savePhotoToDevice,
 			selectedPhotos,
 		],
 	);
@@ -466,6 +509,7 @@ export default function Photos() {
 					</>
 				)}
 			</BottomActionBar>
+			{toast}
 		</Screen>
 	);
 }
@@ -509,13 +553,18 @@ type PhotoCellProps = {
 	/** 2枚そろっていて、これ以上選べないセルかどうか */
 	isDisabled: boolean;
 	onPress: () => void;
+	/** 長押しメニューの「端末に保存」 */
+	onSaveToDevice: () => void;
+	/** 長押しメニューの「削除」 */
+	onDelete: () => void;
 };
 
 /**
  * 一覧のセル
  *
  * 選択モードでは右上に丸チェックが出て、選んだセルには外側にリングが付く。
- * 2枚そろった後は、選べないセルを薄くして丸チェックも消す
+ * 2枚そろった後は、選べないセルを薄くして丸チェックも消す。
+ * 選択モードでないときは、長押しで OS のコンテキストメニューを出す（#66）
  */
 const PhotoCell = ({
 	photo,
@@ -525,79 +574,106 @@ const PhotoCell = ({
 	isSelected,
 	isDisabled,
 	onPress,
+	onSaveToDevice,
+	onDelete,
 }: PhotoCellProps) => {
 	const theme = useTheme();
 	const takenAt = new Date(photo.takenAt);
 
+	const tile = (
+		<View
+			width={width}
+			height={height}
+			borderRadius={radius.tile}
+			overflow="hidden"
+			// 画像が読み込まれるまでの下地。写真で覆われるので単色で足りる
+			backgroundColor="$photoPlaceholderStart"
+			opacity={isDisabled ? 0.5 : 1}
+			// Tamagui は tabIndex が 0 のときしか accessible を補わないので自分で付ける。
+			// 付けないと VoiceOver がボタンとして拾わず、ラベルも読まれない
+			accessible
+			accessibilityRole="button"
+			accessibilityLabel={`${format(takenAt, "yyyy年M月d日")}の写真`}
+			accessibilityState={
+				isSelecting ? { selected: isSelected, disabled: isDisabled } : undefined
+			}
+			pressStyle={{ opacity: isDisabled ? 0.5 : 0.85 }}
+			// 選択モードでないときの遷移は、包んでいる Link が受け持つ
+			onPress={isSelecting && !isDisabled ? onPress : undefined}
+		>
+			<Image
+				source={{ uri: getBodyPhotoUri(photo) }}
+				style={{ width, height }}
+				resizeMode="cover"
+			/>
+			<LinearGradient
+				colors={CELL_SCRIM_COLORS}
+				position="absolute"
+				left={0}
+				right={0}
+				bottom={0}
+				height={CELL_SCRIM_HEIGHT}
+				pointerEvents="none"
+			/>
+			{/* セルが狭いので、日付は数値書体（Barlow Condensed）ではなく本文書体で出す */}
+			<SizableText
+				position="absolute"
+				left={10}
+				bottom={8}
+				fontSize={13}
+				lineHeight={16}
+				fontWeight="700"
+				color="$onHero"
+			>
+				{format(takenAt, "M/d")}
+			</SizableText>
+			{isSelecting && !isDisabled && (
+				<View
+					position="absolute"
+					right={8}
+					top={8}
+					width={CHECK_BADGE_SIZE}
+					height={CHECK_BADGE_SIZE}
+					borderRadius={CHECK_BADGE_SIZE / 2}
+					borderWidth={2}
+					borderColor={isSelected ? "$onHero" : "rgba(255,255,255,0.85)"}
+					backgroundColor={isSelected ? "$accentFill" : "rgba(0,0,0,0.18)"}
+					alignItems="center"
+					justifyContent="center"
+				>
+					{isSelected && (
+						<Check color={theme.onHero.val} size={15} strokeWidth={3} />
+					)}
+				</View>
+			)}
+		</View>
+	);
+
 	return (
 		<View width={width}>
-			<View
-				width={width}
-				height={height}
-				borderRadius={radius.tile}
-				overflow="hidden"
-				// 画像が読み込まれるまでの下地。写真で覆われるので単色で足りる
-				backgroundColor="$photoPlaceholderStart"
-				opacity={isDisabled ? 0.5 : 1}
-				// Tamagui は tabIndex が 0 のときしか accessible を補わないので自分で付ける。
-				// 付けないと VoiceOver がボタンとして拾わず、ラベルも読まれない
-				accessible
-				accessibilityRole="button"
-				accessibilityLabel={`${format(takenAt, "yyyy年M月d日")}の写真`}
-				accessibilityState={
-					isSelecting
-						? { selected: isSelected, disabled: isDisabled }
-						: undefined
-				}
-				pressStyle={{ opacity: isDisabled ? 0.5 : 0.85 }}
-				onPress={isDisabled ? undefined : onPress}
-			>
-				<Image
-					source={{ uri: getBodyPhotoUri(photo) }}
-					style={{ width, height }}
-					resizeMode="cover"
-				/>
-				<LinearGradient
-					colors={CELL_SCRIM_COLORS}
-					position="absolute"
-					left={0}
-					right={0}
-					bottom={0}
-					height={CELL_SCRIM_HEIGHT}
-					pointerEvents="none"
-				/>
-				{/* セルが狭いので、日付は数値書体（Barlow Condensed）ではなく本文書体で出す */}
-				<SizableText
-					position="absolute"
-					left={10}
-					bottom={8}
-					fontSize={13}
-					lineHeight={16}
-					fontWeight="700"
-					color="$onHero"
-				>
-					{format(takenAt, "M/d")}
-				</SizableText>
-				{isSelecting && !isDisabled && (
-					<View
-						position="absolute"
-						right={8}
-						top={8}
-						width={CHECK_BADGE_SIZE}
-						height={CHECK_BADGE_SIZE}
-						borderRadius={CHECK_BADGE_SIZE / 2}
-						borderWidth={2}
-						borderColor={isSelected ? "$onHero" : "rgba(255,255,255,0.85)"}
-						backgroundColor={isSelected ? "$accentFill" : "rgba(0,0,0,0.18)"}
-						alignItems="center"
-						justifyContent="center"
-					>
-						{isSelected && (
-							<Check color={theme.onHero.val} size={15} strokeWidth={3} />
-						)}
-					</View>
-				)}
-			</View>
+			{isSelecting ? (
+				tile
+			) : (
+				// 長押しのプレビューは出さず、セルそのものを浮かせてメニューを添える。
+				// 「写真を見る」はタップと同じく詳細へ進む
+				<Link href={`/(tabs)/photo/${photo.id}`} asChild>
+					<Link.Trigger>{tile}</Link.Trigger>
+					<Link.Menu>
+						<Link.MenuAction
+							icon="square.and.arrow.down"
+							onPress={onSaveToDevice}
+						>
+							端末に保存
+						</Link.MenuAction>
+						<Link.MenuAction icon="photo" onPress={onPress}>
+							写真を見る
+						</Link.MenuAction>
+						<Link.MenuAction icon="trash" destructive onPress={onDelete}>
+							削除
+						</Link.MenuAction>
+					</Link.Menu>
+				</Link>
+			)}
 			{/* リングはセルの外側に出すので、角丸を切る入れ物の外に重ねる */}
 			{isSelected && (
 				<View

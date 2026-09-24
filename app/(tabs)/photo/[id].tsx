@@ -1,14 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Trash2 } from "lucide-react-native";
+import { Download, Trash2 } from "lucide-react-native";
 import { Alert, Image } from "react-native";
-import { Button, SizableText, Spinner, useTheme, View, YStack } from "tamagui";
+import {
+	Button,
+	SizableText,
+	Spinner,
+	useTheme,
+	View,
+	XStack,
+	YStack,
+} from "tamagui";
+import {
+	SAVED_TO_CAMERA_ROLL_MESSAGE,
+	useSavePhotoToDevice,
+} from "@/components/photo/useSavePhotoToDevice";
 import {
 	BackLink,
 	Screen,
 	ScreenHeader,
 	ScreenScrollView,
+	useToast,
 } from "@/components/ui";
 import {
 	deleteBodyPhoto,
@@ -38,6 +51,11 @@ export default function PhotoDetail() {
 	} = useQuery({
 		queryKey: ["bodyPhotos"],
 		queryFn: listBodyPhotos,
+	});
+
+	const { showToast, toast } = useToast();
+	const { savePhotoToDevice, isSaving } = useSavePhotoToDevice({
+		onSaved: () => showToast(SAVED_TO_CAMERA_ROLL_MESSAGE),
 	});
 
 	const index = photos?.findIndex((item) => item.id === id) ?? -1;
@@ -121,27 +139,49 @@ export default function PhotoDetail() {
 					/>
 				</View>
 
-				{/* NOTE: 元々付いていた color="$red10" は config v3 に存在しないトークンで
-				    （あるのは $red10Light / $red10Dark）、v1 でも解決されていなかった。
-				    v2 では未解決の文字列がそのまま lucide に渡ってアイコンが消えるので外す */}
-				<Button
-					marginTop={4}
-					height={layout.primaryButtonHeight}
-					borderRadius={layout.primaryButtonHeight / 2}
-					borderWidth={1}
-					borderColor="$dangerBorder"
-					backgroundColor="$dangerSoft"
-					color="$danger"
-					fontSize={typography.primaryButton.fontSize}
-					fontWeight={typography.primaryButton.fontWeight}
-					pressStyle={{ backgroundColor: "$dangerSoft", opacity: 0.85 }}
-					icon={<Trash2 color={theme.danger.val} size={20} strokeWidth={2} />}
-					onPress={handlePressDelete}
-					disabled={isPending}
-				>
-					この写真を削除
-				</Button>
+				<XStack marginTop={4} gap={10}>
+					<Button
+						flex={1}
+						height={layout.primaryButtonHeight}
+						borderRadius={layout.primaryButtonHeight / 2}
+						borderWidth={0}
+						backgroundColor="$accentSoft"
+						color="$accent"
+						fontSize={typography.primaryButton.fontSize}
+						fontWeight={typography.primaryButton.fontWeight}
+						pressStyle={{ backgroundColor: "$accentSoft", opacity: 0.85 }}
+						icon={
+							<Download color={theme.accent.val} size={20} strokeWidth={2.2} />
+						}
+						onPress={() => savePhotoToDevice(photo)}
+						// 保存中に消すと保存が失敗し、削除中に保存しても消えた写真を指す。互いに待たせる
+						disabled={isSaving || isPending}
+					>
+						端末に保存
+					</Button>
+					{/* NOTE: 元々付いていた color="$red10" は config v3 に存在しないトークンで
+					    （あるのは $red10Light / $red10Dark）、v1 でも解決されていなかった。
+					    v2 では未解決の文字列がそのまま lucide に渡ってアイコンが消えるので外す */}
+					<Button
+						flex={1}
+						height={layout.primaryButtonHeight}
+						borderRadius={layout.primaryButtonHeight / 2}
+						borderWidth={1}
+						borderColor="$dangerBorder"
+						backgroundColor="$dangerSoft"
+						color="$danger"
+						fontSize={typography.primaryButton.fontSize}
+						fontWeight={typography.primaryButton.fontWeight}
+						pressStyle={{ backgroundColor: "$dangerSoft", opacity: 0.85 }}
+						icon={<Trash2 color={theme.danger.val} size={20} strokeWidth={2} />}
+						onPress={handlePressDelete}
+						disabled={isSaving || isPending}
+					>
+						削除
+					</Button>
+				</XStack>
 			</ScreenScrollView>
+			{toast}
 		</Screen>
 	);
 }

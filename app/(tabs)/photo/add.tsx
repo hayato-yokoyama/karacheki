@@ -1,12 +1,13 @@
 import RNDateTimePicker, {
 	type DateTimePickerChangeEvent,
 } from "@react-native-community/datetimepicker";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Check, RotateCcw } from "lucide-react-native";
 import { useState } from "react";
-import { Alert, Image } from "react-native";
-import { Button, SizableText, useTheme, View, XStack } from "tamagui";
+import { Alert, Image, Switch } from "react-native";
+import { Button, SizableText, useTheme, View, XStack, YStack } from "tamagui";
+import { alertCameraRollSaveError } from "@/components/photo/useSavePhotoToDevice";
 import {
 	BackLink,
 	BottomActionBar,
@@ -16,7 +17,15 @@ import {
 	ScreenScrollView,
 	SurfaceCard,
 } from "@/components/ui";
-import { addBodyPhoto } from "@/services/bodyPhotoService";
+import {
+	addBodyPhoto,
+	getSaveToCameraRoll,
+	saveBodyPhotoToCameraRoll,
+	setSaveToCameraRoll,
+} from "@/services/bodyPhotoService";
+
+/** カメラロールにも保存するかの設定のキャッシュキー（#66） */
+const SAVE_TO_CAMERA_ROLL_QUERY_KEY = ["bodyPhotoSaveToCameraRoll"];
 
 /** プレビューの高さ。下の撮影日と保存ボタンまで1画面に収まる大きさ */
 const PREVIEW_HEIGHT = 420;
@@ -43,17 +52,57 @@ export default function Add() {
 		return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 	});
 
+	// 前回の追加で選んだ設定を引き継ぐ（#66）
+	const { data: saveToCameraRoll = false, isFetched: isSettingFetched } =
+		useQuery({
+			queryKey: SAVE_TO_CAMERA_ROLL_QUERY_KEY,
+			queryFn: getSaveToCameraRoll,
+		});
+
+	/** 切り替えたらすぐ覚える。「次回もこの設定で保存します」の約束を、保存しなかったときも守るため */
+	const handleSaveToCameraRollChange = (value: boolean) => {
+		// 読み込みの途中で切り替えると、後から届いた前回の値で上書きされてしまう
+		queryClient.cancelQueries({ queryKey: SAVE_TO_CAMERA_ROLL_QUERY_KEY });
+		queryClient.setQueryData(SAVE_TO_CAMERA_ROLL_QUERY_KEY, value);
+		setSaveToCameraRoll(value).catch((error) => {
+			// 覚えられなくても今回の保存には効くので、止めずにログだけ残す
+			console.error(error);
+		});
+	};
+
 	const { mutate: savePhoto, isPending } = useMutation({
-		mutationFn: () => addBodyPhoto(uri, selectedDate),
-		onSuccess: async () => {
+		mutationFn: async () => {
+			const photo = await addBodyPhoto(uri, selectedDate);
+
+			if (!saveToCameraRoll) {
+				return { cameraRollError: null };
+			}
+
+			// アプリへの保存はもう済んでいる。カメラロールに失敗しても追加は取り消さず、
+			// 失敗したことだけを伝える
+			try {
+				await saveBodyPhotoToCameraRoll(photo);
+				return { cameraRollError: null };
+			} catch (error) {
+				return { cameraRollError: error };
+			}
+		},
+		onSuccess: async ({ cameraRollError }) => {
 			await queryClient.invalidateQueries({ queryKey: ["bodyPhotos"] });
 			// 1つ戻るとトリミング画面に出てしまう。保存し終えたら一覧まで戻す
 			router.dismissTo("/(tabs)/photo");
+
+			if (cameraRollError) {
+				alertCameraRollSaveError(cameraRollError);
+			}
 		},
 		onError: () => {
 			Alert.alert("エラー", "写真の保存に失敗しました");
 		},
 	});
+
+	// 設定を読み終える前に保存すると、ON にしてあってもカメラロールに入らない
+	const canSave = isSettingFetched && !isPending;
 
 	// v9 で date が必須になったため、存在チェックは不要
 	const handleDateChange = (_event: DateTimePickerChangeEvent, date: Date) => {
@@ -140,15 +189,33 @@ export default function Add() {
 							locale="ja-JP"
 						/>
 					</XStack>
+					<View height={1} marginVertical={12} backgroundColor="$cardBorder" />
+					<XStack alignItems="center" justifyContent="space-between" gap={12}>
+						<YStack flex={1} gap={2}>
+							<SizableText fontSize={14} fontWeight="700" color="$textPrimary">
+								カメラロールにも保存
+							</SizableText>
+							<SizableText fontSize={12} lineHeight={16} color="$textMuted">
+								次回もこの設定で保存します
+							</SizableText>
+						</YStack>
+						{/* 切り替えは OS の見た目に揃えて、RN の Switch をそのまま置く */}
+						<Switch
+							value={saveToCameraRoll}
+							onValueChange={handleSaveToCameraRollChange}
+							trackColor={{ true: theme.accentFill.val }}
+							accessibilityLabel="カメラロールにも保存"
+						/>
+					</XStack>
 				</SurfaceCard>
 			</ScreenScrollView>
 
 			<BottomActionBar withTabBar={false}>
 				<PrimaryButton
-					disabled={isPending}
+					disabled={!canSave}
 					icon={
 						<Check
-							color={isPending ? theme.textMuted.val : theme.onAccentFill.val}
+							color={canSave ? theme.onAccentFill.val : theme.textMuted.val}
 							size={20}
 							strokeWidth={2.4}
 						/>

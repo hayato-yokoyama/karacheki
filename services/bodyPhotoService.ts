@@ -5,11 +5,15 @@ import { format } from "date-fns";
 import * as FileSystem from "expo-file-system/legacy";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
+import * as MediaLibrary from "expo-media-library";
 import { Image } from "react-native";
 import type { CropRect } from "@/services/cropRect";
 
 /** Before/After 写真のメタデータの保存キー */
 const STORAGE_KEY = "bodyPhotos";
+
+/** 追加した写真をカメラロールにも保存するかどうかの保存キー（#66） */
+const SAVE_TO_CAMERA_ROLL_KEY = "bodyPhotoSaveToCameraRoll";
 
 /**
  * 保存する画像の長辺の上限（px）
@@ -184,6 +188,48 @@ export const deleteBodyPhoto = async (id: string) => {
 	}
 
 	await writePhotoMeta(storedPhotos.filter((photo) => photo.id !== id));
+};
+
+/**
+ * 追加した写真をカメラロールにも保存するかを読み出す（#66）
+ *
+ * 体の写真は人に見られたくないこともあるので、選ばれるまではアプリの中だけに置く
+ */
+export const getSaveToCameraRoll = async () =>
+	(await AsyncStorage.getItem(SAVE_TO_CAMERA_ROLL_KEY)) === "true";
+
+/** 追加した写真をカメラロールにも保存するかを書き込む。次の追加でもこの設定を使う */
+export const setSaveToCameraRoll = async (value: boolean) => {
+	await AsyncStorage.setItem(SAVE_TO_CAMERA_ROLL_KEY, String(value));
+};
+
+/**
+ * フォトライブラリへの追加の権限が下りていないことを、他の失敗と区別して伝える
+ *
+ * カメラと同じく、一度拒否されると OS はダイアログを出さないため、
+ * 呼び出し側は「設定アプリから許可してほしい」と案内する必要がある
+ */
+export class MediaLibraryPermissionDeniedError extends Error {
+	constructor() {
+		super("写真への追加が許可されていません。");
+		this.name = "MediaLibraryPermissionDeniedError";
+	}
+}
+
+/**
+ * 写真をカメラロール（端末の写真アプリ）に保存する（#66）
+ *
+ * 書き込みだけできればよいので、読み取りを含まない追加専用の権限を求める。
+ * アプリ内の写真はそのまま残り、ここで作るのは写真アプリ側の複製
+ */
+export const saveBodyPhotoToCameraRoll = async (photo: BodyPhoto) => {
+	const permission = await MediaLibrary.requestPermissionsAsync(true);
+
+	if (!permission.granted) {
+		throw new MediaLibraryPermissionDeniedError();
+	}
+
+	await MediaLibrary.Asset.create(getBodyPhotoUri(photo));
 };
 
 /**

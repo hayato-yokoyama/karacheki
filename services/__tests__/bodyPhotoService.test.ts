@@ -1,7 +1,13 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as MediaLibrary from "expo-media-library";
 import type { BodyPhoto } from "@/services/bodyPhotoService";
 import {
+	getSaveToCameraRoll,
 	groupBodyPhotosByMonth,
+	MediaLibraryPermissionDeniedError,
 	replaceComparedPhoto,
+	saveBodyPhotoToCameraRoll,
+	setSaveToCameraRoll,
 } from "@/services/bodyPhotoService";
 
 // 月ごとの区切りと比較する2枚の入れ替えは端末に触らない計算なので、
@@ -25,6 +31,11 @@ jest.mock("expo-image-picker", () => ({
 	launchCameraAsync: jest.fn(),
 	launchImageLibraryAsync: jest.fn(),
 	requestCameraPermissionsAsync: jest.fn(),
+}));
+
+jest.mock("expo-media-library", () => ({
+	requestPermissionsAsync: jest.fn(),
+	Asset: { create: jest.fn() },
 }));
 
 /** 撮影日だけが違う写真を作る。並び順と月の区切りの検証に使う */
@@ -117,5 +128,63 @@ describe("replaceComparedPhoto", () => {
 		expect(new Date(next.before.takenAt).getTime()).toBeLessThan(
 			new Date(next.after.takenAt).getTime(),
 		);
+	});
+});
+
+describe("カメラロールにも保存する設定", () => {
+	const getItem = jest.mocked(AsyncStorage.getItem);
+	const setItem = jest.mocked(AsyncStorage.setItem);
+
+	beforeEach(() => {
+		getItem.mockReset();
+		setItem.mockReset();
+	});
+
+	test("まだ選ばれていなければ保存しない", async () => {
+		getItem.mockResolvedValue(null);
+
+		await expect(getSaveToCameraRoll()).resolves.toBe(false);
+	});
+
+	test("書き込んだ値を読み出せる", async () => {
+		await setSaveToCameraRoll(true);
+		const [key, value] = setItem.mock.calls[0];
+		getItem.mockImplementation(async (readKey) =>
+			readKey === key ? value : null,
+		);
+
+		await expect(getSaveToCameraRoll()).resolves.toBe(true);
+	});
+});
+
+describe("saveBodyPhotoToCameraRoll", () => {
+	const requestPermissions = jest.mocked(MediaLibrary.requestPermissionsAsync);
+	const createAsset = jest.mocked(MediaLibrary.Asset.create);
+
+	beforeEach(() => {
+		requestPermissions.mockReset();
+		createAsset.mockReset();
+	});
+
+	test("追加専用の権限を求めて、アプリ内の実体ファイルを保存する", async () => {
+		requestPermissions.mockResolvedValue({
+			granted: true,
+		} as MediaLibrary.PermissionResponse);
+
+		await saveBodyPhotoToCameraRoll(photo("a", "2026-09-21T09:00:00+09:00"));
+
+		expect(requestPermissions).toHaveBeenCalledWith(true);
+		expect(createAsset).toHaveBeenCalledWith("file:///documents/photos/a.jpg");
+	});
+
+	test("権限が無ければ保存せず、権限の失敗として知らせる", async () => {
+		requestPermissions.mockResolvedValue({
+			granted: false,
+		} as MediaLibrary.PermissionResponse);
+
+		await expect(
+			saveBodyPhotoToCameraRoll(photo("a", "2026-09-21T09:00:00+09:00")),
+		).rejects.toBeInstanceOf(MediaLibraryPermissionDeniedError);
+		expect(createAsset).not.toHaveBeenCalled();
 	});
 });

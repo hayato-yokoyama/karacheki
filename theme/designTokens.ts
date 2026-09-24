@@ -82,6 +82,12 @@ export type ColorTokens = {
 	graphTooltipBackground: string;
 	/** タップした値を出すピルの文字（#79） */
 	graphTooltipText: string;
+	/** 操作の結果を短く知らせるトーストの地。画面の地と反転させて浮かせる（#66） */
+	toastBackground: string;
+	/** トーストの文字 */
+	toastText: string;
+	/** トーストの丸チェックの地。トーストの地の上で見えるよう、反対のテーマのアクセントを使う */
+	toastIcon: string;
 	/** ヒーローカードの上に載る文字（ライト・ダーク共通） */
 	onHero: string;
 	/** ヒーローカードの上の補助文字 */
@@ -161,6 +167,9 @@ export const lightColorTokens: ColorTokens = {
 	graphPlaceholder: "#C3CAD8",
 	graphTooltipBackground: "#12151C",
 	graphTooltipText: "#FFFFFF",
+	toastBackground: "rgba(18,21,28,0.92)",
+	toastText: "#FFFFFF",
+	toastIcon: "#4DA8FF",
 	...heroOnColors,
 	...illustrationShadow,
 };
@@ -204,6 +213,9 @@ export const darkColorTokens: ColorTokens = {
 	graphPlaceholder: "#37414F",
 	graphTooltipBackground: "#EEF1F6",
 	graphTooltipText: "#0B0E13",
+	toastBackground: "rgba(238,241,246,0.96)",
+	toastText: "#12151C",
+	toastIcon: "#1670CF",
 	...heroOnColors,
 	...illustrationShadow,
 };
