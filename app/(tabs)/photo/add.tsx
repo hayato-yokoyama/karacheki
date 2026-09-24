@@ -53,13 +53,16 @@ export default function Add() {
 	});
 
 	// 前回の追加で選んだ設定を引き継ぐ（#66）
-	const { data: saveToCameraRoll = false } = useQuery({
-		queryKey: SAVE_TO_CAMERA_ROLL_QUERY_KEY,
-		queryFn: getSaveToCameraRoll,
-	});
+	const { data: saveToCameraRoll = false, isFetched: isSettingFetched } =
+		useQuery({
+			queryKey: SAVE_TO_CAMERA_ROLL_QUERY_KEY,
+			queryFn: getSaveToCameraRoll,
+		});
 
 	/** 切り替えたらすぐ覚える。「次回もこの設定で保存します」の約束を、保存しなかったときも守るため */
 	const handleSaveToCameraRollChange = (value: boolean) => {
+		// 読み込みの途中で切り替えると、後から届いた前回の値で上書きされてしまう
+		queryClient.cancelQueries({ queryKey: SAVE_TO_CAMERA_ROLL_QUERY_KEY });
 		queryClient.setQueryData(SAVE_TO_CAMERA_ROLL_QUERY_KEY, value);
 		setSaveToCameraRoll(value).catch((error) => {
 			// 覚えられなくても今回の保存には効くので、止めずにログだけ残す
@@ -97,6 +100,9 @@ export default function Add() {
 			Alert.alert("エラー", "写真の保存に失敗しました");
 		},
 	});
+
+	// 設定を読み終える前に保存すると、ON にしてあってもカメラロールに入らない
+	const canSave = isSettingFetched && !isPending;
 
 	// v9 で date が必須になったため、存在チェックは不要
 	const handleDateChange = (_event: DateTimePickerChangeEvent, date: Date) => {
@@ -206,10 +212,10 @@ export default function Add() {
 
 			<BottomActionBar withTabBar={false}>
 				<PrimaryButton
-					disabled={isPending}
+					disabled={!canSave}
 					icon={
 						<Check
-							color={isPending ? theme.textMuted.val : theme.onAccentFill.val}
+							color={canSave ? theme.onAccentFill.val : theme.textMuted.val}
 							size={20}
 							strokeWidth={2.4}
 						/>

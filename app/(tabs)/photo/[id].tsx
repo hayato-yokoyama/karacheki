@@ -154,7 +154,8 @@ export default function PhotoDetail() {
 							<Download color={theme.accent.val} size={20} strokeWidth={2.2} />
 						}
 						onPress={() => savePhotoToDevice(photo)}
-						disabled={isSaving}
+						// 保存中に消すと保存が失敗し、削除中に保存しても消えた写真を指す。互いに待たせる
+						disabled={isSaving || isPending}
 					>
 						端末に保存
 					</Button>
@@ -174,7 +175,7 @@ export default function PhotoDetail() {
 						pressStyle={{ backgroundColor: "$dangerSoft", opacity: 0.85 }}
 						icon={<Trash2 color={theme.danger.val} size={20} strokeWidth={2} />}
 						onPress={handlePressDelete}
-						disabled={isPending}
+						disabled={isSaving || isPending}
 					>
 						削除
 					</Button>
