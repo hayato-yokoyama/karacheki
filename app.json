@@ -44,6 +44,15 @@
 				}
 			],
 			[
+				"expo-media-library",
+				{
+					"photosPermission": "Before/Afterの写真を選ぶために写真へのアクセスを許可します。",
+					"savePhotosPermission": "Before/Afterの写真を写真アプリに保存するために写真の追加を許可します。",
+					"isAccessMediaLocationEnabled": false,
+					"granularPermissions": ["photo"]
+				}
+			],
+			[
 				"@kingstinct/react-native-healthkit",
 				{
 					"NSHealthShareUsageDescription": "体重データを取得するためにヘルスデータにアクセスします。",
