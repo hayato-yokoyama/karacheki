@@ -1,8 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { format } from "date-fns";
-// SDK 54 で File / Directory ベースの新 API に置き換わった。
-// 関数ベースの従来 API は legacy として残っているため、まずはそのまま使う
-import * as FileSystem from "expo-file-system/legacy";
+import { Directory, File, Paths } from "expo-file-system";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
@@ -48,30 +46,31 @@ export type BodyPhoto = {
  * アプリコンテナの絶対パスは再インストールやOSアップデートで変わるため、
  * メタデータには保存せず参照のたびに組み立てる
  */
-const getPhotoDir = () => {
-	const documentDirectory = FileSystem.documentDirectory;
+const getPhotoDir = () => new Directory(Paths.document, "photos");
 
-	if (!documentDirectory) {
-		throw new Error("写真の保存先を取得できませんでした。");
-	}
-
-	return `${documentDirectory}photos/`;
-};
+/** 写真の実体ファイルを指す。存在するかどうかは問わない */
+const getPhotoFile = (fileName: string) => new File(getPhotoDir(), fileName);
 
 /** 写真のメタデータから表示用のURIを組み立てる */
 export const getBodyPhotoUri = (photo: BodyPhoto) =>
-	`${getPhotoDir()}${photo.fileName}`;
+	getPhotoFile(photo.fileName).uri;
 
 /** 写真の保存先ディレクトリを用意する */
-const ensurePhotoDir = async () => {
-	const photoDir = getPhotoDir();
-	const info = await FileSystem.getInfoAsync(photoDir);
+const ensurePhotoDir = () => {
+	getPhotoDir().create({ intermediates: true, idempotent: true });
+};
 
-	if (!info.exists) {
-		await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
+/**
+ * 写真の実体ファイルを消す。すでに無ければ何もしない
+ *
+ * 新 API の delete() は存在しないファイルに対して例外を投げるため、先に確かめる
+ */
+const deletePhotoFile = (fileName: string) => {
+	const file = getPhotoFile(fileName);
+
+	if (file.exists) {
+		file.delete();
 	}
-
-	return photoDir;
 };
 
 /** メタデータを読み出す */
@@ -115,19 +114,11 @@ const sortByTakenAtDesc = (photos: BodyPhoto[]) =>
  * 実体ファイルが失われたメタデータはここで取り除く
  */
 export const listBodyPhotos = async () => {
-	const photoDir = await ensurePhotoDir();
+	ensurePhotoDir();
 	const storedPhotos = await readPhotoMeta();
 
-	const existencePerPhoto = await Promise.all(
-		storedPhotos.map(async (photo) => {
-			const info = await FileSystem.getInfoAsync(
-				`${photoDir}${photo.fileName}`,
-			);
-			return info.exists;
-		}),
-	);
 	const existingPhotos = storedPhotos.filter(
-		(_, index) => existencePerPhoto[index],
+		(photo) => getPhotoFile(photo.fileName).exists,
 	);
 
 	if (existingPhotos.length !== storedPhotos.length) {
@@ -139,15 +130,12 @@ export const listBodyPhotos = async () => {
 
 /** 選択された画像をアプリ内にコピーして保存する */
 export const addBodyPhoto = async (sourceUri: string, takenAt: Date) => {
-	const photoDir = await ensurePhotoDir();
+	ensurePhotoDir();
 
 	const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 	const fileName = `${id}.jpg`;
 
-	await FileSystem.copyAsync({
-		from: sourceUri,
-		to: `${photoDir}${fileName}`,
-	});
+	await new File(sourceUri).copy(getPhotoFile(fileName));
 
 	const photo: BodyPhoto = {
 		id,
@@ -161,9 +149,7 @@ export const addBodyPhoto = async (sourceUri: string, takenAt: Date) => {
 		await writePhotoMeta([...storedPhotos, photo]);
 	} catch (error) {
 		// メタデータを書けなかったら、参照されないファイルを残さない
-		await FileSystem.deleteAsync(`${photoDir}${fileName}`, {
-			idempotent: true,
-		});
+		deletePhotoFile(fileName);
 		throw error;
 	}
 
@@ -177,14 +163,11 @@ export const addBodyPhoto = async (sourceUri: string, takenAt: Date) => {
  * 「失敗」と伝えながら削除は成立していて、参照されないファイルだけが残る
  */
 export const deleteBodyPhoto = async (id: string) => {
-	const photoDir = getPhotoDir();
 	const storedPhotos = await readPhotoMeta();
 	const target = storedPhotos.find((photo) => photo.id === id);
 
 	if (target) {
-		await FileSystem.deleteAsync(`${photoDir}${target.fileName}`, {
-			idempotent: true,
-		});
+		deletePhotoFile(target.fileName);
 	}
 
 	await writePhotoMeta(storedPhotos.filter((photo) => photo.id !== id));

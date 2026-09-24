@@ -2,27 +2,76 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as MediaLibrary from "expo-media-library";
 import type { BodyPhoto } from "@/services/bodyPhotoService";
 import {
+	addBodyPhoto,
+	deleteBodyPhoto,
+	getBodyPhotoUri,
 	getSaveToCameraRoll,
 	groupBodyPhotosByMonth,
+	listBodyPhotos,
 	MediaLibraryPermissionDeniedError,
 	replaceComparedPhoto,
 	saveBodyPhotoToCameraRoll,
 	setSaveToCameraRoll,
 } from "@/services/bodyPhotoService";
 
-// 月ごとの区切りと比較する2枚の入れ替えは端末に触らない計算なので、
-// モジュールが読み込めるだけの最小のモックを置く
 jest.mock("@react-native-async-storage/async-storage", () => ({
 	getItem: jest.fn(),
 	setItem: jest.fn(),
 }));
-jest.mock("expo-file-system/legacy", () => ({
-	documentDirectory: "file:///documents/",
-	copyAsync: jest.fn(),
-	deleteAsync: jest.fn(),
-	getInfoAsync: jest.fn(),
-	makeDirectoryAsync: jest.fn(),
-}));
+
+/** File / Directory のモックが持つ、URI だけの形 */
+type MockEntry = { uri: string };
+
+/** 端末上に存在するファイル・ディレクトリの URI。テストごとに中身を入れ替える */
+const mockExistingUris = new Set<string>();
+
+// File / Directory は URI を組み立てるだけで、実在するかは mockExistingUris で決める。
+// 組み立て方は実物と同じく「親の URI + "/" + 名前」にする
+jest.mock("expo-file-system", () => {
+	const join = (...parts: (string | MockEntry)[]) =>
+		parts
+			.map((part) => (typeof part === "string" ? part : part.uri))
+			.map((part) => part.replace(/\/+$/, ""))
+			.join("/");
+
+	class MockFile {
+		uri: string;
+
+		constructor(...parts: (string | MockEntry)[]) {
+			this.uri = join(...parts);
+		}
+
+		get exists() {
+			return mockExistingUris.has(this.uri);
+		}
+
+		async copy(destination: MockEntry) {
+			if (!this.exists) {
+				throw new Error(`コピー元がありません: ${this.uri}`);
+			}
+			mockExistingUris.add(destination.uri);
+		}
+
+		delete() {
+			if (!this.exists) {
+				throw new Error(`削除するファイルがありません: ${this.uri}`);
+			}
+			mockExistingUris.delete(this.uri);
+		}
+	}
+
+	class MockDirectory extends MockFile {
+		create() {
+			mockExistingUris.add(this.uri);
+		}
+	}
+
+	return {
+		File: MockFile,
+		Directory: MockDirectory,
+		Paths: { document: new MockDirectory("file:///documents/") },
+	};
+});
 jest.mock("expo-image-manipulator", () => ({
 	ImageManipulator: { manipulate: jest.fn() },
 	SaveFormat: { JPEG: "jpeg" },
@@ -186,5 +235,117 @@ describe("saveBodyPhotoToCameraRoll", () => {
 			saveBodyPhotoToCameraRoll(photo("a", "2026-09-21T09:00:00+09:00")),
 		).rejects.toBeInstanceOf(MediaLibraryPermissionDeniedError);
 		expect(createAsset).not.toHaveBeenCalled();
+	});
+});
+
+describe("写真の保存先", () => {
+	test("アプリの Documents 配下の photos に、ファイル名をつないで組み立てる", () => {
+		// 移行前（expo-file-system/legacy）と同じ場所を指していないと、
+		// 既存ユーザーの写真が見つからずメタデータごと消えてしまう
+		expect(getBodyPhotoUri(photo("a", "2026-09-21T09:00:00+09:00"))).toBe(
+			"file:///documents/photos/a.jpg",
+		);
+	});
+});
+
+describe("写真の一覧・追加・削除", () => {
+	const getItem = jest.mocked(AsyncStorage.getItem);
+	const setItem = jest.mocked(AsyncStorage.setItem);
+
+	/** AsyncStorage に保存されているメタデータ */
+	let storedMeta: string | null;
+
+	beforeEach(() => {
+		mockExistingUris.clear();
+		storedMeta = null;
+		getItem.mockReset();
+		setItem.mockReset();
+		getItem.mockImplementation(async () => storedMeta);
+		setItem.mockImplementation(async (_, value) => {
+			storedMeta = value;
+		});
+	});
+
+	const storePhotos = (photos: BodyPhoto[]) => {
+		storedMeta = JSON.stringify(photos);
+		for (const { fileName } of photos) {
+			mockExistingUris.add(`file:///documents/photos/${fileName}`);
+		}
+	};
+
+	const storedIds = () =>
+		(JSON.parse(storedMeta ?? "[]") as BodyPhoto[]).map(({ id }) => id);
+
+	test("保存済みの写真を撮影日の新しい順に返す", async () => {
+		storePhotos([
+			photo("old", "2025-04-12T09:00:00+09:00"),
+			photo("new", "2026-09-21T09:00:00+09:00"),
+		]);
+
+		const photos = await listBodyPhotos();
+
+		expect(photos.map(({ id }) => id)).toEqual(["new", "old"]);
+	});
+
+	test("実体ファイルが失われた写真はメタデータから取り除く", async () => {
+		storePhotos([
+			photo("kept", "2026-09-21T09:00:00+09:00"),
+			photo("lost", "2026-09-20T09:00:00+09:00"),
+		]);
+		mockExistingUris.delete("file:///documents/photos/lost.jpg");
+
+		const photos = await listBodyPhotos();
+
+		expect(photos.map(({ id }) => id)).toEqual(["kept"]);
+		expect(storedIds()).toEqual(["kept"]);
+	});
+
+	test("選ばれた画像を写真の保存先にコピーして、メタデータに加える", async () => {
+		mockExistingUris.add("file:///cache/cropped.jpg");
+
+		const added = await addBodyPhoto(
+			"file:///cache/cropped.jpg",
+			new Date("2026-09-21T09:00:00+09:00"),
+		);
+
+		expect(mockExistingUris).toContain(getBodyPhotoUri(added));
+		expect(storedIds()).toEqual([added.id]);
+	});
+
+	test("メタデータを書けなければ、コピーしたファイルを残さない", async () => {
+		mockExistingUris.add("file:///cache/cropped.jpg");
+		setItem.mockRejectedValue(new Error("書き込みに失敗"));
+
+		await expect(
+			addBodyPhoto(
+				"file:///cache/cropped.jpg",
+				new Date("2026-09-21T09:00:00+09:00"),
+			),
+		).rejects.toThrow("書き込みに失敗");
+		expect(
+			[...mockExistingUris].filter((uri) =>
+				uri.startsWith("file:///documents/photos/"),
+			),
+		).toEqual([]);
+	});
+
+	test("写真を実体ファイルとメタデータの両方から削除する", async () => {
+		storePhotos([
+			photo("a", "2026-09-21T09:00:00+09:00"),
+			photo("b", "2026-09-20T09:00:00+09:00"),
+		]);
+
+		await deleteBodyPhoto("a");
+
+		expect(mockExistingUris).not.toContain("file:///documents/photos/a.jpg");
+		expect(storedIds()).toEqual(["b"]);
+	});
+
+	test("実体ファイルがすでに無くても、メタデータからは削除できる", async () => {
+		storePhotos([photo("a", "2026-09-21T09:00:00+09:00")]);
+		mockExistingUris.delete("file:///documents/photos/a.jpg");
+
+		await expect(deleteBodyPhoto("a")).resolves.toBeUndefined();
+		expect(storedIds()).toEqual([]);
 	});
 });
