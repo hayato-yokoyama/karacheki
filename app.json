@@ -44,6 +44,15 @@
 				}
 			],
 			[
+				"expo-camera",
+				{
+					"cameraPermission": "Before/Afterの写真を撮るためにカメラへのアクセスを許可します。",
+					"microphonePermission": false,
+					"recordAudioAndroid": false,
+					"barcodeScannerEnabled": false
+				}
+			],
+			[
 				"expo-media-library",
 				{
 					"photosPermission": "Before/Afterの写真を選ぶために写真へのアクセスを許可します。",

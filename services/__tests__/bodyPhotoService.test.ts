@@ -3,14 +3,17 @@ import * as MediaLibrary from "expo-media-library";
 import type { BodyPhoto } from "@/services/bodyPhotoService";
 import {
 	addBodyPhoto,
+	DEFAULT_CAMERA_SETTINGS,
 	deleteBodyPhoto,
 	getBodyPhotoUri,
+	getCameraSettings,
 	getSaveToCameraRoll,
 	groupBodyPhotosByMonth,
 	listBodyPhotos,
 	MediaLibraryPermissionDeniedError,
 	replaceComparedPhoto,
 	saveBodyPhotoToCameraRoll,
+	setCameraSettings,
 	setSaveToCameraRoll,
 } from "@/services/bodyPhotoService";
 
@@ -77,9 +80,7 @@ jest.mock("expo-image-manipulator", () => ({
 	SaveFormat: { JPEG: "jpeg" },
 }));
 jest.mock("expo-image-picker", () => ({
-	launchCameraAsync: jest.fn(),
 	launchImageLibraryAsync: jest.fn(),
-	requestCameraPermissionsAsync: jest.fn(),
 }));
 
 jest.mock("expo-media-library", () => ({
@@ -203,6 +204,55 @@ describe("カメラロールにも保存する設定", () => {
 		);
 
 		await expect(getSaveToCameraRoll()).resolves.toBe(true);
+	});
+});
+
+describe("撮影画面のタイマーとカメラの設定", () => {
+	const getItem = jest.mocked(AsyncStorage.getItem);
+	const setItem = jest.mocked(AsyncStorage.setItem);
+
+	beforeEach(() => {
+		getItem.mockReset();
+		setItem.mockReset();
+	});
+
+	test("まだ選ばれていなければ、タイマーなし・前面カメラで撮る", async () => {
+		getItem.mockResolvedValue(null);
+
+		await expect(getCameraSettings()).resolves.toEqual({
+			timerSeconds: 0,
+			facing: "front",
+		});
+	});
+
+	test("書き込んだ値を読み出せる", async () => {
+		await setCameraSettings({ timerSeconds: 10, facing: "back" });
+		const [key, value] = setItem.mock.calls[0];
+		getItem.mockImplementation(async (readKey) =>
+			readKey === key ? value : null,
+		);
+
+		await expect(getCameraSettings()).resolves.toEqual({
+			timerSeconds: 10,
+			facing: "back",
+		});
+	});
+
+	test("選択肢に無い値は、その項目だけ初期値に戻す", async () => {
+		getItem.mockResolvedValue(
+			JSON.stringify({ timerSeconds: 5, facing: "back" }),
+		);
+
+		await expect(getCameraSettings()).resolves.toEqual({
+			timerSeconds: DEFAULT_CAMERA_SETTINGS.timerSeconds,
+			facing: "back",
+		});
+	});
+
+	test("壊れた値が入っていても初期値で撮れる", async () => {
+		getItem.mockResolvedValue("{");
+
+		await expect(getCameraSettings()).resolves.toEqual(DEFAULT_CAMERA_SETTINGS);
 	});
 });
 

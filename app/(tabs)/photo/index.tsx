@@ -1,12 +1,14 @@
 import { LinearGradient } from "@tamagui/linear-gradient";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { useCameraPermissions } from "expo-camera";
 import * as Linking from "expo-linking";
 import { Link, useRouter } from "expo-router";
 import { Check, ChevronRight, Columns2, ImagePlus } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import { Alert, Image, SectionList, useWindowDimensions } from "react-native";
 import { SizableText, Spinner, useTheme, View, XStack, YStack } from "tamagui";
+import { useGoToCrop } from "@/components/photo/useGoToCrop";
 import {
 	SAVED_TO_CAMERA_ROLL_MESSAGE,
 	useSavePhotoToDevice,
@@ -21,15 +23,13 @@ import {
 	useScreenPaddingTop,
 	useToast,
 } from "@/components/ui";
-import type { BodyPhoto, PickedPhoto } from "@/services/bodyPhotoService";
+import type { BodyPhoto } from "@/services/bodyPhotoService";
 import {
-	CameraPermissionDeniedError,
 	deleteBodyPhoto,
 	getBodyPhotoUri,
 	groupBodyPhotosByMonth,
 	listBodyPhotos,
 	pickBodyPhoto,
-	takeBodyPhoto,
 } from "@/services/bodyPhotoService";
 import { layout, radius } from "@/theme/designTokens";
 
@@ -178,49 +178,40 @@ export default function Photos() {
 		[removePhoto],
 	);
 
-	/** 選んだ・撮った写真をトリミング画面へ渡す */
-	const goToCrop = useCallback(
-		(picked: PickedPhoto) => {
-			router.push({
-				pathname: "/(tabs)/photo/crop",
-				params: {
-					uri: picked.uri,
-					takenAt: picked.takenAt.toISOString(),
-					width: String(picked.width),
-					height: String(picked.height),
-				},
-			});
-		},
-		[router],
-	);
+	const goToCrop = useGoToCrop();
 
-	/** カメラで1枚撮る */
+	const [, requestCameraPermission] = useCameraPermissions();
+
+	/**
+	 * 撮影画面を開く
+	 *
+	 * OS 標準の撮影画面にはセルフタイマーが無いため、アプリ内の撮影画面で撮る。
+	 * 権限が無いまま開くと真っ黒な画面で行き止まりになるので、先に確かめる
+	 */
 	const handleTakePhoto = useCallback(async () => {
 		try {
-			const taken = await takeBodyPhoto();
+			const permission = await requestCameraPermission();
 
-			if (taken) {
-				goToCrop(taken);
-			}
-		} catch (error) {
-			// 一度拒否すると OS はもうダイアログを出さないので、設定へ送り出す
-			if (error instanceof CameraPermissionDeniedError) {
-				Alert.alert(
-					"カメラを使えません",
-					"設定アプリからカメラへのアクセスを許可してください。",
-					[
-						{ text: "キャンセル", style: "cancel" },
-						{ text: "設定を開く", onPress: () => Linking.openSettings() },
-					],
-				);
+			if (permission.granted) {
+				router.push("/(tabs)/photo/camera");
 				return;
 			}
 
+			// 一度拒否すると OS はもうダイアログを出さないので、設定へ送り出す
+			Alert.alert(
+				"カメラを使えません",
+				"設定アプリからカメラへのアクセスを許可してください。",
+				[
+					{ text: "キャンセル", style: "cancel" },
+					{ text: "設定を開く", onPress: () => Linking.openSettings() },
+				],
+			);
+		} catch (error) {
 			// 原因を決めつけず、切り分けできるよう内容はログに残す
 			console.error(error);
-			Alert.alert("エラー", "写真を撮れませんでした");
+			Alert.alert("エラー", "カメラを起動できませんでした");
 		}
-	}, [goToCrop]);
+	}, [requestCameraPermission, router]);
 
 	/** フォトライブラリから1枚選ぶ */
 	const handlePickPhoto = useCallback(async () => {
