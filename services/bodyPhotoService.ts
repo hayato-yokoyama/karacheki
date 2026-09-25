@@ -13,6 +13,9 @@ const STORAGE_KEY = "bodyPhotos";
 /** 追加した写真をカメラロールにも保存するかどうかの保存キー（#66） */
 const SAVE_TO_CAMERA_ROLL_KEY = "bodyPhotoSaveToCameraRoll";
 
+/** 撮影画面で最後に選んだタイマーとカメラの保存キー */
+const CAMERA_SETTINGS_KEY = "bodyPhotoCameraSettings";
+
 /**
  * 保存する画像の長辺の上限（px）
  *
@@ -186,6 +189,68 @@ export const setSaveToCameraRoll = async (value: boolean) => {
 	await AsyncStorage.setItem(SAVE_TO_CAMERA_ROLL_KEY, String(value));
 };
 
+/** 撮影画面のセルフタイマーで選べる秒数。0 はタイマーを使わない */
+export const CAMERA_TIMER_SECONDS = [0, 3, 10] as const;
+
+export type CameraTimerSeconds = (typeof CAMERA_TIMER_SECONDS)[number];
+
+/** 撮影に使うカメラ。`expo-camera` の `CameraType` と同じ値 */
+export type CameraFacing = "front" | "back";
+
+/** 撮影画面で最後に選んだタイマーとカメラ */
+export type CameraSettings = {
+	timerSeconds: CameraTimerSeconds;
+	facing: CameraFacing;
+};
+
+/**
+ * 撮影画面の初期値
+ *
+ * タイマーは純正カメラと同じく切っておく。
+ * カメラは壁に立てかけて撮っても立ち位置を画面で確かめられるよう、前面にする
+ */
+export const DEFAULT_CAMERA_SETTINGS: CameraSettings = {
+	timerSeconds: 0,
+	facing: "front",
+};
+
+/**
+ * 撮影画面で最後に選んだタイマーとカメラを読み出す
+ *
+ * 毎日同じ場所で撮るとき、開くたびに選び直さなくて済むようにする。
+ * 壊れた値や選択肢に無い値は、項目ごとに初期値へ戻す
+ */
+export const getCameraSettings = async (): Promise<CameraSettings> => {
+	const stored = await AsyncStorage.getItem(CAMERA_SETTINGS_KEY);
+
+	if (!stored) {
+		return DEFAULT_CAMERA_SETTINGS;
+	}
+
+	let parsed: Partial<Record<keyof CameraSettings, unknown>>;
+
+	try {
+		parsed = JSON.parse(stored) ?? {};
+	} catch {
+		return DEFAULT_CAMERA_SETTINGS;
+	}
+
+	return {
+		timerSeconds:
+			CAMERA_TIMER_SECONDS.find((seconds) => seconds === parsed.timerSeconds) ??
+			DEFAULT_CAMERA_SETTINGS.timerSeconds,
+		facing:
+			parsed.facing === "front" || parsed.facing === "back"
+				? parsed.facing
+				: DEFAULT_CAMERA_SETTINGS.facing,
+	};
+};
+
+/** 撮影画面で選んだタイマーとカメラを書き込む。次に開いたときもこれを使う */
+export const setCameraSettings = async (settings: CameraSettings) => {
+	await AsyncStorage.setItem(CAMERA_SETTINGS_KEY, JSON.stringify(settings));
+};
+
 /**
  * フォトライブラリへの追加の権限が下りていないことを、他の失敗と区別して伝える
  *
@@ -263,19 +328,6 @@ export type PickedPhoto = {
 };
 
 /**
- * カメラの権限が下りていないことを、他の失敗と区別して伝える
- *
- * 一度拒否されると OS はダイアログを出さないため、呼び出し側は
- * 「設定アプリから許可してほしい」と案内する必要がある
- */
-export class CameraPermissionDeniedError extends Error {
-	constructor() {
-		super("カメラへのアクセスが許可されていません。");
-		this.name = "CameraPermissionDeniedError";
-	}
-}
-
-/**
  * 画像の大きさを求める
  *
  * ピッカーは width / height を 0 で返すことがある。0 のままでは
@@ -323,42 +375,6 @@ export const pickBodyPhoto = async (): Promise<PickedPhoto | null> => {
 		uri: asset.uri,
 		takenAt:
 			parseExifDateTimeOriginal(asset.exif?.DateTimeOriginal) ?? new Date(),
-		...(await resolveImageSize(asset)),
-	};
-};
-
-/**
- * カメラで写真を1枚撮る
- *
- * 撮影日は今。撮り忘れた日のぶんを後から撮ることもあるため、
- * この後の確認画面で直せるようにしてある
- */
-export const takeBodyPhoto = async (): Promise<PickedPhoto | null> => {
-	const permission = await ImagePicker.requestCameraPermissionsAsync();
-
-	if (!permission.granted) {
-		throw new CameraPermissionDeniedError();
-	}
-
-	const result = await ImagePicker.launchCameraAsync({
-		mediaTypes: ["images"],
-		// トリミング後に1度だけ圧縮するため、ここでは落とさずに受け取る
-		quality: 1,
-	});
-
-	if (result.canceled) {
-		return null;
-	}
-
-	const asset = result.assets.at(0);
-
-	if (!asset) {
-		return null;
-	}
-
-	return {
-		uri: asset.uri,
-		takenAt: new Date(),
 		...(await resolveImageSize(asset)),
 	};
 };

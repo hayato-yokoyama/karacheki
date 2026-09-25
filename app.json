@@ -1,6 +1,6 @@
 {
 	"expo": {
-		"version": "1.3.0",
+		"version": "1.4.0",
 		"orientation": "portrait",
 		"icon": "./assets/images/icon.png",
 		"userInterfaceStyle": "automatic",
@@ -41,6 +41,15 @@
 					"photosPermission": "Before/Afterの写真を選ぶために写真へのアクセスを許可します。",
 					"cameraPermission": "Before/Afterの写真を撮るためにカメラへのアクセスを許可します。",
 					"microphonePermission": false
+				}
+			],
+			[
+				"expo-camera",
+				{
+					"cameraPermission": "Before/Afterの写真を撮るためにカメラへのアクセスを許可します。",
+					"microphonePermission": false,
+					"recordAudioAndroid": false,
+					"barcodeScannerEnabled": false
 				}
 			],
 			[
