@@ -11,6 +11,11 @@ import { useMemo, useState } from "react";
 import { Image, ScrollView } from "react-native";
 import { SizableText, Spinner, View, XStack, YStack } from "tamagui";
 import {
+	getPhotoWeight,
+	PhotoWeightValue,
+	useAllWeights,
+} from "@/components/photo/photoWeight";
+import {
 	BackLink,
 	NumberText,
 	Screen,
@@ -24,20 +29,22 @@ import {
 	listBodyPhotos,
 	replaceComparedPhoto,
 } from "@/services/bodyPhotoService";
+import { formatDiffWeight } from "@/services/graphWindow";
+import type { PhotoWeight } from "@/services/weightService";
 import { radius } from "@/theme/designTokens";
 
 /** 並べる2枚の高さ */
 const PHOTO_HEIGHT = 240;
 
-/** 日付を読めるようにするため、写真の下端に敷く黒へのグラデーション */
-const PHOTO_SCRIM_HEIGHT = 56;
-const PHOTO_SCRIM_COLORS: string[] = ["rgba(0,0,0,0)", "rgba(0,0,0,0.6)"];
+/** 日付と体重を読めるようにするため、写真の下端に敷く黒へのグラデーション */
+const PHOTO_SCRIM_HEIGHT = 88;
+const PHOTO_SCRIM_COLORS: string[] = ["rgba(0,0,0,0)", "rgba(0,0,0,0.62)"];
 
 /** BEFORE の札。写真の上なので、地はテーマによらず黒の半透明 */
 const BEFORE_BADGE_BACKGROUND = "rgba(0,0,0,0.55)";
 
-/** 2枚の下に置く「◯日後」のピル。左右に区切り線を伸ばす */
-const ELAPSED_PILL_HEIGHT = 28;
+/** 2枚の下に置く「◯日後 · 体重差」のピル。左右に区切り線を伸ばす */
+const ELAPSED_PILL_HEIGHT = 30;
 const ELAPSED_ROW_GAP = 10;
 
 /** 選び直すためのサムネ */
@@ -129,6 +136,26 @@ export default function Compare() {
 		[before, after],
 	);
 
+	// 読み込み中や取得に失敗したときは undefined のままにして、体重の欄ごと出さない（#50）
+	const weights = useAllWeights();
+
+	const comparedWeights = useMemo(
+		() =>
+			weights && compared
+				? {
+						before: getPhotoWeight(weights, compared.before),
+						after: getPhotoWeight(weights, compared.after),
+					}
+				: undefined,
+		[weights, compared],
+	);
+
+	// 片方でも体重が無ければ、差は求められないので出さない
+	const diffWeight =
+		comparedWeights?.before && comparedWeights.after
+			? comparedWeights.after.weight - comparedWeights.before.weight
+			: null;
+
 	/** サムネをタップした1枚で、比較する2枚のどちらかを差し替える */
 	const handlePressThumbnail = (picked: BodyPhoto) => {
 		if (compared === null) {
@@ -183,8 +210,16 @@ export default function Compare() {
 				/>
 
 				<XStack gap={8}>
-					<ComparedPhoto label="BEFORE" photo={compared.before} />
-					<ComparedPhoto label="AFTER" photo={compared.after} />
+					<ComparedPhoto
+						label="BEFORE"
+						photo={compared.before}
+						photoWeight={comparedWeights?.before}
+					/>
+					<ComparedPhoto
+						label="AFTER"
+						photo={compared.after}
+						photoWeight={comparedWeights?.after}
+					/>
 				</XStack>
 
 				{/* 2枚に重ねず、区切り線の間に置く。写真の端が隠れない */}
@@ -195,18 +230,40 @@ export default function Compare() {
 					alignItems="center"
 				>
 					<View flex={1} height={1} backgroundColor="$cardBorder" />
-					<SizableText
+					<XStack
 						height={ELAPSED_PILL_HEIGHT}
-						lineHeight={ELAPSED_PILL_HEIGHT}
 						paddingHorizontal={14}
 						borderRadius={ELAPSED_PILL_HEIGHT / 2}
-						backgroundColor="$accentSoft"
-						fontSize={13}
-						fontWeight="800"
-						color="$accent"
+						backgroundColor="$segmentTrack"
+						gap={7}
+						alignItems="center"
 					>
-						{formatElapsedLabel(beforeTakenAt, afterTakenAt)}
-					</SizableText>
+						<SizableText fontSize={13} fontWeight="800" color="$textPrimary">
+							{formatElapsedLabel(beforeTakenAt, afterTakenAt)}
+						</SizableText>
+						{diffWeight !== null && (
+							<>
+								<View
+									width={3}
+									height={3}
+									borderRadius={2}
+									backgroundColor="$textMuted"
+								/>
+								<XStack gap={4} alignItems="baseline">
+									<NumberText fontSize={17}>
+										{formatDiffWeight(diffWeight)}
+									</NumberText>
+									<SizableText
+										fontSize={12}
+										fontWeight="600"
+										color="$textMuted"
+									>
+										kg
+									</SizableText>
+								</XStack>
+							</>
+						)}
+					</XStack>
 					<View flex={1} height={1} backgroundColor="$cardBorder" />
 				</XStack>
 
@@ -249,13 +306,16 @@ export default function Compare() {
 	);
 }
 
-/** 並べて見せる1枚。左上に BEFORE / AFTER の札、下端に撮影日を載せる */
+/** 並べて見せる1枚。左上に BEFORE / AFTER の札、下端に撮影日と体重を載せる */
 const ComparedPhoto = ({
 	label,
 	photo,
+	photoWeight,
 }: {
 	label: "BEFORE" | "AFTER";
 	photo: BodyPhoto;
+	/** 撮影日の体重。読み込み中や取得に失敗したときは undefined で、体重の欄ごと出さない */
+	photoWeight: PhotoWeight | null | undefined;
 }) => (
 	<View
 		flex={1}
@@ -299,17 +359,18 @@ const ComparedPhoto = ({
 		>
 			{label}
 		</SizableText>
-		<NumberText
-			position="absolute"
-			left={12}
-			bottom={12}
-			weight="600"
-			fontSize={20}
-			lineHeight={22}
-			color="$onHero"
-		>
-			{format(new Date(photo.takenAt), "yy/M/d")}
-		</NumberText>
+		<YStack position="absolute" left={12} right={10} bottom={10}>
+			<NumberText fontSize={15} lineHeight={16} color="$onHero" opacity={0.9}>
+				{format(new Date(photo.takenAt), "yy/M/d")}
+			</NumberText>
+			{photoWeight !== undefined && (
+				<PhotoWeightValue
+					photoWeight={photoWeight}
+					fontSize={26}
+					lineHeight={28}
+				/>
+			)}
+		</YStack>
 	</View>
 );
 
