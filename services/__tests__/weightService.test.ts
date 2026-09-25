@@ -1,5 +1,7 @@
 import type { WeightSample } from "@/services/weightService";
 import {
+	findPhotoWeight,
+	formatPhotoWeightOffset,
 	formatWeekRangeLabel,
 	getLatestWeight,
 	getWeeklyAverages,
@@ -261,5 +263,82 @@ describe("summarizeWeightsForHome", () => {
 		const summary = summarizeWeightsForHome([], NOW);
 
 		expect(summary.weeklyAverages).toHaveLength(WEEKLY_AVERAGE_WEEKS);
+	});
+});
+
+describe("findPhotoWeight", () => {
+	const takenAt = new Date("2026-06-10T20:00:00+09:00");
+
+	it("撮影日に記録があれば、その日の最初の1件を使う", () => {
+		expect(
+			findPhotoWeight(
+				[
+					sample("2026-06-10T21:00:00+09:00", 70.4),
+					sample("2026-06-10T07:00:00+09:00", 70.1),
+					sample("2026-06-09T07:00:00+09:00", 70.9),
+				],
+				takenAt,
+			),
+		).toEqual({ weight: 70.1, offsetDays: 0 });
+	});
+
+	it("撮影日に記録がなければ、いちばん近い日の記録を使う", () => {
+		expect(
+			findPhotoWeight(
+				[
+					sample("2026-06-07T07:00:00+09:00", 71.0),
+					sample("2026-06-12T07:00:00+09:00", 70.2),
+				],
+				takenAt,
+			),
+		).toEqual({ weight: 70.2, offsetDays: 2 });
+	});
+
+	it("前後で同じ距離なら前の日を使う", () => {
+		expect(
+			findPhotoWeight(
+				[
+					sample("2026-06-12T07:00:00+09:00", 70.2),
+					sample("2026-06-08T07:00:00+09:00", 70.8),
+				],
+				takenAt,
+			),
+		).toEqual({ weight: 70.8, offsetDays: -2 });
+	});
+
+	it("3日を超えて離れた記録しかなければ null を返す", () => {
+		expect(
+			findPhotoWeight(
+				[
+					sample("2026-06-06T07:00:00+09:00", 71.0),
+					sample("2026-06-14T07:00:00+09:00", 70.0),
+				],
+				takenAt,
+			),
+		).toBeNull();
+	});
+
+	it("ちょうど3日離れた記録は使う", () => {
+		expect(
+			findPhotoWeight([sample("2026-06-13T07:00:00+09:00", 70.0)], takenAt),
+		).toEqual({ weight: 70.0, offsetDays: 3 });
+	});
+
+	it("記録がなければ null を返す", () => {
+		expect(findPhotoWeight([], takenAt)).toBeNull();
+	});
+});
+
+describe("formatPhotoWeightOffset", () => {
+	it("当日の記録なら null を返す", () => {
+		expect(formatPhotoWeightOffset(0)).toBeNull();
+	});
+
+	it("前の日の記録は「◯日前」にする", () => {
+		expect(formatPhotoWeightOffset(-2)).toBe("2日前");
+	});
+
+	it("後の日の記録は「◯日後」にする", () => {
+		expect(formatPhotoWeightOffset(1)).toBe("1日後");
 	});
 });

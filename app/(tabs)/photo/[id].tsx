@@ -1,3 +1,4 @@
+import { LinearGradient } from "@tamagui/linear-gradient";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -12,6 +13,11 @@ import {
 	XStack,
 	YStack,
 } from "tamagui";
+import {
+	getPhotoWeight,
+	PhotoWeightValue,
+	useAllWeights,
+} from "@/components/photo/photoWeight";
 import {
 	SAVED_TO_CAMERA_ROLL_MESSAGE,
 	useSavePhotoToDevice,
@@ -35,6 +41,10 @@ const PHOTO_HEIGHT = 480;
 /** 写真の角丸。画面の主役なのでカードより一段大きい */
 const PHOTO_RADIUS = 26;
 
+/** 体重を読めるようにするため、写真の下端に敷く黒へのグラデーション（#50） */
+const PHOTO_SCRIM_HEIGHT = 110;
+const PHOTO_SCRIM_COLORS: string[] = ["rgba(0,0,0,0)", "rgba(0,0,0,0.6)"];
+
 /** 読み込み中・エラーのときも見出しは出すので、戻り先の文言はここに置く */
 const BACK_LABEL = "Before/After";
 
@@ -52,6 +62,9 @@ export default function PhotoDetail() {
 		queryKey: ["bodyPhotos"],
 		queryFn: listBodyPhotos,
 	});
+
+	// 読み込み中や取得に失敗したときは undefined のままにして、体重の欄ごと出さない（#50）
+	const weights = useAllWeights();
 
 	const { showToast, toast } = useToast();
 	const { savePhotoToDevice, isSaving } = useSavePhotoToDevice({
@@ -114,6 +127,7 @@ export default function PhotoDetail() {
 	}
 
 	const takenAt = new Date(photo.takenAt);
+	const photoWeight = weights ? getPhotoWeight(weights, photo) : undefined;
 
 	return (
 		<Screen>
@@ -137,6 +151,35 @@ export default function PhotoDetail() {
 						// 切り抜き前に保存した 3:4 でない写真も、端を落とさず全体を見せる
 						resizeMode="contain"
 					/>
+					{photoWeight !== undefined && (
+						<>
+							<LinearGradient
+								colors={PHOTO_SCRIM_COLORS}
+								position="absolute"
+								left={0}
+								right={0}
+								bottom={0}
+								height={PHOTO_SCRIM_HEIGHT}
+								pointerEvents="none"
+							/>
+							<YStack position="absolute" left={18} right={16} bottom={16}>
+								<SizableText
+									fontSize={13}
+									lineHeight={16}
+									fontWeight="700"
+									color="$onHero"
+									opacity={0.9}
+								>
+									撮影時の体重
+								</SizableText>
+								<PhotoWeightValue
+									photoWeight={photoWeight}
+									fontSize={34}
+									lineHeight={36}
+								/>
+							</YStack>
+						</>
+					)}
 				</View>
 
 				<XStack marginTop={4} gap={10}>

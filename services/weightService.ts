@@ -333,3 +333,77 @@ export const summarizeWeightsForHome = (
 		),
 	};
 };
+
+/**
+ * 写真の撮影日に記録がないとき、代わりに使う記録を探す範囲（日）（#50）
+ *
+ * これより離れた日の体重は「その体型のときの体重」とは言いにくいので出さない
+ */
+export const PHOTO_WEIGHT_MAX_OFFSET_DAYS = 3;
+
+/** 写真の撮影日に対応する体重（#50） */
+export type PhotoWeight = {
+	weight: number;
+	/**
+	 * 撮影日から見た測定日のずれ（日）
+	 *
+	 * 撮影日当日の記録なら 0、前の日の記録なら負、後の日の記録なら正
+	 */
+	offsetDays: number;
+};
+
+/**
+ * 写真の撮影日の体重を探す（#50）
+ *
+ * 撮影日に記録があればその日の最初の1件（グラフと同じ考え方）を使う。
+ * 無ければ前後 maxOffsetDays 日以内でいちばん近い日の記録を使い、
+ * 前後で同じ距離なら前の日を優先する。どちらでも結果が1つに決まればよく、
+ * 前を選ぶのは「撮るまでの体重」の方が写真の体型に近いと考えるため。
+ * 日付の境目は端末のタイムゾーンのカレンダー日で数える
+ */
+export const findPhotoWeight = (
+	weights: readonly WeightSample[],
+	takenAt: Date,
+	maxOffsetDays = PHOTO_WEIGHT_MAX_OFFSET_DAYS,
+): PhotoWeight | null => {
+	let found: { sample: WeightSample; offsetDays: number } | null = null;
+
+	for (const sample of weights) {
+		const offsetDays = differenceInCalendarDays(sample.startDate, takenAt);
+
+		if (Math.abs(offsetDays) > maxOffsetDays) {
+			continue;
+		}
+
+		// 近い日 → 前の日 → その日の早い時刻 の順に優先する。
+		// HealthKit は測定日時の順で返すとは限らないため、並び順には頼らない
+		const isBetter =
+			found === null ||
+			Math.abs(offsetDays) < Math.abs(found.offsetDays) ||
+			(Math.abs(offsetDays) === Math.abs(found.offsetDays) &&
+				(offsetDays < found.offsetDays ||
+					(offsetDays === found.offsetDays &&
+						sample.startDate < found.sample.startDate)));
+
+		if (isBetter) {
+			found = { sample, offsetDays };
+		}
+	}
+
+	return found === null
+		? null
+		: { weight: found.sample.quantity, offsetDays: found.offsetDays };
+};
+
+/**
+ * 撮影日と測定日のずれを表示用の文言にする（#50）
+ *
+ * 当日の記録ならずれは無いので null を返し、呼び出し側はピルを出さない
+ */
+export const formatPhotoWeightOffset = (offsetDays: number) => {
+	if (offsetDays === 0) {
+		return null;
+	}
+
+	return offsetDays < 0 ? `${-offsetDays}日前` : `${offsetDays}日後`;
+};
